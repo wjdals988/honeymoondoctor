@@ -1,0 +1,5 @@
+# 이 파일을 복사해 local.properties로 저장하고 본인 환경에 맞게 값을 채우세요.
+# local.properties는 .gitignore에 의해 Git에 커밋되지 않습니다.
+
+# Android SDK 설치 경로 (Android Studio > Preferences > Appearance & Behavior > System Settings > Android SDK 에서 확인)
+sdk.dir=/Users/사용자명/Library/Android/sdk

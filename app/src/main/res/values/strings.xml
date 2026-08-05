@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">허니문닥터</string>
+    <string name="app_tagline">정민·찬희 신혼여행 전담 주치의</string>
+
+    <!-- 데모 모드 -->
+    <string name="demo_mode_banner">데모 모드 · 이 기기에만 저장됩니다</string>
+    <string name="demo_mode_reset_menu">데모 데이터 초기화</string>
+
+    <!-- 하단 탭 -->
+    <string name="tab_home">홈</string>
+    <string name="tab_itinerary">일정</string>
+    <string name="tab_nearby">주변</string>
+    <string name="tab_expense">경비</string>
+    <string name="tab_more">전체</string>
+</resources>

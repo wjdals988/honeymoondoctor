@@ -1,0 +1,23 @@
+*.iml
+.gradle/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+local.properties
+.idea/
+.DS_Store
+*.hprof
+.cursor/
+
+# Firebase 설정 파일 — 실제 값은 절대 커밋하지 않는다
+app/google-services.json
+
+# 서명 키스토어
+*.jks
+*.keystore
+keystore.properties
+
+# 실제 바우처/개인 파일 테스트 산출물
+*.pdf
+!docs/**/*.pdf
