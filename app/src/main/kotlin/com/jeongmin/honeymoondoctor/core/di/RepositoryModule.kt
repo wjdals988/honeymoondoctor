@@ -15,6 +15,8 @@ import com.jeongmin.honeymoondoctor.data.expense.FirebaseBudgetRepository
 import com.jeongmin.honeymoondoctor.data.expense.FirebaseExpenseRepository
 import com.jeongmin.honeymoondoctor.data.itinerary.DemoItineraryRepository
 import com.jeongmin.honeymoondoctor.data.itinerary.FirebaseItineraryRepository
+import com.jeongmin.honeymoondoctor.data.place.DemoPlaceRepository
+import com.jeongmin.honeymoondoctor.data.place.FirebasePlaceRepository
 import com.jeongmin.honeymoondoctor.data.reservation.DemoReservationRepository
 import com.jeongmin.honeymoondoctor.data.reservation.FirebaseReservationRepository
 import com.jeongmin.honeymoondoctor.data.trip.DemoTripRepository
@@ -26,6 +28,7 @@ import com.jeongmin.honeymoondoctor.domain.repository.CityRepository
 import com.jeongmin.honeymoondoctor.domain.repository.DecisionRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ExpenseRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ItineraryRepository
+import com.jeongmin.honeymoondoctor.domain.repository.PlaceRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ReservationRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
 import dagger.Module
@@ -107,6 +110,14 @@ object RepositoryModule {
         demo: Provider<DemoExpenseRepository>,
         firebase: Provider<FirebaseExpenseRepository>,
     ): ExpenseRepository = if (demoModeManager.isDemoMode) demo.get() else firebase.get()
+
+    @Provides
+    @Singleton
+    fun providePlaceRepository(
+        demoModeManager: DemoModeManager,
+        demo: Provider<DemoPlaceRepository>,
+        firebase: Provider<FirebasePlaceRepository>,
+    ): PlaceRepository = if (demoModeManager.isDemoMode) demo.get() else firebase.get()
 
     @Provides
     @Singleton

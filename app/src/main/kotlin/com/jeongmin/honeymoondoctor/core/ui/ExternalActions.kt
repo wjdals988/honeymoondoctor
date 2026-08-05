@@ -26,6 +26,20 @@ fun openGoogleMapsDirections(context: Context, destination: String) {
     }
 }
 
+/** 저장된 Google Maps URL 등 외부 링크를 연다(지도 앱 우선, 없으면 브라우저). */
+fun openUrl(context: Context, url: String) {
+    val mapsIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).setPackage("com.google.android.apps.maps")
+    try {
+        context.startActivity(mapsIntent)
+    } catch (_: ActivityNotFoundException) {
+        try {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(context, "링크를 열 수 있는 앱이 없습니다.", Toast.LENGTH_SHORT).show()
+        }
+    }
+}
+
 fun copyToClipboard(context: Context, label: String, text: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     clipboard.setPrimaryClip(ClipData.newPlainText(label, text))

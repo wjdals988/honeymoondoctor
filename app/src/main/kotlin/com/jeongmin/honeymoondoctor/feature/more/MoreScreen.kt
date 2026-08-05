@@ -24,6 +24,7 @@ fun MoreScreen(
     onNavigateToReservations: () -> Unit,
     onNavigateToChecklist: () -> Unit,
     onNavigateToDecisions: () -> Unit,
+    onNavigateToPlaceImport: () -> Unit,
     onResetDemoData: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -33,7 +34,7 @@ fun MoreScreen(
         MoreMenu("결정함", "decisions"),
         MoreMenu("긴급상황", null),
         MoreMenu("여행 정보 및 구성원", "trip_info"),
-        MoreMenu("장소 가져오기·내보내기", null),
+        MoreMenu("장소 가져오기·내보내기", "place_import"),
         MoreMenu("동기화 상태", null),
         MoreMenu("설정", null),
     )
@@ -44,6 +45,7 @@ fun MoreScreen(
                 "checklist" -> onNavigateToChecklist
                 "decisions" -> onNavigateToDecisions
                 "trip_info" -> onNavigateToTripInfo
+                "place_import" -> onNavigateToPlaceImport
                 else -> null
             }
             ListItem(

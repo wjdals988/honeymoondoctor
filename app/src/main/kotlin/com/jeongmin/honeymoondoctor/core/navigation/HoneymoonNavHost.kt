@@ -29,6 +29,8 @@ import com.jeongmin.honeymoondoctor.feature.itinerary.ItineraryScreen
 import com.jeongmin.honeymoondoctor.feature.more.MoreScreen
 import com.jeongmin.honeymoondoctor.feature.more.MoreViewModel
 import com.jeongmin.honeymoondoctor.feature.nearby.NearbyScreen
+import com.jeongmin.honeymoondoctor.feature.nearby.PlaceEditScreen
+import com.jeongmin.honeymoondoctor.feature.nearby.PlaceImportScreen
 import com.jeongmin.honeymoondoctor.feature.reservation.ReservationDetailScreen
 import com.jeongmin.honeymoondoctor.feature.reservation.ReservationEditScreen
 import com.jeongmin.honeymoondoctor.feature.reservation.ReservationListScreen
@@ -43,6 +45,8 @@ private const val ROUTE_RESERVATION_DETAIL = "reservation_detail"
 private const val ROUTE_RESERVATION_EDIT = "reservation_edit"
 private const val ROUTE_EXPENSE_EDIT = "expense_edit"
 private const val ROUTE_BUDGETS = "budgets"
+private const val ROUTE_PLACE_EDIT = "place_edit"
+private const val ROUTE_PLACE_IMPORT = "place_import"
 
 private fun itineraryEditRoute(itemId: String?): String =
     if (itemId == null) ROUTE_ITINERARY_EDIT else "$ROUTE_ITINERARY_EDIT?itemId=$itemId"
@@ -52,6 +56,9 @@ private fun reservationEditRoute(reservationId: String?): String =
 
 private fun expenseEditRoute(expenseId: String?): String =
     if (expenseId == null) ROUTE_EXPENSE_EDIT else "$ROUTE_EXPENSE_EDIT?expenseId=$expenseId"
+
+private fun placeEditRoute(placeId: String?): String =
+    if (placeId == null) ROUTE_PLACE_EDIT else "$ROUTE_PLACE_EDIT?placeId=$placeId"
 
 /** 데모 모드 배너는 AuthGate가 로그인/여행설정 화면을 포함해 항상 최상단에 그린다. */
 @Composable
@@ -92,7 +99,24 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
             ) {
                 ItineraryEditScreen(onNavigateBack = { navController.popBackStack() })
             }
-            composable(BottomTab.NEARBY.route) { NearbyScreen() }
+            composable(BottomTab.NEARBY.route) {
+                NearbyScreen(onOpenEditor = { placeId -> navController.navigate(placeEditRoute(placeId)) })
+            }
+            composable(
+                route = "$ROUTE_PLACE_EDIT?placeId={placeId}",
+                arguments = listOf(
+                    navArgument("placeId") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                ),
+            ) {
+                PlaceEditScreen(onNavigateBack = { navController.popBackStack() })
+            }
+            composable(ROUTE_PLACE_IMPORT) {
+                PlaceImportScreen(onNavigateBack = { navController.popBackStack() })
+            }
             composable(BottomTab.EXPENSE.route) {
                 ExpenseScreen(
                     onAddExpense = { navController.navigate(expenseEditRoute(null)) },
@@ -123,6 +147,7 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                     onNavigateToReservations = { navController.navigate(ROUTE_RESERVATIONS) },
                     onNavigateToChecklist = { navController.navigate(ROUTE_CHECKLIST) },
                     onNavigateToDecisions = { navController.navigate(ROUTE_DECISIONS) },
+                    onNavigateToPlaceImport = { navController.navigate(ROUTE_PLACE_IMPORT) },
                     onResetDemoData = moreViewModel::resetDemoData,
                 )
             }
