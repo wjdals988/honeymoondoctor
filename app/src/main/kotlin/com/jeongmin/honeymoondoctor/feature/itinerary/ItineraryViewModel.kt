@@ -8,6 +8,7 @@ import com.jeongmin.honeymoondoctor.domain.model.ItineraryStatus
 import com.jeongmin.honeymoondoctor.domain.model.Trip
 import com.jeongmin.honeymoondoctor.domain.repository.AuthRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ItineraryRepository
+import com.jeongmin.honeymoondoctor.domain.repository.ReservationRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
 import com.jeongmin.honeymoondoctor.domain.usecase.ItineraryConflictDetector
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,6 +20,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -49,6 +51,7 @@ class ItineraryViewModel @Inject constructor(
     authRepository: AuthRepository,
     tripRepository: TripRepository,
     private val itineraryRepository: ItineraryRepository,
+    private val reservationRepository: ReservationRepository,
 ) : ViewModel() {
 
     val uiState: StateFlow<ItineraryUiState> = authRepository.currentUser
@@ -81,12 +84,17 @@ class ItineraryViewModel @Inject constructor(
 
     /**
      * 일정 삭제. 연결 데이터 경고·확인은 화면(다이얼로그)에서 이미 거친 뒤 호출된다.
-     * TODO(Phase 5): 예약 저장소가 생기면, 이 일정을 linkedItineraryId로 가리키는 예약의
-     * 참조를 함께 해제해야 한다(스펙 4장 — 자동 연쇄 삭제 금지, 참조 해제만).
+     * 이 일정을 가리키는 예약의 linkedItineraryId는 참조만 해제한다
+     * (스펙 4장 — 자동 연쇄 삭제 금지, 참조 해제만).
      */
     fun delete(item: ItineraryItem) {
         val tripId = uiState.value.trip?.id ?: return
-        viewModelScope.launch { itineraryRepository.delete(tripId, item.id) }
+        viewModelScope.launch {
+            reservationRepository.observeReservations(tripId).first()
+                .filter { it.linkedItineraryId == item.id }
+                .forEach { reservationRepository.update(tripId, it.copy(linkedItineraryId = null)) }
+            itineraryRepository.delete(tripId, item.id)
+        }
     }
 
     private fun buildDays(trip: Trip, items: List<ItineraryItem>): List<ItineraryDay> {

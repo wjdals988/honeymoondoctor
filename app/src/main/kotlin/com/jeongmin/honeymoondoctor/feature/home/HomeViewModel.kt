@@ -8,9 +8,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.Trip
+import com.jeongmin.honeymoondoctor.domain.model.ReservationStatus
 import com.jeongmin.honeymoondoctor.domain.repository.AuthRepository
+import com.jeongmin.honeymoondoctor.domain.repository.BudgetRepository
+import com.jeongmin.honeymoondoctor.domain.repository.ChecklistRepository
 import com.jeongmin.honeymoondoctor.domain.repository.CityRepository
+import com.jeongmin.honeymoondoctor.domain.repository.ExpenseRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ItineraryRepository
+import com.jeongmin.honeymoondoctor.domain.repository.ReservationRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
 import com.jeongmin.honeymoondoctor.domain.usecase.ItineraryConflictDetector
 import com.jeongmin.honeymoondoctor.domain.usecase.NextItineraryCalculator
@@ -44,6 +49,11 @@ data class HomeUiState(
     val now: Instant = Instant.EPOCH,
     val next: NextItinerarySnapshot? = null,
     val conflictCount: Int = 0,
+    /** 출발 전 홈 요약(스펙 7-2): 미완료 필수 준비물, 확인 필요 예약, 예산/지출/잔여 */
+    val requiredChecklistIncomplete: Int = 0,
+    val attentionReservationCount: Int = 0,
+    val totalBudgetKrw: Long = 0,
+    val totalSpentKrw: Long = 0,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -54,6 +64,10 @@ class HomeViewModel @Inject constructor(
     tripRepository: TripRepository,
     itineraryRepository: ItineraryRepository,
     cityRepository: CityRepository,
+    checklistRepository: ChecklistRepository,
+    reservationRepository: ReservationRepository,
+    expenseRepository: ExpenseRepository,
+    budgetRepository: BudgetRepository,
 ) : ViewModel() {
 
     /**
@@ -87,12 +101,32 @@ class HomeViewModel @Inject constructor(
                     if (trip == null) {
                         flowOf(HomeUiState(loading = false))
                     } else {
+                        val preparation = combine(
+                            checklistRepository.observeChecklist(trip.id),
+                            reservationRepository.observeReservations(trip.id),
+                            expenseRepository.observeExpenses(trip.id),
+                            budgetRepository.observeBudgets(trip.id),
+                        ) { checklist, reservations, expenses, budgets ->
+                            PreparationSummary(
+                                requiredChecklistIncomplete = checklist.count { it.required && !it.completed },
+                                attentionReservationCount = reservations.count {
+                                    it.status in setOf(
+                                        ReservationStatus.NEEDS_CHECK,
+                                        ReservationStatus.NEEDS_BOOKING,
+                                        ReservationStatus.NEEDS_PAYMENT,
+                                    )
+                                },
+                                totalBudgetKrw = budgets.sumOf { it.budgetKrw },
+                                totalSpentKrw = expenses.sumOf { it.amountKrw },
+                            )
+                        }
                         combine(
                             itineraryRepository.observeItinerary(trip.id),
                             cityRepository.observeCities(trip.id),
+                            preparation,
                             clock,
-                        ) { items, cities, now ->
-                            buildState(trip, items, cities, now)
+                        ) { items, cities, summary, now ->
+                            buildState(trip, items, cities, now, summary)
                         }
                     }
                 }
@@ -105,6 +139,7 @@ class HomeViewModel @Inject constructor(
         items: List<com.jeongmin.honeymoondoctor.domain.model.ItineraryItem>,
         cities: List<City>,
         now: Instant,
+        summary: PreparationSummary,
     ): HomeUiState {
         val tripStart = runCatching { LocalDate.parse(trip.startDate) }.getOrNull()
         val tripEnd = runCatching { LocalDate.parse(trip.endDate) }.getOrNull()
@@ -144,6 +179,17 @@ class HomeViewModel @Inject constructor(
             now = now,
             next = snapshot,
             conflictCount = ItineraryConflictDetector.findConflictingIds(items).size,
+            requiredChecklistIncomplete = summary.requiredChecklistIncomplete,
+            attentionReservationCount = summary.attentionReservationCount,
+            totalBudgetKrw = summary.totalBudgetKrw,
+            totalSpentKrw = summary.totalSpentKrw,
         )
     }
 }
+
+private data class PreparationSummary(
+    val requiredChecklistIncomplete: Int,
+    val attentionReservationCount: Int,
+    val totalBudgetKrw: Long,
+    val totalSpentKrw: Long,
+)

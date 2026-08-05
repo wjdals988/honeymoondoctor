@@ -4,12 +4,18 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.jeongmin.honeymoondoctor.core.security.InviteCode
+import com.jeongmin.honeymoondoctor.data.checklist.toFirestoreMap
 import com.jeongmin.honeymoondoctor.data.city.toFirestoreMap
+import com.jeongmin.honeymoondoctor.data.decision.toFirestoreMap
 import com.jeongmin.honeymoondoctor.data.firestore.snapshotFlow
 import com.jeongmin.honeymoondoctor.data.itinerary.toFirestoreMap
+import com.jeongmin.honeymoondoctor.data.reservation.toFirestoreMap
 import com.jeongmin.honeymoondoctor.data.seed.SeedAssetLoader
+import com.jeongmin.honeymoondoctor.data.seed.toDomainChecklistItem
 import com.jeongmin.honeymoondoctor.data.seed.toDomainCity
+import com.jeongmin.honeymoondoctor.data.seed.toDomainDecision
 import com.jeongmin.honeymoondoctor.data.seed.toDomainItem
+import com.jeongmin.honeymoondoctor.data.seed.toDomainReservation
 import com.jeongmin.honeymoondoctor.domain.model.JoinRequest
 import com.jeongmin.honeymoondoctor.domain.model.JoinRequestStatus
 import com.jeongmin.honeymoondoctor.domain.model.Trip
@@ -96,6 +102,36 @@ class FirebaseTripRepository @Inject constructor(
                 transaction.set(
                     tripRef.collection("itinerary").document(item.id),
                     item.toFirestoreMap() + mapOf(
+                        "createdAt" to FieldValue.serverTimestamp(),
+                        "updatedAt" to FieldValue.serverTimestamp(),
+                    ),
+                )
+            }
+            seed.reservations.forEach { reservationSeed ->
+                val reservation = reservationSeed.toDomainReservation()
+                transaction.set(
+                    tripRef.collection("reservations").document(reservation.id),
+                    reservation.toFirestoreMap() + mapOf(
+                        "createdAt" to FieldValue.serverTimestamp(),
+                        "updatedAt" to FieldValue.serverTimestamp(),
+                    ),
+                )
+            }
+            seed.checklistItems.forEach { checklistSeed ->
+                val checklistItem = checklistSeed.toDomainChecklistItem()
+                transaction.set(
+                    tripRef.collection("checklistItems").document(checklistItem.id),
+                    checklistItem.toFirestoreMap() + mapOf(
+                        "createdAt" to FieldValue.serverTimestamp(),
+                        "updatedAt" to FieldValue.serverTimestamp(),
+                    ),
+                )
+            }
+            seed.decisions.forEach { decisionSeed ->
+                val decision = decisionSeed.toDomainDecision()
+                transaction.set(
+                    tripRef.collection("decisions").document(decision.id),
+                    decision.toFirestoreMap() + mapOf(
                         "createdAt" to FieldValue.serverTimestamp(),
                         "updatedAt" to FieldValue.serverTimestamp(),
                     ),

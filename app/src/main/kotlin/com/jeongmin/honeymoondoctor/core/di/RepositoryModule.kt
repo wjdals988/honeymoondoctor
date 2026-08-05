@@ -3,15 +3,30 @@ package com.jeongmin.honeymoondoctor.core.di
 import com.jeongmin.honeymoondoctor.core.demo.DemoModeManager
 import com.jeongmin.honeymoondoctor.data.auth.DemoAuthRepository
 import com.jeongmin.honeymoondoctor.data.auth.FirebaseAuthRepository
+import com.jeongmin.honeymoondoctor.data.checklist.DemoChecklistRepository
+import com.jeongmin.honeymoondoctor.data.checklist.FirebaseChecklistRepository
 import com.jeongmin.honeymoondoctor.data.city.DemoCityRepository
 import com.jeongmin.honeymoondoctor.data.city.FirebaseCityRepository
+import com.jeongmin.honeymoondoctor.data.decision.DemoDecisionRepository
+import com.jeongmin.honeymoondoctor.data.decision.FirebaseDecisionRepository
+import com.jeongmin.honeymoondoctor.data.expense.DemoBudgetRepository
+import com.jeongmin.honeymoondoctor.data.expense.DemoExpenseRepository
+import com.jeongmin.honeymoondoctor.data.expense.FirebaseBudgetRepository
+import com.jeongmin.honeymoondoctor.data.expense.FirebaseExpenseRepository
 import com.jeongmin.honeymoondoctor.data.itinerary.DemoItineraryRepository
 import com.jeongmin.honeymoondoctor.data.itinerary.FirebaseItineraryRepository
+import com.jeongmin.honeymoondoctor.data.reservation.DemoReservationRepository
+import com.jeongmin.honeymoondoctor.data.reservation.FirebaseReservationRepository
 import com.jeongmin.honeymoondoctor.data.trip.DemoTripRepository
 import com.jeongmin.honeymoondoctor.data.trip.FirebaseTripRepository
 import com.jeongmin.honeymoondoctor.domain.repository.AuthRepository
+import com.jeongmin.honeymoondoctor.domain.repository.BudgetRepository
+import com.jeongmin.honeymoondoctor.domain.repository.ChecklistRepository
 import com.jeongmin.honeymoondoctor.domain.repository.CityRepository
+import com.jeongmin.honeymoondoctor.domain.repository.DecisionRepository
+import com.jeongmin.honeymoondoctor.domain.repository.ExpenseRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ItineraryRepository
+import com.jeongmin.honeymoondoctor.domain.repository.ReservationRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
 import dagger.Module
 import dagger.Provides
@@ -60,4 +75,44 @@ object RepositoryModule {
         demo: Provider<DemoCityRepository>,
         firebase: Provider<FirebaseCityRepository>,
     ): CityRepository = if (demoModeManager.isDemoMode) demo.get() else firebase.get()
+
+    @Provides
+    @Singleton
+    fun provideChecklistRepository(
+        demoModeManager: DemoModeManager,
+        demo: Provider<DemoChecklistRepository>,
+        firebase: Provider<FirebaseChecklistRepository>,
+    ): ChecklistRepository = if (demoModeManager.isDemoMode) demo.get() else firebase.get()
+
+    @Provides
+    @Singleton
+    fun provideReservationRepository(
+        demoModeManager: DemoModeManager,
+        demo: Provider<DemoReservationRepository>,
+        firebase: Provider<FirebaseReservationRepository>,
+    ): ReservationRepository = if (demoModeManager.isDemoMode) demo.get() else firebase.get()
+
+    @Provides
+    @Singleton
+    fun provideDecisionRepository(
+        demoModeManager: DemoModeManager,
+        demo: Provider<DemoDecisionRepository>,
+        firebase: Provider<FirebaseDecisionRepository>,
+    ): DecisionRepository = if (demoModeManager.isDemoMode) demo.get() else firebase.get()
+
+    @Provides
+    @Singleton
+    fun provideExpenseRepository(
+        demoModeManager: DemoModeManager,
+        demo: Provider<DemoExpenseRepository>,
+        firebase: Provider<FirebaseExpenseRepository>,
+    ): ExpenseRepository = if (demoModeManager.isDemoMode) demo.get() else firebase.get()
+
+    @Provides
+    @Singleton
+    fun provideBudgetRepository(
+        demoModeManager: DemoModeManager,
+        demo: Provider<DemoBudgetRepository>,
+        firebase: Provider<FirebaseBudgetRepository>,
+    ): BudgetRepository = if (demoModeManager.isDemoMode) demo.get() else firebase.get()
 }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -23,6 +24,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -44,6 +46,9 @@ fun HomeScreen(
     onAddItinerary: () -> Unit,
     onOpenItineraryTab: () -> Unit,
     onOpenNearbyTab: () -> Unit,
+    onAddExpense: () -> Unit,
+    onOpenReservations: () -> Unit,
+    onOpenChecklist: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -70,11 +75,19 @@ fun HomeScreen(
             if (uiState.conflictCount > 0) {
                 ConflictWarningCard(count = uiState.conflictCount)
             }
+            PreparationSummaryCard(
+                uiState = uiState,
+                onOpenReservations = onOpenReservations,
+                onOpenChecklist = onOpenChecklist,
+            )
             TodayTimelineSection(uiState)
             QuickActions(
                 onAddItinerary = onAddItinerary,
                 onOpenItineraryTab = onOpenItineraryTab,
                 onOpenNearbyTab = onOpenNearbyTab,
+                onAddExpense = onAddExpense,
+                onOpenReservations = onOpenReservations,
+                onOpenChecklist = onOpenChecklist,
             )
             Spacer(Modifier.height(8.dp))
         }
@@ -275,31 +288,105 @@ private fun TodayTimelineSection(uiState: HomeUiState) {
     }
 }
 
+/** 출발 전 준비 요약(스펙 7-2): 미완료 필수 준비물, 확인 필요 예약, 예산 현황. */
+@Composable
+private fun PreparationSummaryCard(
+    uiState: HomeUiState,
+    onOpenReservations: () -> Unit,
+    onOpenChecklist: () -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Text("준비 현황", style = MaterialTheme.typography.titleSmall)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = if (uiState.requiredChecklistIncomplete > 0) {
+                        "미완료 필수 준비물 ${uiState.requiredChecklistIncomplete}개"
+                    } else {
+                        "필수 준비물 완료"
+                    },
+                    modifier = Modifier.weight(1f),
+                    color = if (uiState.requiredChecklistIncomplete > 0) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                )
+                TextButton(onClick = onOpenChecklist) { Text("준비물") }
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = if (uiState.attentionReservationCount > 0) {
+                        "주의 증상: 확인이 필요한 예약 ${uiState.attentionReservationCount}건"
+                    } else {
+                        "확인 필요 예약 없음"
+                    },
+                    modifier = Modifier.weight(1f),
+                    color = if (uiState.attentionReservationCount > 0) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                )
+                TextButton(onClick = onOpenReservations) { Text("예약함") }
+            }
+            val budgetText = if (uiState.totalBudgetKrw > 0) {
+                val remaining = uiState.totalBudgetKrw - uiState.totalSpentKrw
+                "예산 ${formatWon(uiState.totalBudgetKrw)} · 지출 ${formatWon(uiState.totalSpentKrw)} · " +
+                    if (remaining >= 0) "잔여 ${formatWon(remaining)}" else "초과 ${formatWon(-remaining)}"
+            } else {
+                "지출 ${formatWon(uiState.totalSpentKrw)} · 예산 미설정"
+            }
+            Text(
+                text = budgetText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
 @Composable
 private fun QuickActions(
     onAddItinerary: () -> Unit,
     onOpenItineraryTab: () -> Unit,
     onOpenNearbyTab: () -> Unit,
+    onAddExpense: () -> Unit,
+    onOpenReservations: () -> Unit,
+    onOpenChecklist: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("빠른 실행", style = MaterialTheme.typography.titleMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilledTonalButton(onClick = onAddItinerary) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+        ) {
+            FilledTonalButton(onClick = onAddExpense) {
                 Icon(Icons.Filled.Add, contentDescription = null)
                 Spacer(Modifier.width(4.dp))
-                Text("일정 추가")
+                Text("지출 추가")
             }
-            FilledTonalButton(onClick = onOpenItineraryTab) {
-                Text("일정 전체")
-            }
+            FilledTonalButton(onClick = onOpenReservations) { Text("예약함") }
+            FilledTonalButton(onClick = onOpenChecklist) { Text("준비물") }
             FilledTonalButton(onClick = onOpenNearbyTab) {
                 Icon(Icons.Filled.Place, contentDescription = null)
                 Spacer(Modifier.width(4.dp))
                 Text("주변")
             }
+            FilledTonalButton(onClick = onAddItinerary) { Text("일정 추가") }
+            FilledTonalButton(onClick = onOpenItineraryTab) { Text("일정 전체") }
         }
     }
 }
+
+private fun formatWon(amount: Long): String =
+    "${java.text.NumberFormat.getNumberInstance(java.util.Locale.KOREA).format(amount)}원"
 
 private fun formatRemaining(duration: Duration): String {
     val totalMinutes = duration.toMinutes()

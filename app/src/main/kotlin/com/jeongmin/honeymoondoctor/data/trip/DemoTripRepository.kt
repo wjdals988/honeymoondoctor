@@ -4,12 +4,18 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.jeongmin.honeymoondoctor.core.security.InviteCode
+import com.jeongmin.honeymoondoctor.data.checklist.DemoChecklistRepository
 import com.jeongmin.honeymoondoctor.data.city.DemoCityRepository
+import com.jeongmin.honeymoondoctor.data.decision.DemoDecisionRepository
 import com.jeongmin.honeymoondoctor.data.itinerary.DemoItineraryRepository
 import com.jeongmin.honeymoondoctor.data.local.prefs.appDataStore
+import com.jeongmin.honeymoondoctor.data.reservation.DemoReservationRepository
 import com.jeongmin.honeymoondoctor.data.seed.SeedAssetLoader
+import com.jeongmin.honeymoondoctor.data.seed.toDomainChecklistItem
 import com.jeongmin.honeymoondoctor.data.seed.toDomainCity
+import com.jeongmin.honeymoondoctor.data.seed.toDomainDecision
 import com.jeongmin.honeymoondoctor.data.seed.toDomainItem
+import com.jeongmin.honeymoondoctor.data.seed.toDomainReservation
 import com.jeongmin.honeymoondoctor.domain.model.JoinRequest
 import com.jeongmin.honeymoondoctor.domain.model.JoinRequestStatus
 import com.jeongmin.honeymoondoctor.domain.model.Trip
@@ -39,6 +45,9 @@ class DemoTripRepository @Inject constructor(
     private val seedAssetLoader: SeedAssetLoader,
     private val demoItineraryRepository: DemoItineraryRepository,
     private val demoCityRepository: DemoCityRepository,
+    private val demoReservationRepository: DemoReservationRepository,
+    private val demoChecklistRepository: DemoChecklistRepository,
+    private val demoDecisionRepository: DemoDecisionRepository,
 ) : com.jeongmin.honeymoondoctor.domain.repository.TripRepository {
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -82,9 +91,12 @@ class DemoTripRepository @Inject constructor(
         )
         saveState(state)
         // 시드 데이터는 여행 최초 생성 시에만 삽입한다(스펙 4장). 여행 생성이 유일한 진입점이므로
-        // 재실행·동기화 시 재삽입되지 않는다. Phase 5에서 예약·준비물·결정함 시드도 여기에 추가한다.
+        // 재실행·동기화 시 재삽입되지 않는다.
         demoCityRepository.seedForNewTrip(tripId, seed.cities.map { it.toDomainCity() })
         demoItineraryRepository.seedForNewTrip(tripId, seed.itinerary.map { it.toDomainItem() })
+        demoReservationRepository.seedForNewTrip(tripId, seed.reservations.map { it.toDomainReservation() })
+        demoChecklistRepository.seedForNewTrip(tripId, seed.checklistItems.map { it.toDomainChecklistItem() })
+        demoDecisionRepository.seedForNewTrip(tripId, seed.decisions.map { it.toDomainDecision() })
         return state.toDomain()
     }
 

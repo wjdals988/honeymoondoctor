@@ -18,6 +18,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.jeongmin.honeymoondoctor.feature.checklist.ChecklistScreen
+import com.jeongmin.honeymoondoctor.feature.decision.DecisionScreen
+import com.jeongmin.honeymoondoctor.feature.expense.BudgetScreen
+import com.jeongmin.honeymoondoctor.feature.expense.ExpenseEditScreen
 import com.jeongmin.honeymoondoctor.feature.expense.ExpenseScreen
 import com.jeongmin.honeymoondoctor.feature.home.HomeScreen
 import com.jeongmin.honeymoondoctor.feature.itinerary.ItineraryEditScreen
@@ -25,13 +29,29 @@ import com.jeongmin.honeymoondoctor.feature.itinerary.ItineraryScreen
 import com.jeongmin.honeymoondoctor.feature.more.MoreScreen
 import com.jeongmin.honeymoondoctor.feature.more.MoreViewModel
 import com.jeongmin.honeymoondoctor.feature.nearby.NearbyScreen
+import com.jeongmin.honeymoondoctor.feature.reservation.ReservationDetailScreen
+import com.jeongmin.honeymoondoctor.feature.reservation.ReservationEditScreen
+import com.jeongmin.honeymoondoctor.feature.reservation.ReservationListScreen
 import com.jeongmin.honeymoondoctor.feature.tripinfo.TripInfoScreen
 
 private const val ROUTE_TRIP_INFO = "trip_info"
 private const val ROUTE_ITINERARY_EDIT = "itinerary_edit"
+private const val ROUTE_CHECKLIST = "checklist"
+private const val ROUTE_DECISIONS = "decisions"
+private const val ROUTE_RESERVATIONS = "reservations"
+private const val ROUTE_RESERVATION_DETAIL = "reservation_detail"
+private const val ROUTE_RESERVATION_EDIT = "reservation_edit"
+private const val ROUTE_EXPENSE_EDIT = "expense_edit"
+private const val ROUTE_BUDGETS = "budgets"
 
 private fun itineraryEditRoute(itemId: String?): String =
     if (itemId == null) ROUTE_ITINERARY_EDIT else "$ROUTE_ITINERARY_EDIT?itemId=$itemId"
+
+private fun reservationEditRoute(reservationId: String?): String =
+    if (reservationId == null) ROUTE_RESERVATION_EDIT else "$ROUTE_RESERVATION_EDIT?reservationId=$reservationId"
+
+private fun expenseEditRoute(expenseId: String?): String =
+    if (expenseId == null) ROUTE_EXPENSE_EDIT else "$ROUTE_EXPENSE_EDIT?expenseId=$expenseId"
 
 /** 데모 모드 배너는 AuthGate가 로그인/여행설정 화면을 포함해 항상 최상단에 그린다. */
 @Composable
@@ -52,6 +72,9 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                     onAddItinerary = { navController.navigate(itineraryEditRoute(null)) },
                     onOpenItineraryTab = { navController.navigateToTab(BottomTab.ITINERARY) },
                     onOpenNearbyTab = { navController.navigateToTab(BottomTab.NEARBY) },
+                    onAddExpense = { navController.navigate(expenseEditRoute(null)) },
+                    onOpenReservations = { navController.navigate(ROUTE_RESERVATIONS) },
+                    onOpenChecklist = { navController.navigate(ROUTE_CHECKLIST) },
                 )
             }
             composable(BottomTab.ITINERARY.route) {
@@ -70,16 +93,74 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                 ItineraryEditScreen(onNavigateBack = { navController.popBackStack() })
             }
             composable(BottomTab.NEARBY.route) { NearbyScreen() }
-            composable(BottomTab.EXPENSE.route) { ExpenseScreen() }
+            composable(BottomTab.EXPENSE.route) {
+                ExpenseScreen(
+                    onAddExpense = { navController.navigate(expenseEditRoute(null)) },
+                    onEditExpense = { expenseId -> navController.navigate(expenseEditRoute(expenseId)) },
+                    onOpenBudgets = { navController.navigate(ROUTE_BUDGETS) },
+                )
+            }
+            composable(
+                route = "$ROUTE_EXPENSE_EDIT?expenseId={expenseId}",
+                arguments = listOf(
+                    navArgument("expenseId") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                ),
+            ) {
+                ExpenseEditScreen(onNavigateBack = { navController.popBackStack() })
+            }
+            composable(ROUTE_BUDGETS) {
+                BudgetScreen(onNavigateBack = { navController.popBackStack() })
+            }
             composable(BottomTab.MORE.route) {
                 val moreViewModel: MoreViewModel = hiltViewModel()
                 MoreScreen(
                     isDemoMode = isDemoMode,
                     onNavigateToTripInfo = { navController.navigate(ROUTE_TRIP_INFO) },
+                    onNavigateToReservations = { navController.navigate(ROUTE_RESERVATIONS) },
+                    onNavigateToChecklist = { navController.navigate(ROUTE_CHECKLIST) },
+                    onNavigateToDecisions = { navController.navigate(ROUTE_DECISIONS) },
                     onResetDemoData = moreViewModel::resetDemoData,
                 )
             }
             composable(ROUTE_TRIP_INFO) { TripInfoScreen() }
+            composable(ROUTE_CHECKLIST) {
+                ChecklistScreen(onNavigateBack = { navController.popBackStack() })
+            }
+            composable(ROUTE_DECISIONS) {
+                DecisionScreen(onNavigateBack = { navController.popBackStack() })
+            }
+            composable(ROUTE_RESERVATIONS) {
+                ReservationListScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onOpenDetail = { id -> navController.navigate("$ROUTE_RESERVATION_DETAIL/$id") },
+                    onCreate = { navController.navigate(reservationEditRoute(null)) },
+                )
+            }
+            composable(
+                route = "$ROUTE_RESERVATION_DETAIL/{reservationId}",
+                arguments = listOf(navArgument("reservationId") { type = NavType.StringType }),
+            ) {
+                ReservationDetailScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onEdit = { id -> navController.navigate(reservationEditRoute(id)) },
+                )
+            }
+            composable(
+                route = "$ROUTE_RESERVATION_EDIT?reservationId={reservationId}",
+                arguments = listOf(
+                    navArgument("reservationId") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                ),
+            ) {
+                ReservationEditScreen(onNavigateBack = { navController.popBackStack() })
+            }
         }
     }
 }

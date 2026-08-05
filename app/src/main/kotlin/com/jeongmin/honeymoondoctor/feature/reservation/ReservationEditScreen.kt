@@ -1,4 +1,4 @@
-package com.jeongmin.honeymoondoctor.feature.itinerary
+package com.jeongmin.honeymoondoctor.feature.reservation
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,16 +34,16 @@ import com.jeongmin.honeymoondoctor.core.time.koreanZoneLabel
 import com.jeongmin.honeymoondoctor.core.ui.DateField
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.core.ui.TimeField
-import com.jeongmin.honeymoondoctor.domain.model.ItineraryType
+import com.jeongmin.honeymoondoctor.domain.model.ReservationStatus
+import com.jeongmin.honeymoondoctor.domain.model.ReservationType
 
-/** 이번 여행에서 고를 수 있는 시간대 후보. 도시를 고르면 자동으로 바뀌고, 직접 바꿀 수도 있다. */
 private val timeZoneOptions = listOf("Asia/Seoul", "Europe/Prague", "Europe/Madrid")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ItineraryEditScreen(
+fun ReservationEditScreen(
     onNavigateBack: () -> Unit,
-    viewModel: ItineraryEditViewModel = hiltViewModel(),
+    viewModel: ReservationEditViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val form by viewModel.form.collectAsState()
@@ -51,16 +51,14 @@ fun ItineraryEditScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (form?.itemId == null) "일정 추가" else "일정 수정") },
+                title = { Text(if (form?.reservationId == null) "예약 추가" else "예약 수정") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로")
                     }
                 },
                 actions = {
-                    TextButton(onClick = { viewModel.save(onSaved = onNavigateBack) }) {
-                        Text("저장")
-                    }
+                    TextButton(onClick = { viewModel.save(onSaved = onNavigateBack) }) { Text("저장") }
                 },
             )
         },
@@ -83,139 +81,137 @@ fun ItineraryEditScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             uiState.validationError?.let { error ->
-                Text(
-                    text = error,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
             }
 
             OutlinedTextField(
                 value = currentForm.title,
                 onValueChange = { value -> viewModel.updateForm { it.copy(title = value) } },
-                label = { Text("일정 이름 *") },
+                label = { Text("예약명 *") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = currentForm.vendor,
+                onValueChange = { value -> viewModel.updateForm { it.copy(vendor = value) } },
+                label = { Text("업체명") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            DropdownSelector(
+                label = "유형",
+                selectedLabel = currentForm.type.labelKo,
+                options = ReservationType.entries,
+                optionLabel = { it.labelKo },
+                onSelect = { type -> viewModel.updateForm { it.copy(type = type) } },
+            )
+            DropdownSelector(
+                label = "상태",
+                selectedLabel = currentForm.status.labelKo,
+                options = ReservationStatus.entries,
+                optionLabel = { it.labelKo },
+                onSelect = { status -> viewModel.updateForm { it.copy(status = status) } },
+            )
+            OutlinedTextField(
+                value = currentForm.confirmationCode,
+                onValueChange = { value -> viewModel.updateForm { it.copy(confirmationCode = value) } },
+                label = { Text("예약번호") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = currentForm.pin,
+                onValueChange = { value -> viewModel.updateForm { it.copy(pin = value) } },
+                label = { Text("PIN") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            DropdownSelector(
-                label = "유형",
-                selectedLabel = currentForm.type.labelKo,
-                options = ItineraryType.entries,
-                optionLabel = { it.labelKo },
-                onSelect = { type -> viewModel.updateForm { it.copy(type = type) } },
-            )
-
-            DropdownSelector(
-                label = "도시",
-                selectedLabel = uiState.cities.firstOrNull { it.id == currentForm.cityId }?.displayName ?: "선택 안 함",
-                options = uiState.cities + listOf(null),
-                optionLabel = { it?.displayName ?: "선택 안 함" },
-                onSelect = viewModel::selectCity,
-            )
-
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("종일 일정", modifier = Modifier.weight(1f))
+                Text("일시 입력", modifier = Modifier.weight(1f))
                 Switch(
-                    checked = currentForm.allDay,
-                    onCheckedChange = { checked -> viewModel.updateForm { it.copy(allDay = checked) } },
+                    checked = currentForm.hasSchedule,
+                    onCheckedChange = { checked -> viewModel.updateForm { it.copy(hasSchedule = checked) } },
                 )
             }
-
-            DateField(
-                label = if (currentForm.allDay) "시작 날짜" else "날짜",
-                date = currentForm.startDate,
-                onDateChange = { date ->
-                    viewModel.updateForm {
-                        // 종료 날짜가 시작보다 앞서지 않게 따라 움직인다
-                        it.copy(startDate = date, endDate = if (it.endDate.isBefore(date)) date else it.endDate)
-                    }
-                },
-            )
-
-            if (currentForm.allDay) {
+            if (currentForm.hasSchedule) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("종일(날짜 범위)", modifier = Modifier.weight(1f))
+                    Switch(
+                        checked = currentForm.allDay,
+                        onCheckedChange = { checked -> viewModel.updateForm { it.copy(allDay = checked) } },
+                    )
+                }
+                DateField(
+                    label = "시작 날짜",
+                    date = currentForm.startDate,
+                    onDateChange = { date ->
+                        viewModel.updateForm {
+                            it.copy(startDate = date, endDate = if (it.endDate.isBefore(date)) date else it.endDate)
+                        }
+                    },
+                )
+                if (!currentForm.allDay) {
+                    TimeField(
+                        label = "시작 시각",
+                        time = currentForm.startTime,
+                        onTimeChange = { time -> viewModel.updateForm { it.copy(startTime = time) } },
+                    )
+                }
                 DateField(
                     label = "종료 날짜",
                     date = currentForm.endDate,
                     onDateChange = { date -> viewModel.updateForm { it.copy(endDate = date) } },
                 )
-            } else {
-                TimeField(
-                    label = "시작 시각",
-                    time = currentForm.startTime,
-                    onTimeChange = { time -> viewModel.updateForm { it.copy(startTime = time) } },
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("종료 시각 입력", modifier = Modifier.weight(1f))
-                    Switch(
-                        checked = currentForm.hasEnd,
-                        onCheckedChange = { checked -> viewModel.updateForm { it.copy(hasEnd = checked) } },
-                    )
-                }
-                if (currentForm.hasEnd) {
-                    DateField(
-                        label = "종료 날짜",
-                        date = currentForm.endDate,
-                        onDateChange = { date -> viewModel.updateForm { it.copy(endDate = date) } },
-                    )
+                if (!currentForm.allDay) {
                     TimeField(
                         label = "종료 시각",
                         time = currentForm.endTime,
                         onTimeChange = { time -> viewModel.updateForm { it.copy(endTime = time) } },
                     )
                 }
+                DropdownSelector(
+                    label = "시간대",
+                    selectedLabel = "${koreanZoneLabel(currentForm.timeZone)} (${currentForm.timeZone})",
+                    options = (timeZoneOptions + currentForm.timeZone).distinct(),
+                    optionLabel = { "${koreanZoneLabel(it)} ($it)" },
+                    onSelect = { zone -> viewModel.updateForm { it.copy(timeZone = zone) } },
+                )
+                if (!currentForm.allDay) {
+                    DropdownSelector(
+                        label = "도착(종료) 시간대 — 비행처럼 시간대가 바뀔 때만",
+                        selectedLabel = currentForm.endTimeZone
+                            ?.let { "${koreanZoneLabel(it)} ($it)" } ?: "출발과 동일",
+                        options = listOf<String?>(null) + timeZoneOptions,
+                        optionLabel = { it?.let { z -> "${koreanZoneLabel(z)} ($z)" } ?: "출발과 동일" },
+                        onSelect = { zone -> viewModel.updateForm { it.copy(endTimeZone = zone) } },
+                    )
+                }
             }
 
             DropdownSelector(
-                label = "시간대",
-                selectedLabel = "${koreanZoneLabel(currentForm.timeZone)} (${currentForm.timeZone})",
-                options = (timeZoneOptions + currentForm.timeZone).distinct(),
-                optionLabel = { "${koreanZoneLabel(it)} ($it)" },
-                onSelect = { zone -> viewModel.updateForm { it.copy(timeZone = zone) } },
+                label = "연결 일정",
+                selectedLabel = uiState.itinerary.firstOrNull { it.id == currentForm.linkedItineraryId }?.title
+                    ?: "연결 안 함",
+                options = listOf(null) + uiState.itinerary,
+                optionLabel = { it?.title ?: "연결 안 함" },
+                onSelect = { item -> viewModel.updateForm { it.copy(linkedItineraryId = item?.id) } },
             )
-
-            if (!currentForm.allDay && currentForm.hasEnd) {
-                DropdownSelector(
-                    label = "도착(종료) 시간대 — 비행처럼 시간대가 바뀔 때만",
-                    selectedLabel = currentForm.endTimeZone
-                        ?.let { "${koreanZoneLabel(it)} ($it)" } ?: "출발과 동일",
-                    options = listOf<String?>(null) + (timeZoneOptions + (currentForm.endTimeZone ?: "")).filter { it.isNotEmpty() }.distinct(),
-                    optionLabel = { it?.let { z -> "${koreanZoneLabel(z)} ($z)" } ?: "출발과 동일" },
-                    onSelect = { zone -> viewModel.updateForm { it.copy(endTimeZone = zone) } },
-                )
-            }
-
-            OutlinedTextField(
-                value = currentForm.location,
-                onValueChange = { value -> viewModel.updateForm { it.copy(location = value) } },
-                label = { Text("장소명") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            OutlinedTextField(
-                value = currentForm.address,
-                onValueChange = { value -> viewModel.updateForm { it.copy(address = value) } },
-                label = { Text("주소") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-
             DropdownSelector(
                 label = "담당자",
-                selectedLabel = uiState.members.firstOrNull { it.uid == currentForm.assigneeUid }?.displayName ?: "없음",
+                selectedLabel = uiState.members.firstOrNull { it.uid == currentForm.assigneeUid }?.displayName
+                    ?: "없음",
                 options = listOf(null) + uiState.members,
                 optionLabel = { it?.displayName ?: "없음" },
                 onSelect = { member -> viewModel.updateForm { it.copy(assigneeUid = member?.uid) } },
             )
-
             OutlinedTextField(
                 value = currentForm.estimatedKrwText,
                 onValueChange = { value -> viewModel.updateForm { it.copy(estimatedKrwText = value) } },
-                label = { Text("예상 경비 (원)") },
+                label = { Text("예상 비용 (원)") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-
             OutlinedTextField(
                 value = currentForm.notes,
                 onValueChange = { value -> viewModel.updateForm { it.copy(notes = value) } },
@@ -227,7 +223,7 @@ fun ItineraryEditScreen(
             Button(
                 onClick = { viewModel.save(onSaved = onNavigateBack) },
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text(if (currentForm.itemId == null) "일정 추가" else "변경 사항 저장") }
+            ) { Text(if (currentForm.reservationId == null) "예약 추가" else "변경 사항 저장") }
         }
     }
 }

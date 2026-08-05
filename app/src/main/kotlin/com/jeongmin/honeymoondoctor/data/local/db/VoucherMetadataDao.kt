@@ -12,6 +12,9 @@ interface VoucherMetadataDao {
     @Query("SELECT * FROM voucher_metadata WHERE reservationId = :reservationId")
     fun observeForReservation(reservationId: String): Flow<List<VoucherMetadataEntity>>
 
+    @Query("SELECT * FROM voucher_metadata WHERE reservationId = :reservationId")
+    suspend fun listForReservation(reservationId: String): List<VoucherMetadataEntity>
+
     @Query("SELECT COALESCE(SUM(sizeBytes), 0) FROM voucher_metadata")
     suspend fun totalSizeBytes(): Long
 
