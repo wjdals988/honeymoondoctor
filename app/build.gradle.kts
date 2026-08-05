@@ -91,6 +91,18 @@ android {
             isReturnDefaultValues = true
         }
     }
+
+    sourceSets {
+        getByName("test") {
+            // 시드 JSON을 Android Context 없이도 유닛테스트에서 읽을 수 있도록 클래스패스에 포함한다.
+            resources.directories += "src/main/assets"
+        }
+    }
+}
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+    arg("room.generateKotlin", "true")
 }
 
 dependencies {
