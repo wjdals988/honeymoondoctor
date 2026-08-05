@@ -2,11 +2,14 @@
 
 원본 요구사항 전문은 [SPEC.md](SPEC.md). 이 문서는 "지금까지 뭘 했고, 왜 그렇게 했고, 다음에 뭘 해야 하는지"만 담는다.
 
-마지막 갱신: 2026-08-05, 커밋 `575fd24`까지 반영.
+마지막 갱신: 2026-08-05, 커밋 `6058bfa`(Phase 4)까지 반영.
 
 ## 저장소 위치 / 실행 환경
 
-- 프로젝트 루트: `/Users/user/my-travelapp` (git repo, branch `main`, 로컬 전용 — 원격 push 안 함)
+- 프로젝트 루트: `/Users/user/my-travelapp` (git repo, branch `main`)
+- 원격: `origin = https://github.com/wjdals988/honeymoondoctor.git` 등록됨. **아직 push 못 함** —
+  이 맥에는 github.com 자격증명이 없다(gh는 oss.navercorp.com에만 로그인, SSH 키도 미등록).
+  사용자가 `gh auth login --hostname github.com` 후 `git push -u origin main` 하면 된다.
 - `/Users/user/series-qa-pipeline-claude`는 **완전히 다른 프로젝트**(TestRail QA 파이프라인)다. 절대 헷갈리지 말 것.
 - Android SDK: `~/Library/Android/sdk` (platform 36.1 / 37 설치됨)
 - JDK: Temurin 21 — `export JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home` 하고 `./gradlew` 실행
@@ -27,7 +30,7 @@
 | 1 | Gradle/Compose/Hilt/Navigation 스캐폴딩, 데모모드, 테마 | ✅ 완료 | `52171aa` |
 | 2 | 시드 JSON, 41개 장소 TSV/JSON 템플릿, Room/DataStore | ✅ 완료 | `6f65ff8` |
 | 3 | 인증(Google 로그인), 2인 공유, `firestore.rules`, Emulator 테스트 | ✅ 완료 | `575fd24` |
-| 4 | 일정 CRUD, 홈 "다음 일정" 계산 + 타임존 유닛테스트 | ⬜ 미착수 | — |
+| 4 | 일정 CRUD, 홈 "다음 일정" 계산 + 타임존 유닛테스트 | ✅ 완료 | `6058bfa` |
 | 5 | 준비물, 예약 메타데이터, 기기 내 바우처, 경비·예산·결정함 | ⬜ 미착수 | — |
 | 6 | 주변 추천, 위치 권한, Haversine, 추천 점수, Maps Intent | ⬜ 미착수 | — |
 | 7 | 오프라인 상태, 동기화 대기 추적, 로컬 알림 | ⬜ 미착수 | — |
@@ -43,13 +46,17 @@ cd /Users/user/my-travelapp
 # Firestore 보안규칙 (firestore.rules 건드렸을 때만)
 cd firebase && npm test
 ```
-마지막 실행 결과(2026-08-05): assembleDebug 성공, 유닛테스트 12/12 통과, lint 차단오류 0건(경미한 경고 8건), rules 테스트 12/12 통과.
+마지막 실행 결과(2026-08-05, Phase 4 후): assembleDebug 성공, 유닛테스트 30/30 통과, lint 차단오류 0건(경미한 경고 7건). rules 테스트는 Phase 3에서 12/12 통과(Phase 4는 rules 변경 없음).
+
+에뮬레이터 스모크(2026-08-05, `HoneymoonDoctor_Dev`=emulator-5556, 데모 모드): 여행 생성 → 시드 항공편 3건 일정 탭 표시(시간대 라벨 포함), 일정 추가/완료/삭제, KST·프라하 교차 시간대 겹침의 과로 경고 표시·완료 시 해제, 연결 예약 삭제 경고 다이얼로그, 홈 D-35·다음 일정 카드·남은 시간 확인.
 
 ## 핵심 아키텍처 결정 (Phase 4 이후에도 그대로 따를 것)
 
 - **Demo/Firebase 이중 구현 + 런타임 라우팅**: `domain/repository/*Repository` 인터페이스 하나당 `data/*/Demo*Repository`(DataStore/Room 기반, 실기기 계정 없이도 동작)와 `data/*/Firebase*Repository`(Firestore) 두 구현을 만들고, `core/di/RepositoryModule`에서 `DemoModeManager.isDemoMode`를 보고 `Provider<T>`로 지연 선택한다. **이 패턴을 Phase 4~7의 모든 신규 리포지토리(Itinerary, Reservation, Checklist, Expense, Budget, Place, Decision)에 그대로 반복 적용**하면 된다.
 - **DemoModeManager**(`core/demo/DemoModeManager.kt`): `BuildConfig.HAS_FIREBASE_CONFIG`(google-services.json 존재 여부, 빌드타임) + `FirebaseApp.getInstance()` 성공 여부(런타임)를 함께 봐서 데모 모드를 판단한다. Firebase 관련 클래스(FirebaseAuth/FirebaseFirestore)는 데모 모드일 때 **절대 인스턴스화되면 안 됨** — `Provider<T>` 간접 주입으로 이미 보장돼 있다.
-- **시드 삽입 경계**: `TripRepository.createTripWithSeed()`는 Phase 3 범위상 **여행 문서 + 소유자 멤버 문서만** 생성한다. `SeedAssetLoader`가 읽어오는 나머지(cities/itinerary/reservations/checklistItems/decisions)는 **아직 어디에도 쓰여지지 않는다** — Phase 4/5에서 해당 리포지토리를 만들 때, 여행 생성 직후(또는 각 리포지토리 최초 접근 시 `trip.seedVersion` 체크 후) 한 번만 시드를 실제로 삽입하는 로직을 추가해야 한다. 스펙 4장의 "최초 1회만 삽입, 재삽입 금지" 요구사항을 지키는 지점이 바로 여기다.
+- **시드 삽입 경계**: `TripRepository.createTripWithSeed()`가 Phase 4부터 **여행 문서 + 소유자 멤버 + 도시 4건 + 일정 3건**을 삽입한다(Demo는 각 Demo 리포지토리의 `seedForNewTrip()`, Firebase는 여행 생성 트랜잭션에 포함 — 원자성 보장). 여행 생성이 시드 삽입의 유일한 진입점이므로 재삽입은 구조적으로 불가능하다. **Phase 5에서 reservations/checklistItems/decisions 시드도 같은 방식으로 이 지점에 추가**하면 된다.
+- **일정 시간 모델(Phase 4)**: 도메인 `ItineraryItem`은 UTC `Instant`(startAt/endAt) + 표시용 `timeZone`/`endTimeZone`(IANA)을 갖는다. `endTimeZone`은 출발·도착 시간대가 다른 항공 일정용으로 **스펙 8장 스키마에 추가한 필드**(null이면 timeZone과 동일). 로컬시각↔UTC 변환은 `core/time/LocalTimes`가 유일한 경계다. 다음 일정/충돌 판정은 전부 Instant 비교라 기기 시간대와 무관하다.
+- **일정 삭제 시 참조 해제 TODO(Phase 5)**: 일정 삭제 확인 다이얼로그는 연결 예약 경고까지 구현돼 있지만, 예약 리포지토리가 아직 없어 **예약 쪽 `linkedItineraryId` 해제는 미구현**이다. Phase 5에서 ReservationRepository를 만들면 `ItineraryViewModel.delete()`의 TODO 주석 위치에서 참조 해제를 함께 처리할 것(자동 연쇄 삭제 금지 — 스펙 4장).
 - **firestore.rules** (`/firestore.rules`): `trips/{tripId}` 하위의 `cities, itinerary, reservations, checklistItems, expenses, budgets, places, decisions`는 이미 "구성원이면 전부 CRUD 허용"으로 열어뒀다. Phase 4~7에서 새 서브컬렉션을 추가하지 않는 한 규칙은 안 건드려도 된다.
 - **시간/시간대 데이터**: 시드 JSON(`app/src/main/assets/seed/honeymoon_trip_seed.json`)의 모든 일정·예약은 `startAtLocal`/`startTimeZone`/`endAtLocal`/`endTimeZone` 쌍으로 저장돼 있다(둘 다 있어야 시간대 변환이 가능). Phase 4의 "다음 일정 계산"과 UTC 저장 로직을 만들 때 이 필드 구조를 그대로 Firestore 스키마(`startAt`/`endAt`은 UTC Timestamp, `timeZone`은 표시용 문자열)로 변환하면 된다.
 
@@ -75,7 +82,7 @@ cd firebase && npm test
 
 ```
 /Users/user/my-travelapp 에서 작업을 이어간다.
-docs/PROGRESS.md 와 docs/SPEC.md 를 먼저 읽고, Phase 4(일정 CRUD + 홈 다음 일정 계산)부터
-같은 방식(Demo/Firebase 이중 구현, 실제 빌드·테스트·에뮬레이터 검증, 매 Phase 끝나면 커밋)으로
-계속 진행해줘.
+docs/PROGRESS.md 와 docs/SPEC.md 를 먼저 읽고, Phase 5(준비물·예약 메타데이터·기기 내 바우처·
+경비·예산·결정함)부터 같은 방식(Demo/Firebase 이중 구현, 실제 빌드·테스트·에뮬레이터 검증,
+매 Phase 끝나면 커밋)으로 계속 진행해줘.
 ```
