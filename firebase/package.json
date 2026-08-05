@@ -1,0 +1,14 @@
+{
+  "name": "honeymoon-doctor-firestore-rules-tests",
+  "private": true,
+  "version": "1.0.0",
+  "description": "firestore.rules를 Firestore Emulator로 검증하는 테스트 (Android 앱 본체와는 별도의 Node 도구 모음)",
+  "scripts": {
+    "test": "cd .. && firebase emulators:exec --project demo-honeymoon-doctor --only firestore \"node --test firebase/test/*.test.js\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
+    "firebase": "^12.17.1",
+    "firebase-tools": "^15.25.1"
+  }
+}

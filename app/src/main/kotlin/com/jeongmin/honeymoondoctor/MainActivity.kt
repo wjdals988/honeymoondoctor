@@ -7,8 +7,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.jeongmin.honeymoondoctor.core.navigation.HoneymoonDoctorAppRoot
 import com.jeongmin.honeymoondoctor.core.theme.HoneymoonDoctorTheme
+import com.jeongmin.honeymoondoctor.feature.auth.AuthGate
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -19,7 +19,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             HoneymoonDoctorTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    HoneymoonDoctorAppRoot()
+                    AuthGate()
                 }
             }
         }

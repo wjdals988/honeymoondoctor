@@ -1,0 +1,95 @@
+rules_version = '2';
+
+// 허니문닥터 Firestore 보안 규칙
+//
+// 설계 원칙 (스펙 9장):
+// 1) 인증되지 않은 사용자는 전부 거부한다.
+// 2) trips 컬렉션의 전체 목록 조회는 금지한다 — 클라이언트는 반드시
+//    where("memberIds", "array-contains", uid) 쿼리로만 trips를 조회해야 하며,
+//    이 규칙은 그 쿼리 형태와 무관하게 각 문서마다 memberIds 소속 여부를 검사한다.
+// 3) 여행 구성원만 해당 여행과 모든 하위 컬렉션을 읽고 쓸 수 있다.
+// 4) 참여 요청(joinRequests)은 초대코드 해시 일치 + 본인 UID 조건을 동시에 만족해야 생성되고,
+//    승인 전 신청자는 여행 본문/하위 컬렉션을 절대 읽을 수 없다(멤버가 아니므로 자동으로 차단됨).
+// 5) 소유자만 초대 승인/거절, 구성원 변경, 초대코드 변경, 여행 기본정보 변경을 수행하며,
+//    getAfter()로 "구성원 2명 초과 금지"와 "소유자 유지"를 서버 측에서 강제한다.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function tripDoc(tripId) {
+      return get(/databases/$(database)/documents/trips/$(tripId));
+    }
+
+    function isTripMember(tripId) {
+      return isSignedIn() &&
+        request.auth.uid in tripDoc(tripId).data.memberIds;
+    }
+
+    function isTripOwner(tripId) {
+      return isSignedIn() &&
+        request.auth.uid == tripDoc(tripId).data.ownerId;
+    }
+
+    // ── trips/{tripId} ─────────────────────────────────────────────
+    match /trips/{tripId} {
+      // get/list 모두 resource.data 기준으로 동일하게 검사한다. array-contains 필터가
+      // 없는 무제한 목록 조회는 컬렉션 내 다른 여행 문서에 대해 이 조건이 깨지므로
+      // Firestore가 요청 전체를 거부한다 — 이것이 "전체 여행 목록 조회 금지"의 근거다.
+      allow read: if isSignedIn() && request.auth.uid in resource.data.memberIds;
+
+      // 신규 여행 생성: 생성자 본인이 owner이자 유일한 최초 구성원이어야 한다.
+      allow create: if isSignedIn() &&
+        request.resource.data.ownerId == request.auth.uid &&
+        request.resource.data.memberIds.size() == 1 &&
+        request.resource.data.memberIds[0] == request.auth.uid;
+
+      // 여행 기본정보/구성원/초대코드 변경은 소유자만 가능하다.
+      // getAfter()로 갱신 직후 상태까지 함께 검증해, 소유자 유지·최대 2인을 서버에서 강제한다.
+      allow update: if isTripOwner(tripId) &&
+        request.resource.data.ownerId == resource.data.ownerId &&
+        request.resource.data.memberIds.size() <= 2 &&
+        request.resource.data.ownerId in request.resource.data.memberIds;
+
+      // 여행 삭제는 소유자만 가능하다.
+      allow delete: if isTripOwner(tripId);
+
+      // ── trips/{tripId}/members/{uid} ────────────────────────────
+      // 구성원 문서는 승인 트랜잭션의 일부로 소유자만 생성·수정한다.
+      match /members/{memberUid} {
+        allow read: if isTripMember(tripId);
+        allow create, update, delete: if isTripOwner(tripId);
+      }
+
+      // ── trips/{tripId}/joinRequests/{requestId} ─────────────────
+      match /joinRequests/{requestId} {
+        // 본인이 신청한 요청은 본인이, 소유자는 모든 요청을 읽을 수 있다.
+        allow get: if isSignedIn() &&
+          (request.auth.uid == resource.data.applicantUid || isTripOwner(tripId));
+        allow list: if isTripOwner(tripId);
+
+        // 참여 요청 생성: 본인 UID + 초대코드 해시 일치를 동시에 만족해야 한다.
+        // 승인 전 신청자는 아직 memberIds에 없으므로 위 isTripMember() 조건에 의해
+        // 여행 본문/하위 컬렉션을 읽을 수 없다.
+        allow create: if isSignedIn() &&
+          request.resource.data.applicantUid == request.auth.uid &&
+          request.resource.data.status == 'PENDING' &&
+          request.resource.data.inviteCodeHash == tripDoc(tripId).data.inviteCodeHash;
+
+        // 승인/거절 처리는 소유자만 한다.
+        allow update, delete: if isTripOwner(tripId);
+      }
+
+      // ── 여행 구성원이라면 CRUD 가능한 운영 데이터 컬렉션 ─────────
+      // (일정, 예약, 준비물, 경비, 예산, 장소, 결정함, 도시)
+      match /{collection}/{docId} {
+        allow read, write: if isTripMember(tripId) && collection in [
+          'cities', 'itinerary', 'reservations', 'checklistItems',
+          'expenses', 'budgets', 'places', 'decisions'
+        ];
+      }
+    }
+  }
+}

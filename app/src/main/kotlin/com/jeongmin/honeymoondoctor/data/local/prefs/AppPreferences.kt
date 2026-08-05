@@ -25,6 +25,7 @@ data class LastKnownLocation(
 data class AppPrefsSnapshot(
     val selectedCityId: String?,
     val lastKnownLocation: LastKnownLocation?,
+    val pendingJoinTripId: String?,
 )
 
 /** 앱 설정, 선택 도시, 최근 위치 메타데이터를 담는 DataStore 래퍼. 위치는 화면 진입/새로고침 때만 갱신된다. */
@@ -39,6 +40,7 @@ class AppPreferences @Inject constructor(
         val LAST_LATITUDE = doublePreferencesKey("last_latitude")
         val LAST_LONGITUDE = doublePreferencesKey("last_longitude")
         val LAST_LOCATION_AT = longPreferencesKey("last_location_at")
+        val PENDING_JOIN_TRIP_ID = stringPreferencesKey("pending_join_trip_id")
     }
 
     val snapshot: Flow<AppPrefsSnapshot> = dataStore.data.map { prefs ->
@@ -52,6 +54,7 @@ class AppPreferences @Inject constructor(
             } else {
                 null
             },
+            pendingJoinTripId = prefs[Keys.PENDING_JOIN_TRIP_ID],
         )
     }
 
@@ -64,6 +67,12 @@ class AppPreferences @Inject constructor(
             it[Keys.LAST_LATITUDE] = location.latitude
             it[Keys.LAST_LONGITUDE] = location.longitude
             it[Keys.LAST_LOCATION_AT] = location.capturedAtEpochMillis
+        }
+    }
+
+    suspend fun setPendingJoinTripId(tripId: String?) {
+        dataStore.edit {
+            if (tripId == null) it.remove(Keys.PENDING_JOIN_TRIP_ID) else it[Keys.PENDING_JOIN_TRIP_ID] = tripId
         }
     }
 }

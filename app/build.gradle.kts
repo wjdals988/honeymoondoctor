@@ -1,3 +1,4 @@
+import groovy.json.JsonSlurper
 import java.io.FileInputStream
 import java.util.Properties
 
@@ -16,6 +17,21 @@ val hasFirebaseConfig = firebaseConfigFile.exists()
 if (hasFirebaseConfig) {
     apply(plugin = "com.google.gms.google-services")
 }
+
+// google-services.json에서 Google 로그인(Credential Manager)에 필요한 "웹 클라이언트 ID"
+// (client_type == 3)만 추출한다. 파일이 없으면 빈 문자열로 두어 데모 모드 빌드가 실패하지 않게 한다.
+// R.string 리소스가 아니라 BuildConfig로 노출하는 이유: google-services 플러그인이 생성하는
+// 리소스와 이름이 겹치면 리소스 병합 충돌이 날 수 있어, 아예 별도 경로로 우회한다.
+@Suppress("UNCHECKED_CAST")
+fun extractGoogleWebClientId(): String {
+    val root = JsonSlurper().parse(firebaseConfigFile) as Map<String, Any?>
+    val clients = root["client"] as? List<Map<String, Any?>> ?: emptyList()
+    val oauthClients = clients.firstOrNull()?.get("oauth_client") as? List<Map<String, Any?>> ?: emptyList()
+    val webClient = oauthClients.firstOrNull { (it["client_type"] as? Number)?.toInt() == 3 }
+    return (webClient?.get("client_id") as? String).orEmpty()
+}
+
+val googleWebClientId: String = if (hasFirebaseConfig) extractGoogleWebClientId() else ""
 
 // 서명 설정 (release 서명 정보는 로컬 keystore.properties에서만 읽는다. 커밋 금지)
 val keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -39,6 +55,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("boolean", "HAS_FIREBASE_CONFIG", hasFirebaseConfig.toString())
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
     }
 
     signingConfigs {

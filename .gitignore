@@ -21,3 +21,10 @@ keystore.properties
 # 실제 바우처/개인 파일 테스트 산출물
 *.pdf
 !docs/**/*.pdf
+
+# Firestore Rules 테스트 도구 (Node)
+firebase/node_modules/
+firebase/.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log

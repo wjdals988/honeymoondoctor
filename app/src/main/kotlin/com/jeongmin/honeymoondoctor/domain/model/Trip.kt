@@ -1,0 +1,37 @@
+package com.jeongmin.honeymoondoctor.domain.model
+
+import java.time.Instant
+
+enum class TripRole { OWNER, MEMBER }
+
+enum class TripStatus { ACTIVE, ARCHIVED }
+
+data class TripMember(
+    val uid: String,
+    val displayName: String,
+    val role: TripRole,
+    val joinedAt: Instant,
+)
+
+data class Trip(
+    val id: String,
+    val name: String,
+    val startDate: String, // ISO-8601 date (YYYY-MM-DD), 여행 전체 기간은 시간대와 무관해 문자열로 보관
+    val endDate: String,
+    val defaultCurrency: String,
+    val ownerId: String,
+    val memberIds: List<String>,
+    val inviteCodeHash: String?,
+    val status: TripStatus,
+    val seedVersion: String?,
+)
+
+enum class JoinRequestStatus { PENDING, APPROVED, REJECTED }
+
+data class JoinRequest(
+    val id: String,
+    val applicantUid: String,
+    val applicantDisplayName: String,
+    val status: JoinRequestStatus,
+    val createdAt: Instant,
+)
