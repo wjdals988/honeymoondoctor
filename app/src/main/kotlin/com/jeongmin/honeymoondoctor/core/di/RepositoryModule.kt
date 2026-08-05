@@ -3,9 +3,15 @@ package com.jeongmin.honeymoondoctor.core.di
 import com.jeongmin.honeymoondoctor.core.demo.DemoModeManager
 import com.jeongmin.honeymoondoctor.data.auth.DemoAuthRepository
 import com.jeongmin.honeymoondoctor.data.auth.FirebaseAuthRepository
+import com.jeongmin.honeymoondoctor.data.city.DemoCityRepository
+import com.jeongmin.honeymoondoctor.data.city.FirebaseCityRepository
+import com.jeongmin.honeymoondoctor.data.itinerary.DemoItineraryRepository
+import com.jeongmin.honeymoondoctor.data.itinerary.FirebaseItineraryRepository
 import com.jeongmin.honeymoondoctor.data.trip.DemoTripRepository
 import com.jeongmin.honeymoondoctor.data.trip.FirebaseTripRepository
 import com.jeongmin.honeymoondoctor.domain.repository.AuthRepository
+import com.jeongmin.honeymoondoctor.domain.repository.CityRepository
+import com.jeongmin.honeymoondoctor.domain.repository.ItineraryRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
 import dagger.Module
 import dagger.Provides
@@ -38,4 +44,20 @@ object RepositoryModule {
         demo: Provider<DemoTripRepository>,
         firebase: Provider<FirebaseTripRepository>,
     ): TripRepository = if (demoModeManager.isDemoMode) demo.get() else firebase.get()
+
+    @Provides
+    @Singleton
+    fun provideItineraryRepository(
+        demoModeManager: DemoModeManager,
+        demo: Provider<DemoItineraryRepository>,
+        firebase: Provider<FirebaseItineraryRepository>,
+    ): ItineraryRepository = if (demoModeManager.isDemoMode) demo.get() else firebase.get()
+
+    @Provides
+    @Singleton
+    fun provideCityRepository(
+        demoModeManager: DemoModeManager,
+        demo: Provider<DemoCityRepository>,
+        firebase: Provider<FirebaseCityRepository>,
+    ): CityRepository = if (demoModeManager.isDemoMode) demo.get() else firebase.get()
 }

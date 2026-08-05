@@ -4,8 +4,12 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.jeongmin.honeymoondoctor.core.security.InviteCode
+import com.jeongmin.honeymoondoctor.data.city.toFirestoreMap
 import com.jeongmin.honeymoondoctor.data.firestore.snapshotFlow
+import com.jeongmin.honeymoondoctor.data.itinerary.toFirestoreMap
 import com.jeongmin.honeymoondoctor.data.seed.SeedAssetLoader
+import com.jeongmin.honeymoondoctor.data.seed.toDomainCity
+import com.jeongmin.honeymoondoctor.data.seed.toDomainItem
 import com.jeongmin.honeymoondoctor.domain.model.JoinRequest
 import com.jeongmin.honeymoondoctor.domain.model.JoinRequestStatus
 import com.jeongmin.honeymoondoctor.domain.model.Trip
@@ -72,9 +76,31 @@ class FirebaseTripRepository @Inject constructor(
         )
         // 여행 문서와 소유자 구성원 문서를 하나의 트랜잭션으로 묶어, 규칙의 isTripOwner()가
         // 두 쓰기 모두에 대해 일관되게(같은 커밋 시점 기준으로) 평가되도록 한다.
+        // 시드 데이터(도시·일정)도 같은 트랜잭션에 넣어 "전부 삽입되거나 전혀 안 되거나"를 보장한다.
+        // 여행 생성이 시드 삽입의 유일한 진입점이므로 재실행·동기화 시 재삽입되지 않는다(스펙 4장).
         firestore.runTransaction { transaction ->
             transaction.set(tripRef, tripData)
             transaction.set(memberRef, memberData)
+            seed.cities.forEach { citySeed ->
+                val city = citySeed.toDomainCity()
+                transaction.set(
+                    tripRef.collection("cities").document(city.id),
+                    city.toFirestoreMap() + mapOf(
+                        "createdAt" to FieldValue.serverTimestamp(),
+                        "updatedAt" to FieldValue.serverTimestamp(),
+                    ),
+                )
+            }
+            seed.itinerary.forEach { itemSeed ->
+                val item = itemSeed.toDomainItem()
+                transaction.set(
+                    tripRef.collection("itinerary").document(item.id),
+                    item.toFirestoreMap() + mapOf(
+                        "createdAt" to FieldValue.serverTimestamp(),
+                        "updatedAt" to FieldValue.serverTimestamp(),
+                    ),
+                )
+            }
         }.await()
 
         return Trip(
