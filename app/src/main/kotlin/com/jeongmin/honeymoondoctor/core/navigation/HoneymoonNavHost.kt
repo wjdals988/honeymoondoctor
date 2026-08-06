@@ -34,6 +34,7 @@ import com.jeongmin.honeymoondoctor.feature.nearby.PlaceImportScreen
 import com.jeongmin.honeymoondoctor.feature.reservation.ReservationDetailScreen
 import com.jeongmin.honeymoondoctor.feature.reservation.ReservationEditScreen
 import com.jeongmin.honeymoondoctor.feature.reservation.ReservationListScreen
+import com.jeongmin.honeymoondoctor.feature.sync.SyncStatusScreen
 import com.jeongmin.honeymoondoctor.feature.tripinfo.TripInfoScreen
 
 private const val ROUTE_TRIP_INFO = "trip_info"
@@ -47,6 +48,7 @@ private const val ROUTE_EXPENSE_EDIT = "expense_edit"
 private const val ROUTE_BUDGETS = "budgets"
 private const val ROUTE_PLACE_EDIT = "place_edit"
 private const val ROUTE_PLACE_IMPORT = "place_import"
+private const val ROUTE_SYNC_STATUS = "sync_status"
 
 private fun itineraryEditRoute(itemId: String?): String =
     if (itemId == null) ROUTE_ITINERARY_EDIT else "$ROUTE_ITINERARY_EDIT?itemId=$itemId"
@@ -82,6 +84,7 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                     onAddExpense = { navController.navigate(expenseEditRoute(null)) },
                     onOpenReservations = { navController.navigate(ROUTE_RESERVATIONS) },
                     onOpenChecklist = { navController.navigate(ROUTE_CHECKLIST) },
+                    onOpenSyncStatus = { navController.navigate(ROUTE_SYNC_STATUS) },
                 )
             }
             composable(BottomTab.ITINERARY.route) {
@@ -117,6 +120,9 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
             composable(ROUTE_PLACE_IMPORT) {
                 PlaceImportScreen(onNavigateBack = { navController.popBackStack() })
             }
+            composable(ROUTE_SYNC_STATUS) {
+                SyncStatusScreen(onNavigateBack = { navController.popBackStack() })
+            }
             composable(BottomTab.EXPENSE.route) {
                 ExpenseScreen(
                     onAddExpense = { navController.navigate(expenseEditRoute(null)) },
@@ -148,6 +154,7 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                     onNavigateToChecklist = { navController.navigate(ROUTE_CHECKLIST) },
                     onNavigateToDecisions = { navController.navigate(ROUTE_DECISIONS) },
                     onNavigateToPlaceImport = { navController.navigate(ROUTE_PLACE_IMPORT) },
+                    onNavigateToSyncStatus = { navController.navigate(ROUTE_SYNC_STATUS) },
                     onResetDemoData = moreViewModel::resetDemoData,
                 )
             }

@@ -49,6 +49,7 @@ fun HomeScreen(
     onAddExpense: () -> Unit,
     onOpenReservations: () -> Unit,
     onOpenChecklist: () -> Unit,
+    onOpenSyncStatus: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -80,6 +81,9 @@ fun HomeScreen(
                 onOpenReservations = onOpenReservations,
                 onOpenChecklist = onOpenChecklist,
             )
+            if (uiState.isDuringTrip) {
+                SyncStatusFooter(uiState = uiState, onOpenSyncStatus = onOpenSyncStatus)
+            }
             TodayTimelineSection(uiState)
             QuickActions(
                 onAddItinerary = onAddItinerary,
@@ -349,6 +353,36 @@ private fun PreparationSummaryCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+/** 여행 중에만 표시(스펙 7-2): 오프라인 상태, 마지막 동기화 시각, 동기화 대기 변경 수. */
+@Composable
+private fun SyncStatusFooter(uiState: HomeUiState, onOpenSyncStatus: () -> Unit) {
+    val status = uiState.syncStatus ?: return
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text = buildString {
+                append(if (status.isOnline) "온라인" else "오프라인")
+                if (!status.isDemoMode) {
+                    append(" · 동기화 대기 ${status.pendingChangeCount}건")
+                    status.lastSyncAt?.let {
+                        append(" · 마지막 동기화 ${LocalTimes.formatTime(it, "Asia/Seoul")}")
+                    }
+                }
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = if (status.isOnline) {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            } else {
+                MaterialTheme.colorScheme.error
+            },
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = onOpenSyncStatus) { Text("자세히") }
     }
 }
 

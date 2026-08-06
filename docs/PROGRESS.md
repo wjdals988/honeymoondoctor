@@ -2,7 +2,7 @@
 
 원본 요구사항 전문은 [SPEC.md](SPEC.md). 이 문서는 "지금까지 뭘 했고, 왜 그렇게 했고, 다음에 뭘 해야 하는지"만 담는다.
 
-마지막 갱신: 2026-08-05, 커밋 `14fcfc9`(Phase 6)까지 반영.
+마지막 갱신: 2026-08-06, Phase 7 완료(커밋 예정)까지 반영.
 
 ## 저장소 위치 / 실행 환경
 
@@ -33,7 +33,7 @@
 | 4 | 일정 CRUD, 홈 "다음 일정" 계산 + 타임존 유닛테스트 | ✅ 완료 | `6058bfa` |
 | 5 | 준비물, 예약 메타데이터, 기기 내 바우처, 경비·예산·결정함 | ✅ 완료 | `cff6edc` |
 | 6 | 주변 추천, 위치 권한, Haversine, 추천 점수, Maps Intent | ✅ 완료 | `14fcfc9` |
-| 7 | 오프라인 상태, 동기화 대기 추적, 로컬 알림 | ⬜ 미착수 | — |
+| 7 | 오프라인 상태, 동기화 대기 추적, 로컬 알림 | ✅ 완료 | (다음 커밋) |
 | 8 | 테스트 전수 실행, README, QA 체크리스트, APK 빌드 | ⬜ 미착수 | — |
 
 ## 검증 명령 (매 Phase 끝날 때마다 이걸로 확인)
@@ -46,13 +46,14 @@ cd /Users/user/my-travelapp
 # Firestore 보안규칙 (firestore.rules 건드렸을 때만)
 cd firebase && npm test
 ```
-마지막 실행 결과(2026-08-05, Phase 6 후): assembleDebug 성공, 유닛테스트 57/57 통과, lint 차단오류 0건(경미한 경고 7건). rules 테스트는 Phase 3에서 12/12 통과(Phase 4~6은 rules 변경 없음 — 기존 규칙이 places 포함 서브컬렉션 CRUD를 이미 커버).
+마지막 실행 결과(2026-08-06, Phase 7 후): assembleDebug 성공, 유닛테스트 62/62 통과, lint 차단오류 0건(경미한 경고 7건). rules 테스트는 Phase 3에서 12/12 통과(Phase 4~7은 rules 변경 없음 — 기존 규칙이 서브컬렉션 CRUD를 이미 커버).
 
-에뮬레이터 스모크(2026-08-05, `HoneymoonDoctor_Dev`=emulator-5556, 데모 모드):
+에뮬레이터 스모크(`HoneymoonDoctor_Dev`=emulator-5556, 데모 모드):
 - Phase 4: 여행 생성 → 시드 항공편 3건 일정 탭 표시(시간대 라벨), 일정 추가/완료/삭제, KST·프라하 교차 시간대 겹침 과로 경고·완료 시 해제, 연결 예약 삭제 경고, 홈 D-35·다음 일정 카드
 - Phase 5: 준비물 8건 시드·체크 토글(완료율 1/8)·필터 칩, 예약 5건 시드·상세 마스킹(`KE•••••••`)·보기/복사, 결정함 옵션 선택→결정 완료 정렬, EUR 12.34×환율 1532.5 → 18,911원 실시간 HALF_UP 환산·저장, 경비 요약(1/2 정산 9,455원·예약 예상비 합계 1,922,152원), 홈 준비 현황 카드(필수 준비물 8·확인 필요 예약 0·지출/예산)
-- Phase 6: `pm grant` + `emu geo fix`(프라하 구시가지)로 "현재 위치 기준" 전환, 장소 추가 → 714m 거리(수기 계산과 일치), 점수 근거 문자열 일치, 테스트 TSV(유효2·오류1행) SAF 선택 → 미리보기 오류 사유 → 2건 가져오기 → 추천 랭킹 53/50/49점 수기 계산과 전부 일치, `pm revoke` 후 권한 거절 배너·거리 숨김·거리 0점 확인. **SAF 문서 피커 자동화가 이번에는 성공**했으므로 Phase 5의 바우처 첨부도 같은 방식으로 수동 확인 가능
-- **미검증**: 바우처 실제 파일 첨부 플로우(Phase 5, 수동 확인 필요), Pull-to-Refresh 제스처(스와이프 자동화 미실행 — 동일 코드 경로인 화면 재진입 갱신은 확인됨)
+- Phase 6: `pm grant` + `emu geo fix`(프라하 구시가지)로 "현재 위치 기준" 전환, 장소 추가 → 714m 거리(수기 계산과 일치), 점수 근거 문자열 일치, 테스트 TSV(유효2·오류1행) SAF 선택 → 미리보기 오류 사유 → 2건 가져오기 → 추천 랭킹 53/50/49점 수기 계산과 전부 일치, `pm revoke` 후 권한 거절 배너·거리 숨김·거리 0점 확인
+- **Phase 7(2026-08-06)**: `svc wifi/data disable` → 동기화 상태 화면 "오프라인" 실시간 전환(상태바 신호 아이콘과 함께), `svc ... enable`로 복구 확인. 알림 권한 `pm revoke` 후 "거절됨" 표시·"권한 요청"/"설정으로 이동" 버튼 노출 확인, `pm grant` 후 화면 재진입(ON_RESUME)으로 "허용됨" 갱신 확인. **AlarmManager 실제 등록 검증**: `appops set ... SCHEDULE_EXACT_ALARM allow` 후 일정 탭에서 항목 추가(도시=프라하, 10:00 현지 시각) → `dumpsys alarm`으로 `ItineraryAlarmReceiver` 대상 알람 3건이 정확히 서울 표시 기준 09-08 17:00(H24)·09-09 14:00(H3)·09-09 16:00(H1)로 등록됐음을 확인(프라하→서울 UTC+7 환산이 정확히 반영됨). 시드 항공편(KE969, 11:05 KST)에 대해서도 동일한 방식으로 3건이 24h/3h/1h 오프셋에 맞춰 이미 등록돼 있음을 함께 확인 — `ItineraryReminderSyncCoordinator`가 앱 시작 시 자동으로 전체 일정을 스캔해 예약함을 실증
+- **미검증**: 바우처 실제 파일 첨부 플로우(Phase 5, 수동 확인 필요), Pull-to-Refresh 제스처(스와이프 자동화 미실행 — 동일 코드 경로인 화면 재진입 갱신은 확인됨), 알림이 실제로 발사되는 순간(수 시간~수십 일 후라 대기 불가 — 대신 AlarmManager 등록 자체를 직접 검증함), WorkManager 폴백 경로(정확 알람 미허용 시)의 실제 발사(코드 경로는 존재하나 실측 미완료), 재부팅 시 BootCompletedReceiver 재예약(에뮬레이터 재부팅 미실행)
 
 ## 핵심 아키텍처 결정 (Phase 4 이후에도 그대로 따를 것)
 
@@ -63,6 +64,8 @@ cd firebase && npm test
 - **참조 해제(스펙 4장) 구현 위치**: 일정 삭제 → 그 일정을 가리키는 예약의 `linkedItineraryId` 해제(`ItineraryViewModel.delete`). 예약 삭제 → 그 예약을 가리키는 일정의 `reservationId` 해제 + 기기 바우처 삭제 여부 **별도 확인** 다이얼로그(`ReservationDetailViewModel.delete`). 자동 연쇄 삭제는 어디에도 없다. 단, **경비의 linkedItineraryId/linkedReservationId 해제는 아직 안 걸려 있음** — Phase 6~8에서 삭제 경고 카운트에 경비·장소를 추가할 때 함께 처리할 것.
 - **기기 전용 바우처(`data/voucher/VoucherStore.kt`)**: 확장자+MIME 이중 화이트리스트, 파일당 15MB(선언 크기가 아닌 실제 복사 바이트로 재검증), 총 100MB, `files/vouchers` + FileProvider. Firestore에는 존재 여부조차 저장하지 않는다(스펙 7-4). 데모 초기화가 Room·바우처 파일까지 지운다.
 - **금액 규칙(`domain/usecase/KrwConverter.kt`)**: 모든 금액은 최소 단위 정수(amountMinor). KRW 0자리, EUR/CZK 2자리. KRW 환산은 BigDecimal HALF_UP이며 입력 시점 환율(fxRateToKrw)과 환산액(amountKrw)을 지출 문서에 스냅샷으로 보존한다.
+- **동기화 상태(Phase 7, `data/sync/`)**: Firestore SDK가 "전체 대기 쓰기 개수"를 직접 주지 않는 문제를, Phase 2에 미리 만들어뒀던 Room `PendingSyncChangeEntity`/`Dao`(끝내 어디서도 쓰이지 않음) 대신 **Firestore 스냅샷 메타데이터 집계 방식으로 교체 구현**했다 — 현재 여행의 문서+모든 서브컬렉션을 `MetadataChanges.INCLUDE`로 구독해 `hasPendingWrites` true인 문서 수를 합산한다(수동으로 큐를 관리할 필요가 없어 더 견고함). 미사용 Room 엔티티는 삭제했다(`AppDatabase`/`DatabaseModule`에서도 제거). "마지막 동기화 시각"은 `AppPreferences`에 영속화한다. 오프라인 여부는 Firestore 상태가 아니라 `ConnectivityManager.NetworkCallback` 기반 실제 기기 네트워크 상태(`core/network/ConnectivityObserver`)를 그대로 쓴다 — 데모 모드에서도 의미 있게 표시하기 위함.
+- **중요 일정 알림(Phase 7, `core/notification/`)**: "중요한 일정" = 시각이 있는(allDay 아님) 미완료(PLANNED) 일정으로 정의(`domain/usecase/ItineraryReminderPlanner` — 순수 함수, 유닛테스트로 오프셋 경계 전부 커버). 정확한 알람 권한(`SCHEDULE_EXACT_ALARM`, Android 12+ 특수 권한)이 있으면 `AlarmManager.setExactAndAllowWhileIdle` + `ItineraryAlarmReceiver`(비노출, Hilt 불필요)로, 없으면 `WorkManager` 지연 작업(`ItineraryReminderWorker`, 지연될 수 있음이 스펙 요구사항)으로 폴백한다. 어느 경로로 예약됐는지는 `ItineraryReminderScheduler`가 두 경로 취소를 모두 시도하므로 알 필요 없다. 예약 상태는 `AppPreferences`의 키 집합(`scheduledReminderKeys`)으로 추적해 재계획 시 사라진 일정의 알림만 정확히 취소한다. `ItineraryReminderSyncCoordinator`가 `HoneymoonDoctorApp.onCreate()`에서 프로세스 전역으로 시작돼 현재 여행의 일정 변경을 항상 관찰한다. `BootCompletedReceiver`(`@AndroidEntryPoint`)가 재부팅 후 정확 알람 재예약을 전담한다(WorkManager는 자체적으로 재부팅 후 복원되므로 손댈 필요 없음). 알림 권한(POST_NOTIFICATIONS) 거절 시 `ItineraryNotifier.show()`가 조용히 아무 것도 하지 않는다(크래시 방지, 핵심 기능 영향 없음).
 - **firestore.rules** (`/firestore.rules`): `trips/{tripId}` 하위의 `cities, itinerary, reservations, checklistItems, expenses, budgets, places, decisions`는 이미 "구성원이면 전부 CRUD 허용"으로 열어뒀다. Phase 4~7에서 새 서브컬렉션을 추가하지 않는 한 규칙은 안 건드려도 된다.
 - **시간/시간대 데이터**: 시드 JSON(`app/src/main/assets/seed/honeymoon_trip_seed.json`)의 모든 일정·예약은 `startAtLocal`/`startTimeZone`/`endAtLocal`/`endTimeZone` 쌍으로 저장돼 있다(둘 다 있어야 시간대 변환이 가능). Phase 4의 "다음 일정 계산"과 UTC 저장 로직을 만들 때 이 필드 구조를 그대로 Firestore 스키마(`startAt`/`endAt`은 UTC Timestamp, `timeZone`은 표시용 문자열)로 변환하면 된다.
 
@@ -88,7 +91,7 @@ cd firebase && npm test
 
 ```
 /Users/user/my-travelapp 에서 작업을 이어간다.
-docs/PROGRESS.md 와 docs/SPEC.md 를 먼저 읽고, Phase 7(오프라인 상태·동기화 대기 추적·
-로컬 알림)부터 같은 방식(Demo/Firebase 이중 구현, 실제 빌드·테스트·에뮬레이터 검증,
-매 Phase 끝나면 커밋)으로 계속 진행해줘.
+docs/PROGRESS.md 와 docs/SPEC.md 를 먼저 읽고, Phase 8(테스트 전수 실행·README·QA
+체크리스트·APK 빌드 — 사실상 마지막 단계)부터 같은 방식(실제 빌드·테스트·에뮬레이터 검증,
+끝나면 커밋)으로 계속 진행해줘.
 ```

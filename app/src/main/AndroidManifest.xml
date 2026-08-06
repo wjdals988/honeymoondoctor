@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- 중요 일정 알림의 정시성을 위해 요청하되, 거부 시 WorkManager 비정확 알림으로 대체한다. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- AlarmManager로 예약한 정확한 알람은 재부팅 시 사라지므로, 부팅 완료 시 다시 계획한다. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name=".HoneymoonDoctorApp"
@@ -41,6 +43,20 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_provider_paths" />
         </provider>
+
+        <!-- 정확한 알람 발사 지점. 앱 내부에서 발급한 PendingIntent로만 호출되므로 비노출. -->
+        <receiver
+            android:name=".core.notification.ItineraryAlarmReceiver"
+            android:exported="false" />
+
+        <!-- 재부팅 후 정확한 알람 재예약 전용. 시스템 보호 브로드캐스트만 받는다. -->
+        <receiver
+            android:name=".core.notification.BootCompletedReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
     </application>
 

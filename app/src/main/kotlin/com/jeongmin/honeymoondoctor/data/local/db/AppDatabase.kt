@@ -4,11 +4,10 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [VoucherMetadataEntity::class, PendingSyncChangeEntity::class],
+    entities = [VoucherMetadataEntity::class],
     version = 1,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun voucherMetadataDao(): VoucherMetadataDao
-    abstract fun pendingSyncChangeDao(): PendingSyncChangeDao
 }

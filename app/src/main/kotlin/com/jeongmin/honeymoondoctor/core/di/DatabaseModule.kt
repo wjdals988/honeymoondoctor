@@ -3,7 +3,6 @@ package com.jeongmin.honeymoondoctor.core.di
 import android.content.Context
 import androidx.room.Room
 import com.jeongmin.honeymoondoctor.data.local.db.AppDatabase
-import com.jeongmin.honeymoondoctor.data.local.db.PendingSyncChangeDao
 import com.jeongmin.honeymoondoctor.data.local.db.VoucherMetadataDao
 import dagger.Module
 import dagger.Provides
@@ -23,7 +22,4 @@ object DatabaseModule {
 
     @Provides
     fun provideVoucherMetadataDao(db: AppDatabase): VoucherMetadataDao = db.voucherMetadataDao()
-
-    @Provides
-    fun providePendingSyncChangeDao(db: AppDatabase): PendingSyncChangeDao = db.pendingSyncChangeDao()
 }

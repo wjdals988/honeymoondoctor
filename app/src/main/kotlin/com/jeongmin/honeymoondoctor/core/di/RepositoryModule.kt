@@ -19,6 +19,8 @@ import com.jeongmin.honeymoondoctor.data.place.DemoPlaceRepository
 import com.jeongmin.honeymoondoctor.data.place.FirebasePlaceRepository
 import com.jeongmin.honeymoondoctor.data.reservation.DemoReservationRepository
 import com.jeongmin.honeymoondoctor.data.reservation.FirebaseReservationRepository
+import com.jeongmin.honeymoondoctor.data.sync.DemoSyncStatusRepository
+import com.jeongmin.honeymoondoctor.data.sync.FirebaseSyncStatusRepository
 import com.jeongmin.honeymoondoctor.data.trip.DemoTripRepository
 import com.jeongmin.honeymoondoctor.data.trip.FirebaseTripRepository
 import com.jeongmin.honeymoondoctor.domain.repository.AuthRepository
@@ -30,6 +32,7 @@ import com.jeongmin.honeymoondoctor.domain.repository.ExpenseRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ItineraryRepository
 import com.jeongmin.honeymoondoctor.domain.repository.PlaceRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ReservationRepository
+import com.jeongmin.honeymoondoctor.domain.repository.SyncStatusRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
 import dagger.Module
 import dagger.Provides
@@ -126,4 +129,12 @@ object RepositoryModule {
         demo: Provider<DemoBudgetRepository>,
         firebase: Provider<FirebaseBudgetRepository>,
     ): BudgetRepository = if (demoModeManager.isDemoMode) demo.get() else firebase.get()
+
+    @Provides
+    @Singleton
+    fun provideSyncStatusRepository(
+        demoModeManager: DemoModeManager,
+        demo: Provider<DemoSyncStatusRepository>,
+        firebase: Provider<FirebaseSyncStatusRepository>,
+    ): SyncStatusRepository = if (demoModeManager.isDemoMode) demo.get() else firebase.get()
 }

@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "e441bdba6f987372b544ef4e67551748",
+    "identityHash": "b20e2f5893badc41e616af98c484f52d",
     "entities": [
       {
         "tableName": "voucher_metadata",
@@ -57,59 +57,11 @@
             "id"
           ]
         }
-      },
-      {
-        "tableName": "pending_sync_change",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `collectionPath` TEXT NOT NULL, `documentId` TEXT NOT NULL, `changeType` TEXT NOT NULL, `createdAtEpochMillis` INTEGER NOT NULL, `synced` INTEGER NOT NULL)",
-        "fields": [
-          {
-            "fieldPath": "id",
-            "columnName": "id",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "collectionPath",
-            "columnName": "collectionPath",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "documentId",
-            "columnName": "documentId",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "changeType",
-            "columnName": "changeType",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "createdAtEpochMillis",
-            "columnName": "createdAtEpochMillis",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "synced",
-            "columnName": "synced",
-            "affinity": "INTEGER",
-            "notNull": true
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": true,
-          "columnNames": [
-            "id"
-          ]
-        }
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e441bdba6f987372b544ef4e67551748')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b20e2f5893badc41e616af98c484f52d')"
     ]
   }
 }

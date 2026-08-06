@@ -16,7 +16,9 @@ import com.jeongmin.honeymoondoctor.domain.repository.CityRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ExpenseRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ItineraryRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ReservationRepository
+import com.jeongmin.honeymoondoctor.domain.repository.SyncStatusRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
+import com.jeongmin.honeymoondoctor.domain.model.SyncStatus
 import com.jeongmin.honeymoondoctor.domain.usecase.ItineraryConflictDetector
 import com.jeongmin.honeymoondoctor.domain.usecase.NextItineraryCalculator
 import com.jeongmin.honeymoondoctor.domain.usecase.NextItinerarySnapshot
@@ -54,6 +56,8 @@ data class HomeUiState(
     val attentionReservationCount: Int = 0,
     val totalBudgetKrw: Long = 0,
     val totalSpentKrw: Long = 0,
+    /** 여행 중에만 노출(스펙 7-2): 오프라인 상태·마지막 동기화·동기화 대기 변경 수 */
+    val syncStatus: SyncStatus? = null,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -68,6 +72,7 @@ class HomeViewModel @Inject constructor(
     reservationRepository: ReservationRepository,
     expenseRepository: ExpenseRepository,
     budgetRepository: BudgetRepository,
+    syncStatusRepository: SyncStatusRepository,
 ) : ViewModel() {
 
     /**
@@ -124,9 +129,10 @@ class HomeViewModel @Inject constructor(
                             itineraryRepository.observeItinerary(trip.id),
                             cityRepository.observeCities(trip.id),
                             preparation,
+                            syncStatusRepository.observeSyncStatus(trip.id),
                             clock,
-                        ) { items, cities, summary, now ->
-                            buildState(trip, items, cities, now, summary)
+                        ) { items, cities, summary, syncStatus, now ->
+                            buildState(trip, items, cities, now, summary, syncStatus)
                         }
                     }
                 }
@@ -140,6 +146,7 @@ class HomeViewModel @Inject constructor(
         cities: List<City>,
         now: Instant,
         summary: PreparationSummary,
+        syncStatus: SyncStatus,
     ): HomeUiState {
         val tripStart = runCatching { LocalDate.parse(trip.startDate) }.getOrNull()
         val tripEnd = runCatching { LocalDate.parse(trip.endDate) }.getOrNull()
@@ -183,6 +190,7 @@ class HomeViewModel @Inject constructor(
             attentionReservationCount = summary.attentionReservationCount,
             totalBudgetKrw = summary.totalBudgetKrw,
             totalSpentKrw = summary.totalSpentKrw,
+            syncStatus = syncStatus,
         )
     }
 }
