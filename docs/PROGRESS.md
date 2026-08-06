@@ -2,14 +2,18 @@
 
 원본 요구사항 전문은 [SPEC.md](SPEC.md). 이 문서는 "지금까지 뭘 했고, 왜 그렇게 했고, 다음에 뭘 해야 하는지"만 담는다.
 
-마지막 갱신: 2026-08-06, Phase 7 완료(커밋 예정)까지 반영.
+마지막 갱신: 2026-08-06, Phase 8(전체 완료)까지 반영. 스펙 11장 전체 Phase가 끝났다.
 
 ## 저장소 위치 / 실행 환경
 
 - 프로젝트 루트: `/Users/user/my-travelapp` (git repo, branch `main`)
-- 원격: `origin = https://github.com/wjdals988/honeymoondoctor.git` 등록됨. **아직 push 못 함** —
-  이 맥에는 github.com 자격증명이 없다(gh는 oss.navercorp.com에만 로그인, SSH 키도 미등록).
-  사용자가 `gh auth login --hostname github.com` 후 `git push -u origin main` 하면 된다.
+- 원격: `origin = https://github.com/wjdals988/honeymoondoctor.git`, **push 완료**(2026-08-06).
+  - 이 레포 전용 로컬 설정(전역 `~/.gitconfig`는 그대로 사내 계정 `jeongmin2@navercorp.com` +
+    `oss.navercorp.com` 유지): `git config --local user.name/user.email` = `JMLee` /
+    `wjdals988@gmail.com`, `credential.https://github.com.helper = !gh auth git-credential`
+    (`gh auth login --hostname github.com`으로 `wjdals988` 계정 인증됨).
+  - GitHub가 저장소 생성 시 만든 `README.md` 1줄 커밋과 로컬 히스토리가 서로 무관해
+    `git merge origin/main --allow-unrelated-histories`로 합친 뒤 push했다(강제 push 아님).
 - `/Users/user/series-qa-pipeline-claude`는 **완전히 다른 프로젝트**(TestRail QA 파이프라인)다. 절대 헷갈리지 말 것.
 - Android SDK: `~/Library/Android/sdk` (platform 36.1 / 37 설치됨)
 - JDK: Temurin 21 — `export JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home` 하고 `./gradlew` 실행
@@ -33,8 +37,8 @@
 | 4 | 일정 CRUD, 홈 "다음 일정" 계산 + 타임존 유닛테스트 | ✅ 완료 | `6058bfa` |
 | 5 | 준비물, 예약 메타데이터, 기기 내 바우처, 경비·예산·결정함 | ✅ 완료 | `cff6edc` |
 | 6 | 주변 추천, 위치 권한, Haversine, 추천 점수, Maps Intent | ✅ 완료 | `14fcfc9` |
-| 7 | 오프라인 상태, 동기화 대기 추적, 로컬 알림 | ✅ 완료 | (다음 커밋) |
-| 8 | 테스트 전수 실행, README, QA 체크리스트, APK 빌드 | ⬜ 미착수 | — |
+| 7 | 오프라인 상태, 동기화 대기 추적, 로컬 알림 | ✅ 완료 | `8eb366f` |
+| 8 | 테스트 전수 실행, README, QA 체크리스트, APK 빌드 | ✅ 완료 | (다음 커밋) |
 
 ## 검증 명령 (매 Phase 끝날 때마다 이걸로 확인)
 
@@ -46,7 +50,7 @@ cd /Users/user/my-travelapp
 # Firestore 보안규칙 (firestore.rules 건드렸을 때만)
 cd firebase && npm test
 ```
-마지막 실행 결과(2026-08-06, Phase 7 후): assembleDebug 성공, 유닛테스트 62/62 통과, lint 차단오류 0건(경미한 경고 7건). rules 테스트는 Phase 3에서 12/12 통과(Phase 4~7은 rules 변경 없음 — 기존 규칙이 서브컬렉션 CRUD를 이미 커버).
+마지막 실행 결과(2026-08-06, Phase 8/전체 완료 후): `./gradlew clean :app:assembleDebug :app:testDebugUnitTest :app:lintDebug` 성공, 유닛테스트 62/62 통과, lint 차단오류 0건(경미한 경고 7건), `firebase && npm test` 12/12 통과. APK: `app/build/outputs/apk/debug/app-debug.apk`(27.9MB).
 
 에뮬레이터 스모크(`HoneymoonDoctor_Dev`=emulator-5556, 데모 모드):
 - Phase 4: 여행 생성 → 시드 항공편 3건 일정 탭 표시(시간대 라벨), 일정 추가/완료/삭제, KST·프라하 교차 시간대 겹침 과로 경고·완료 시 해제, 연결 예약 삭제 경고, 홈 D-35·다음 일정 카드
@@ -85,13 +89,28 @@ cd firebase && npm test
 3. Firebase Authentication에서 Google 로그인 제공업체를 활성화하고, OAuth 동의 화면을 구성해야 한다.
 4. Firestore를 프로덕션 모드로 생성한 뒤 `firestore.rules`를 배포한다: `firebase deploy --only firestore:rules --project <실제 프로젝트 ID>` (지금은 로컬 Emulator 테스트만 돼 있고 실제 프로젝트에 배포된 적 없음).
 
-이 중 하나도 아직 받지 못했으므로, 지금 상태의 앱은 **데모 모드로만 실행·검증**됐다. Firebase 값이 들어오기 전까지 Phase 4~7도 계속 데모 모드 기준으로 개발·검증하면 된다.
+이 중 하나도 아직 받지 못했으므로, 지금 상태의 앱은 **데모 모드로만 실행·검증**됐다.
+(2026-08-06 기준) 사용자가 Firebase 연결을 별도로 직접 진행 중 — 완료되면 README의
+"Firebase 연결 절차"대로 됐는지, 그리고 QA_CHECKLIST.md §3-7(2인 공유 실동기화)과
+§4에 미검증으로 남겨둔 항목들을 재확인해야 한다.
+
+## Phase 0~8 전체 완료 — 남은 일이 있다면
+
+스펙 11장의 9단계(Phase 0~8)가 모두 끝났다. 앞으로 다시 이어갈 만한 작업은:
+
+1. **Firebase 연결 후 실동기화 검증**: `docs/QA_CHECKLIST.md` §3-7, §4의 미검증 항목들
+   (2인 실시간 동기화, WorkManager 알림 폴백 실발사, 재부팅 재예약)을 실제로 확인.
+2. **`docs/FEATURE_STATUS.md`에 정리된 명확한 미구현 4가지**: 여행 기본정보 수정/삭제,
+   도시(City) CRUD UI, 긴급상황 화면, 로그아웃 버튼. 필요해지면 우선순위를 정해 추가.
+3. **릴리스 서명·배포**: 지금은 `keystore.properties`가 없어 debug APK만 빌드된다.
+   실제 배포하려면 release 키스토어를 만들고 `keystore.properties.example`을 참고해
+   설정해야 한다(아직 이 파일 자체도 없음 — 필요해지면 새로 만들 것).
 
 ## 다음 세션에서 이어갈 때 프롬프트 예시
 
 ```
 /Users/user/my-travelapp 에서 작업을 이어간다.
-docs/PROGRESS.md 와 docs/SPEC.md 를 먼저 읽고, Phase 8(테스트 전수 실행·README·QA
-체크리스트·APK 빌드 — 사실상 마지막 단계)부터 같은 방식(실제 빌드·테스트·에뮬레이터 검증,
-끝나면 커밋)으로 계속 진행해줘.
+docs/PROGRESS.md 를 먼저 읽고, "Phase 0~8 전체 완료 — 남은 일이 있다면" 항목 중
+<구체적으로 하고 싶은 것>부터 같은 방식(실제 빌드·테스트·에뮬레이터 검증, 끝나면 커밋)으로
+진행해줘.
 ```
