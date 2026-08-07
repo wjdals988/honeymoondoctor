@@ -1,7 +1,9 @@
 package com.jeongmin.honeymoondoctor.data.city
 
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import com.jeongmin.honeymoondoctor.data.firestore.snapshotFlow
 import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.repository.CityRepository
@@ -9,6 +11,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.tasks.await
 
 private const val TRIPS = "trips"
 private const val CITIES = "cities"
@@ -18,10 +21,25 @@ class FirebaseCityRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
 ) : CityRepository {
 
+    private fun collection(tripId: String) = firestore.collection(TRIPS).document(tripId).collection(CITIES)
+
     override fun observeCities(tripId: String): Flow<List<City>> =
-        firestore.collection(TRIPS).document(tripId).collection(CITIES)
+        collection(tripId)
             .snapshotFlow()
             .map { snapshot -> snapshot?.documents.orEmpty().mapNotNull { it.toCity() } }
+
+    override suspend fun create(tripId: String, city: City) {
+        collection(tripId).document(city.id)
+            .set(city.toFirestoreMap() + mapOf("createdAt" to FieldValue.serverTimestamp(), "updatedAt" to FieldValue.serverTimestamp()))
+            .await()
+    }
+
+    override suspend fun update(tripId: String, city: City) {
+        // merge로 저장해 create가 넣어둔 createdAt은 보존하고 updatedAt만 갱신한다.
+        collection(tripId).document(city.id)
+            .set(city.toFirestoreMap() + mapOf("updatedAt" to FieldValue.serverTimestamp()), SetOptions.merge())
+            .await()
+    }
 
     private fun DocumentSnapshot.toCity(): City? {
         val displayName = getString("displayName") ?: return null

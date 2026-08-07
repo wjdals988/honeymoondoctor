@@ -56,7 +56,7 @@ data class PlaceEditUiState(
 class PlaceEditViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     observeCurrentTrip: ObserveCurrentTrip,
-    cityRepository: CityRepository,
+    private val cityRepository: CityRepository,
     private val placeRepository: PlaceRepository,
 ) : ViewModel() {
 
@@ -114,6 +114,11 @@ class PlaceEditViewModel @Inject constructor(
     fun updateForm(transform: (PlaceEditForm) -> PlaceEditForm) {
         _form.value = _form.value?.let(transform)
         validationError.value = null
+    }
+
+    fun createCity(city: City) {
+        val tripId = uiState.value.tripId ?: return
+        viewModelScope.launch { cityRepository.create(tripId, city) }
     }
 
     fun togglePreferredTime(time: PreferredTime) {

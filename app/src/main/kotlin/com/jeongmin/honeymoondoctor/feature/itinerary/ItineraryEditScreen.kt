@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.time.koreanZoneLabel
+import com.jeongmin.honeymoondoctor.core.ui.CityPickerField
 import com.jeongmin.honeymoondoctor.core.ui.DateField
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.core.ui.TimeField
@@ -106,12 +107,11 @@ fun ItineraryEditScreen(
                 onSelect = { type -> viewModel.updateForm { it.copy(type = type) } },
             )
 
-            DropdownSelector(
-                label = "도시",
-                selectedLabel = uiState.cities.firstOrNull { it.id == currentForm.cityId }?.displayName ?: "선택 안 함",
-                options = uiState.cities + listOf(null),
-                optionLabel = { it?.displayName ?: "선택 안 함" },
+            CityPickerField(
+                selectedCityId = currentForm.cityId,
+                cities = uiState.cities,
                 onSelect = viewModel::selectCity,
+                onCreateCity = viewModel::createCity,
             )
 
             Row(verticalAlignment = Alignment.CenterVertically) {

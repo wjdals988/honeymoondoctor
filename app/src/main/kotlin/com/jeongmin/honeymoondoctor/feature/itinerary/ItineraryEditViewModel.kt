@@ -181,6 +181,11 @@ class ItineraryEditViewModel @Inject constructor(
         }
     }
 
+    fun createCity(city: City) {
+        val tripId = uiState.value.tripId ?: return
+        viewModelScope.launch { cityRepository.create(tripId, city) }
+    }
+
     fun save(onSaved: () -> Unit) {
         val form = _form.value ?: return
         val tripId = uiState.value.tripId ?: return

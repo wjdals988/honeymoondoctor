@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.jeongmin.honeymoondoctor.core.ui.CityPickerField
 import com.jeongmin.honeymoondoctor.core.ui.DateField
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.domain.model.ExpenseCategory
@@ -136,12 +137,11 @@ fun ExpenseEditScreen(
                     onCheckedChange = { checked -> viewModel.updateForm { it.copy(shared = checked) } },
                 )
             }
-            DropdownSelector(
-                label = "도시",
-                selectedLabel = uiState.cities.firstOrNull { it.id == currentForm.cityId }?.displayName ?: "선택 안 함",
-                options = listOf(null) + uiState.cities,
-                optionLabel = { it?.displayName ?: "선택 안 함" },
+            CityPickerField(
+                selectedCityId = currentForm.cityId,
+                cities = uiState.cities,
                 onSelect = { city -> viewModel.updateForm { it.copy(cityId = city?.id) } },
+                onCreateCity = viewModel::createCity,
             )
             DateField(
                 label = "지출 날짜",

@@ -72,7 +72,7 @@ class ExpenseEditViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     observeCurrentTrip: ObserveCurrentTrip,
     tripRepository: TripRepository,
-    cityRepository: CityRepository,
+    private val cityRepository: CityRepository,
     itineraryRepository: ItineraryRepository,
     reservationRepository: ReservationRepository,
     private val expenseRepository: ExpenseRepository,
@@ -139,6 +139,11 @@ class ExpenseEditViewModel @Inject constructor(
                 linkedReservationId = existing.linkedReservationId,
             )
         }
+    }
+
+    fun createCity(city: City) {
+        val tripId = uiState.value.tripId ?: return
+        viewModelScope.launch { cityRepository.create(tripId, city) }
     }
 
     fun updateForm(transform: (ExpenseEditForm) -> ExpenseEditForm) {

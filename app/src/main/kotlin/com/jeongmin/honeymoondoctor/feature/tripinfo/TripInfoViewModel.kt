@@ -3,10 +3,12 @@ package com.jeongmin.honeymoondoctor.feature.tripinfo
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jeongmin.honeymoondoctor.domain.model.AuthUser
+import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.JoinRequest
 import com.jeongmin.honeymoondoctor.domain.model.Trip
 import com.jeongmin.honeymoondoctor.domain.model.TripMember
 import com.jeongmin.honeymoondoctor.domain.repository.AuthRepository
+import com.jeongmin.honeymoondoctor.domain.repository.CityRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -26,6 +28,7 @@ data class TripInfoUiState(
     val members: List<TripMember> = emptyList(),
     val pendingJoinRequests: List<JoinRequest> = emptyList(),
     val lastGeneratedInviteCode: String? = null,
+    val cities: List<City> = emptyList(),
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -33,6 +36,7 @@ data class TripInfoUiState(
 class TripInfoViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val tripRepository: TripRepository,
+    private val cityRepository: CityRepository,
 ) : ViewModel() {
 
     private val lastGeneratedInviteCode = MutableStateFlow<String?>(null)
@@ -50,14 +54,23 @@ class TripInfoViewModel @Inject constructor(
                             tripRepository.observeMembers(trip.id),
                             tripRepository.observePendingJoinRequests(trip.id),
                             lastGeneratedInviteCode,
-                        ) { members, joinRequests, generatedCode ->
-                            TripInfoUiState(user, trip, members, joinRequests, generatedCode)
+                            cityRepository.observeCities(trip.id),
+                        ) { members, joinRequests, generatedCode, cities ->
+                            TripInfoUiState(user, trip, members, joinRequests, generatedCode, cities)
                         }
                     }
                 }
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TripInfoUiState())
+
+    fun createCity(tripId: String, city: City) {
+        viewModelScope.launch { cityRepository.create(tripId, city) }
+    }
+
+    fun updateCity(tripId: String, city: City) {
+        viewModelScope.launch { cityRepository.update(tripId, city) }
+    }
 
     fun regenerateInviteCode(tripId: String) {
         viewModelScope.launch {

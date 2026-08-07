@@ -35,7 +35,7 @@ data class DemoCityDto(
     val notes: String? = null,
 )
 
-/** 데모 모드 도시 저장소. Phase 4에서는 시드 삽입과 조회만 필요하다(도시 CRUD UI는 이후 단계). */
+/** 데모 모드 도시 저장소. */
 @Singleton
 class DemoCityRepository @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -48,6 +48,37 @@ class DemoCityRepository @Inject constructor(
         val state = prefs[DEMO_CITIES_KEY]?.let { json.decodeFromString(DemoCityStateDto.serializer(), it) }
         state?.takeIf { it.tripId == tripId }?.cities.orEmpty().map { it.toDomain() }
     }
+
+    override suspend fun create(tripId: String, city: City) {
+        upsert(tripId, city)
+    }
+
+    override suspend fun update(tripId: String, city: City) {
+        upsert(tripId, city)
+    }
+
+    private suspend fun upsert(tripId: String, city: City) {
+        dataStore.edit { prefs ->
+            val current = prefs[DEMO_CITIES_KEY]?.let { json.decodeFromString(DemoCityStateDto.serializer(), it) }
+                ?.takeIf { it.tripId == tripId }
+                ?: DemoCityStateDto(tripId = tripId)
+            val updatedCities = current.cities.filterNot { it.id == city.id } + city.toDto()
+            val next = current.copy(cities = updatedCities)
+            prefs[DEMO_CITIES_KEY] = json.encodeToString(DemoCityStateDto.serializer(), next)
+        }
+    }
+
+    private fun City.toDto() = DemoCityDto(
+        id = id,
+        displayName = displayName,
+        countryCode = countryCode,
+        timeZoneId = timeZoneId,
+        startDate = startDate,
+        endDate = endDate,
+        referenceLatitude = referenceLatitude,
+        referenceLongitude = referenceLongitude,
+        notes = notes,
+    )
 
     suspend fun seedForNewTrip(tripId: String, cities: List<City>) {
         val state = DemoCityStateDto(

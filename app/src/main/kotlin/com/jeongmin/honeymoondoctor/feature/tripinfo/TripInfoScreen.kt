@@ -13,10 +13,16 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.jeongmin.honeymoondoctor.core.ui.CityFormDialog
+import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.TripRole
 
 @Composable
@@ -24,6 +30,8 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
     val state by viewModel.uiState.collectAsState()
     val trip = state.trip ?: return
     val isOwner = state.currentUser?.uid == trip.ownerId
+    var showCityDialog by remember { mutableStateOf(false) }
+    var editingCity by remember { mutableStateOf<City?>(null) }
 
     LazyColumn(modifier = modifier.padding(16.dp)) {
         item {
@@ -39,6 +47,32 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
             ListItem(
                 headlineContent = { Text(member.displayName) },
                 supportingContent = { Text(if (member.role == TripRole.OWNER) "소유자" else "구성원") },
+            )
+        }
+        item { HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) }
+
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("도시", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                TextButton(onClick = { editingCity = null; showCityDialog = true }) { Text("+ 도시 추가") }
+            }
+        }
+        if (state.cities.isEmpty()) {
+            item {
+                Text(
+                    "등록된 도시가 없습니다. 일정·장소·경비 화면에서도 바로 추가할 수 있습니다.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+        }
+        items(state.cities) { city ->
+            ListItem(
+                headlineContent = { Text(city.displayName) },
+                supportingContent = { Text(listOfNotNull(city.countryCode.ifBlank { null }, city.timeZoneId).joinToString(" · ")) },
+                trailingContent = {
+                    TextButton(onClick = { editingCity = city; showCityDialog = true }) { Text("수정") }
+                },
             )
         }
         item { HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) }
@@ -93,5 +127,16 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
                 )
             }
         }
+    }
+
+    if (showCityDialog) {
+        CityFormDialog(
+            initial = editingCity,
+            onDismiss = { showCityDialog = false },
+            onConfirm = { city ->
+                if (editingCity == null) viewModel.createCity(trip.id, city) else viewModel.updateCity(trip.id, city)
+                showCityDialog = false
+            },
+        )
     }
 }
