@@ -23,6 +23,7 @@ import com.jeongmin.honeymoondoctor.domain.model.AuthUser
 fun TripSetupScreen(
     user: AuthUser,
     pendingJoinTripId: String?,
+    createError: String?,
     onCreateTrip: () -> Unit,
     onRequestToJoin: (String, (Result<Unit>) -> Unit) -> Unit,
     onCancelPendingJoin: () -> Unit,
@@ -44,6 +45,9 @@ fun TripSetupScreen(
 
         Button(onClick = onCreateTrip, modifier = Modifier.fillMaxWidth()) {
             Text("새 여행 만들기")
+        }
+        createError?.let {
+            Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp))
         }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))

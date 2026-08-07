@@ -170,3 +170,49 @@ test("필터 없는 전체 trips 목록 조회는 차단되고, memberIds 필터
     getDocs(query(collection(partnerDb, "trips"), where("memberIds", "array-contains", PARTNER_UID))),
   );
 });
+
+// FirebaseTripRepository.createTripWithSeed()가 실제로 쓰는 두 단계 쓰기 패턴을 그대로
+// 재현한다. 트립 문서와 구성원+시드 데이터를 하나의 트랜잭션에 함께 넣으면, 규칙의
+// isTripOwner()/isTripMember()가 get()으로 트립 문서를 다시 읽을 때 "트랜잭션 시작 시점"
+// 상태(트립 문서 없음)를 보게 되어 프로덕션에서 항상 PERMISSION_DENIED가 난다. 이 회귀
+// 테스트가 없어서 실제 Firebase 연동 전까지 이 버그가 발견되지 못했다.
+test("신규 여행 생성: 트립 문서와 시드 데이터를 한 트랜잭션에 함께 쓰면 거부된다(회귀 방지)", async () => {
+  const newTripId = "new-trip-single-tx";
+  const ownerDb = testEnv.authenticatedContext(OWNER_UID).firestore();
+  const { runTransaction, doc: docRef } = require("firebase/firestore");
+  await assertFails(
+    runTransaction(ownerDb, async (transaction) => {
+      transaction.set(docRef(ownerDb, "trips", newTripId), {
+        ownerId: OWNER_UID,
+        memberIds: [OWNER_UID],
+      });
+      transaction.set(docRef(ownerDb, "trips", newTripId, "members", OWNER_UID), {
+        displayName: "정민",
+        role: "OWNER",
+      });
+    }),
+  );
+});
+
+test("신규 여행 생성: 트립 문서를 먼저 커밋한 뒤 구성원+시드를 별도 트랜잭션으로 쓰면 성공한다", async () => {
+  const newTripId = "new-trip-two-step";
+  const ownerDb = testEnv.authenticatedContext(OWNER_UID).firestore();
+  const { runTransaction, doc: docRef } = require("firebase/firestore");
+  await assertSucceeds(
+    setDoc(doc(ownerDb, "trips", newTripId), {
+      ownerId: OWNER_UID,
+      memberIds: [OWNER_UID],
+    }),
+  );
+  await assertSucceeds(
+    runTransaction(ownerDb, async (transaction) => {
+      transaction.set(docRef(ownerDb, "trips", newTripId, "members", OWNER_UID), {
+        displayName: "정민",
+        role: "OWNER",
+      });
+      transaction.set(docRef(ownerDb, "trips", newTripId, "itinerary", "seed-item"), {
+        title: "인천 → 프라하",
+      });
+    }),
+  );
+});

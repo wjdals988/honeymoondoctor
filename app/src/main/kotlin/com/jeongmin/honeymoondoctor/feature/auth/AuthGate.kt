@@ -7,6 +7,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -34,13 +37,20 @@ fun AuthGate(viewModel: AuthGateViewModel = hiltViewModel()) {
                     })
                 }
             }
-            is AuthGateState.NeedsTripSetup -> TripSetupScreen(
-                user = state.user,
-                pendingJoinTripId = state.pendingJoinTripId,
-                onCreateTrip = { viewModel.createTrip(state.user) {} },
-                onRequestToJoin = { code, onResult -> viewModel.requestToJoin(state.user, code, onResult) },
-                onCancelPendingJoin = viewModel::cancelPendingJoin,
-            )
+            is AuthGateState.NeedsTripSetup -> {
+                var createError by remember { mutableStateOf<String?>(null) }
+                TripSetupScreen(
+                    user = state.user,
+                    pendingJoinTripId = state.pendingJoinTripId,
+                    createError = createError,
+                    onCreateTrip = {
+                        createError = null
+                        viewModel.createTrip(state.user) { createError = it.message ?: "여행 생성에 실패했습니다." }
+                    },
+                    onRequestToJoin = { code, onResult -> viewModel.requestToJoin(state.user, code, onResult) },
+                    onCancelPendingJoin = viewModel::cancelPendingJoin,
+                )
+            }
             is AuthGateState.Ready -> HoneymoonDoctorAppRoot()
         }
     }

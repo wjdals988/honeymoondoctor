@@ -80,64 +80,73 @@ class FirebaseTripRepository @Inject constructor(
             "role" to TripRole.OWNER.name,
             "joinedAt" to FieldValue.serverTimestamp(),
         )
-        // 여행 문서와 소유자 구성원 문서를 하나의 트랜잭션으로 묶어, 규칙의 isTripOwner()가
-        // 두 쓰기 모두에 대해 일관되게(같은 커밋 시점 기준으로) 평가되도록 한다.
-        // 시드 데이터(도시·일정)도 같은 트랜잭션에 넣어 "전부 삽입되거나 전혀 안 되거나"를 보장한다.
-        // 여행 생성이 시드 삽입의 유일한 진입점이므로 재실행·동기화 시 재삽입되지 않는다(스펙 4장).
-        firestore.runTransaction { transaction ->
-            transaction.set(tripRef, tripData)
-            transaction.set(memberRef, memberData)
-            seed.cities.forEach { citySeed ->
-                val city = citySeed.toDomainCity()
-                transaction.set(
-                    tripRef.collection("cities").document(city.id),
-                    city.toFirestoreMap() + mapOf(
-                        "createdAt" to FieldValue.serverTimestamp(),
-                        "updatedAt" to FieldValue.serverTimestamp(),
-                    ),
-                )
-            }
-            seed.itinerary.forEach { itemSeed ->
-                val item = itemSeed.toDomainItem()
-                transaction.set(
-                    tripRef.collection("itinerary").document(item.id),
-                    item.toFirestoreMap() + mapOf(
-                        "createdAt" to FieldValue.serverTimestamp(),
-                        "updatedAt" to FieldValue.serverTimestamp(),
-                    ),
-                )
-            }
-            seed.reservations.forEach { reservationSeed ->
-                val reservation = reservationSeed.toDomainReservation()
-                transaction.set(
-                    tripRef.collection("reservations").document(reservation.id),
-                    reservation.toFirestoreMap() + mapOf(
-                        "createdAt" to FieldValue.serverTimestamp(),
-                        "updatedAt" to FieldValue.serverTimestamp(),
-                    ),
-                )
-            }
-            seed.checklistItems.forEach { checklistSeed ->
-                val checklistItem = checklistSeed.toDomainChecklistItem()
-                transaction.set(
-                    tripRef.collection("checklistItems").document(checklistItem.id),
-                    checklistItem.toFirestoreMap() + mapOf(
-                        "createdAt" to FieldValue.serverTimestamp(),
-                        "updatedAt" to FieldValue.serverTimestamp(),
-                    ),
-                )
-            }
-            seed.decisions.forEach { decisionSeed ->
-                val decision = decisionSeed.toDomainDecision()
-                transaction.set(
-                    tripRef.collection("decisions").document(decision.id),
-                    decision.toFirestoreMap() + mapOf(
-                        "createdAt" to FieldValue.serverTimestamp(),
-                        "updatedAt" to FieldValue.serverTimestamp(),
-                    ),
-                )
-            }
-        }.await()
+        // firestore.rules의 isTripOwner()/isTripMember()는 get()으로 trips/{tripId}를 다시 읽어 검사한다.
+        // Firestore는 트랜잭션 안에서 "같은 트랜잭션이 쓰고 있는 문서"에 대한 get()을 트랜잭션 시작
+        // 시점의 상태(즉 아직 존재하지 않음)로 평가하므로, 여행 문서와 구성원·시드 데이터를 한
+        // 트랜잭션에 함께 넣으면 프로덕션에서 항상 PERMISSION_DENIED가 난다(Emulator 규칙 테스트는
+        // 이 조합을 검증하지 않아 이 문제를 잡지 못했다 — 실제 Firebase 연동 후에야 발견됨).
+        // 그래서 여행 문서를 먼저 커밋해 get()이 볼 수 있게 만든 뒤, 구성원+시드 데이터를 별도
+        // 트랜잭션으로 묶는다. 두 번째 트랜잭션이 실패하면 첫 번째에서 만든 여행 문서를 정리해
+        // "구성원도 시드도 없는 빈 여행"이 남지 않게 한다.
+        tripRef.set(tripData).await()
+        runCatching {
+            firestore.runTransaction { transaction ->
+                transaction.set(memberRef, memberData)
+                seed.cities.forEach { citySeed ->
+                    val city = citySeed.toDomainCity()
+                    transaction.set(
+                        tripRef.collection("cities").document(city.id),
+                        city.toFirestoreMap() + mapOf(
+                            "createdAt" to FieldValue.serverTimestamp(),
+                            "updatedAt" to FieldValue.serverTimestamp(),
+                        ),
+                    )
+                }
+                seed.itinerary.forEach { itemSeed ->
+                    val item = itemSeed.toDomainItem()
+                    transaction.set(
+                        tripRef.collection("itinerary").document(item.id),
+                        item.toFirestoreMap() + mapOf(
+                            "createdAt" to FieldValue.serverTimestamp(),
+                            "updatedAt" to FieldValue.serverTimestamp(),
+                        ),
+                    )
+                }
+                seed.reservations.forEach { reservationSeed ->
+                    val reservation = reservationSeed.toDomainReservation()
+                    transaction.set(
+                        tripRef.collection("reservations").document(reservation.id),
+                        reservation.toFirestoreMap() + mapOf(
+                            "createdAt" to FieldValue.serverTimestamp(),
+                            "updatedAt" to FieldValue.serverTimestamp(),
+                        ),
+                    )
+                }
+                seed.checklistItems.forEach { checklistSeed ->
+                    val checklistItem = checklistSeed.toDomainChecklistItem()
+                    transaction.set(
+                        tripRef.collection("checklistItems").document(checklistItem.id),
+                        checklistItem.toFirestoreMap() + mapOf(
+                            "createdAt" to FieldValue.serverTimestamp(),
+                            "updatedAt" to FieldValue.serverTimestamp(),
+                        ),
+                    )
+                }
+                seed.decisions.forEach { decisionSeed ->
+                    val decision = decisionSeed.toDomainDecision()
+                    transaction.set(
+                        tripRef.collection("decisions").document(decision.id),
+                        decision.toFirestoreMap() + mapOf(
+                            "createdAt" to FieldValue.serverTimestamp(),
+                            "updatedAt" to FieldValue.serverTimestamp(),
+                        ),
+                    )
+                }
+            }.await()
+        }.onFailure { error ->
+            runCatching { tripRef.delete().await() }
+            throw error
+        }
 
         return Trip(
             id = tripRef.id,

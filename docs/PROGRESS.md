@@ -93,6 +93,67 @@ cd firebase && npm test
 - 아직 남은 것: Authentication에서 Google 로그인 활성화 → SHA-1 등록 → google-services.json
   재다운로드(웹 클라이언트 ID 포함) → 실제 Firebase 모드 빌드 검증.
 
+## Firebase 콘솔 연동 완료 — 빌드 검증 (2026-08-07)
+
+- 사용자가 Authentication에서 Google 로그인 활성화 → SHA-1 지문(`1a:2d:c0:63:...`) 등록 →
+  `google-services.json` 재다운로드·교체까지 전부 완료함.
+- 새 `google-services.json` 내용 확인: `project_id=honeymoon-doctor`,
+  `package_name=com.jeongmin.honeymoondoctor`, `oauth_client`에 `client_type 3`(웹 클라이언트) 포함.
+- `export JAVA_HOME=... && ./gradlew clean :app:assembleDebug` 실행 → **BUILD SUCCESSFUL in 17s**.
+  생성된 `BuildConfig`에서 `HAS_FIREBASE_CONFIG=true`, `GOOGLE_WEB_CLIENT_ID=405941960117-r6uj0qq...`
+  실제 값 채워짐을 확인함(빈 문자열이 아님 → 데모 모드로 폴백하지 않고 진짜 Firebase 경로를 탄다는 뜻).
+  경고 1건은 `SyncStatusScreen.kt:75`의 `LocalLifecycleOwner` deprecated 알림뿐이며 빌드를 막지 않음.
+- **Firestore 보안 규칙을 실제 프로젝트에 배포 완료**: 사용자가
+  `firebase deploy --only firestore:rules --project honeymoon-doctor` 실행 →
+  `Deploy complete!`. 배포 과정에서 CLI가 `firestore.googleapis.com` API를 자동 활성화하고
+  프로덕션 모드 Firestore 데이터베이스(default)를 새로 생성함(이전에는 존재하지 않았음).
+  이제 실제 프로젝트에 규칙이 적용된 상태.
+- **아직 미검증(코드는 완성, 실측 전)**: 실제 기기/에뮬레이터에서 Google 로그인 성공 여부,
+  Firestore에 실제 문서 생성 여부, 2인 동시 접속 시 실시간 동기화. QA_CHECKLIST.md §3-7·§4와
+  동일한 항목.
+
+## 실제 Firebase 모드 실측 — Google 로그인 성공, 여행 생성 P0 버그 발견·수정 (2026-08-07)
+
+- `HoneymoonDoctor_Dev` 에뮬레이터(창 보이게 재시작)에서 테스트 계정(`jm2test002@gmail.com`)으로
+  실제 Google 로그인 시도 → logcat에 `FirebaseAuth: Notifying auth state listeners about user
+  (cPU2SuWXYNUnwbfa7XNioA0Hfht2)` 확인 → **로그인 자체는 완전히 성공**.
+- 로그인 후 "새 여행 만들기"를 누르면 화면에 아무 변화 없이 조용히 실패. 원인 추적 결과
+  [AuthGate.kt](../app/src/main/kotlin/com/jeongmin/honeymoondoctor/feature/auth/AuthGate.kt)의
+  `onCreateTrip = { viewModel.createTrip(state.user) {} }`처럼 에러 콜백이 빈 람다라 실패가
+  화면에 전혀 노출되지 않았음. 에러를 노출하도록 임시 수정한 뒤 재현하니 실제 에러는
+  `PERMISSION_DENIED: Missing or insufficient permissions.`
+- **근본 원인**: [FirebaseTripRepository.kt](../app/src/main/kotlin/com/jeongmin/honeymoondoctor/data/trip/FirebaseTripRepository.kt)의
+  `createTripWithSeed()`가 여행 문서·구성원 문서·시드 데이터(도시/일정/예약/준비물/결정)를
+  하나의 트랜잭션에 함께 썼는데, `firestore.rules`의 `isTripOwner()`/`isTripMember()`가
+  `get()`으로 트립 문서를 다시 읽어 검사한다. **Firestore는 같은 트랜잭션이 쓰고 있는 문서에
+  대한 `get()`을 트랜잭션 "시작 시점" 상태(즉 아직 존재하지 않음)로 평가**하므로, 구성원·시드
+  쓰기가 전부 권한 검사에서 걸려 트랜잭션 전체가 항상 거부됨. 코드에 있던 기존 주석("같은
+  커밋 시점 기준으로 일관되게 평가된다")은 실제 Firestore 동작과 다른 잘못된 가정이었음.
+  **Firestore Emulator 규칙 테스트(기존 12개)는 이 조합(같은 트랜잭션 내 다중 컬렉션 생성 +
+  그 트랜잭션 안의 부모 문서를 get()으로 검사)을 테스트한 적이 없어서** 실제 Firebase 연동
+  전까지 발견되지 못했던 사각지대였음. 데모 모드(Room)는 이런 제약이 없어 항상 정상 동작했기
+  때문에 지금까지의 "Phase별 에뮬레이터 검증 완료"는 전부 데모 모드 기준이었을 뿐, 실제
+  Firebase 기준 검증은 이번이 처음이었음.
+- **수정**: 트랜잭션을 2단계로 분리 — ① `trips/{id}` 문서만 먼저 단독 커밋(생성 규칙은 get()
+  불필요) → ② 그 커밋이 끝난 뒤 별도 트랜잭션으로 구성원 문서+시드 데이터 전체 생성(이제
+  get()이 ①에서 커밋된 트립 문서를 정상적으로 봄). ②가 실패하면 ①에서 만든 고아 트립 문서를
+  삭제해 "구성원도 시드도 없는 빈 여행"이 남지 않게 함.
+  [firebase/test/rules.test.js](../firebase/test/rules.test.js)에 이 시나리오의 회귀 테스트
+  2건 추가(단일 트랜잭션은 거부, 2단계는 성공) — Emulator 규칙 테스트 12→14개, 전부 통과.
+  또한 [AuthGate.kt](../app/src/main/kotlin/com/jeongmin/honeymoondoctor/feature/auth/AuthGate.kt)/
+  [TripSetupScreen.kt](../app/src/main/kotlin/com/jeongmin/honeymoondoctor/feature/auth/TripSetupScreen.kt)의
+  빈 에러 콜백을 실제 에러 메시지 표시로 교체(join 요청 실패 표시와 동일한 패턴).
+- **수정 후 재검증**: `HoneymoonDoctor_Dev`에서 재현 절차 그대로 재시도 → 홈 화면에 "출발
+  D-33", "인천 → 프라하 (KE969)" 다음 일정, "미완료 필수 준비물 8개" 등 실제 시드 데이터가
+  Firestore를 거쳐 정상 표시됨. 일정 탭에서도 인천→프라하·프라하→바르셀로나 일정과 예상
+  경비(615,600원)까지 확인 — **실제 Firebase 모드 로그인+여행 생성+시드 데이터 조회가
+  end-to-end로 전부 검증됨**.
+- 유닛테스트(`./gradlew :app:testDebugUnitTest`) 전부 통과, Emulator 규칙 테스트 14/14 통과.
+- 남은 미검증: 2인 동시 접속 실시간 동기화. 초대 승인(`approveJoinRequest`)도 트랜잭션+get()을
+  쓰지만, 거기서 읽는 트립 문서는 트랜잭션 시작 전부터 이미 존재하는 문서라(여행 생성 버그처럼
+  "같은 트랜잭션에서 막 생성 중인 문서"가 아님) 구조적으로 위험은 낮다고 판단됨 — 다만 실제
+  Firebase로 직접 검증한 적은 아직 없어 QA_CHECKLIST에는 미검증으로 남겨둠.
+
 ## Firebase 설정 — 사용자가 직접 해야 하는 것 (아직 아무것도 안 받음)
 
 1. Firebase 콘솔에서 프로젝트 생성 → Android 앱 등록(패키지명 `com.jeongmin.honeymoondoctor`) → `google-services.json`을 `app/google-services.json`에 저장(자동으로 `.gitignore`에 걸려 커밋되지 않음).
