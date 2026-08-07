@@ -1,0 +1,15 @@
+{
+  "seedVersion": "default-checklist-v1",
+  "_comment": "새 여행을 만들 때 1회만 삽입되는 기본 준비물 목록입니다. 자유롭게 수정·삭제할 수 있습니다.",
+
+  "checklistItems": [
+    { "checklistItemId": "seed_checklist_passport", "title": "여권", "category": "DOCUMENT", "ownerScope": "SHARED", "required": true },
+    { "checklistItemId": "seed_checklist_vouchers", "title": "항공·호텔 바우처", "category": "DOCUMENT", "ownerScope": "SHARED", "required": true },
+    { "checklistItemId": "seed_checklist_travel_insurance", "title": "여행자보험", "category": "DOCUMENT", "ownerScope": "SHARED", "required": true },
+    { "checklistItemId": "seed_checklist_overseas_card", "title": "해외결제카드", "category": "DOCUMENT", "ownerScope": "SHARED", "required": true },
+    { "checklistItemId": "seed_checklist_charger", "title": "충전기", "category": "ELECTRONICS", "ownerScope": "SHARED", "required": true },
+    { "checklistItemId": "seed_checklist_adapter", "title": "멀티어댑터", "category": "ELECTRONICS", "ownerScope": "SHARED", "required": true },
+    { "checklistItemId": "seed_checklist_sim", "title": "유심·로밍", "category": "ELECTRONICS", "ownerScope": "SHARED", "required": true },
+    { "checklistItemId": "seed_checklist_local_cash", "title": "현지 현금", "category": "ETC", "ownerScope": "SHARED", "required": true }
+  ]
+}

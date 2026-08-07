@@ -45,7 +45,7 @@ fun LoginScreen(
     ) {
         Text("허니문닥터", style = MaterialTheme.typography.headlineMedium)
         Text(
-            "정민·찬희 신혼여행 전담 주치의",
+            "둘만의 신혼여행 전담 주치의",
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(top = 8.dp, bottom = 32.dp),
         )

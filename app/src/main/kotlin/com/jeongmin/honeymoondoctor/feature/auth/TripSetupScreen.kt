@@ -1,6 +1,5 @@
 package com.jeongmin.honeymoondoctor.feature.auth
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -17,14 +16,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.jeongmin.honeymoondoctor.core.ui.DateField
+import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.domain.model.AuthUser
+import com.jeongmin.honeymoondoctor.domain.model.NewTripDraft
+import com.jeongmin.honeymoondoctor.domain.model.TravelCurrency
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun TripSetupScreen(
     user: AuthUser,
     pendingJoinTripId: String?,
     createError: String?,
-    onCreateTrip: () -> Unit,
+    onCreateTrip: (NewTripDraft) -> Unit,
     onRequestToJoin: (String, (Result<Unit>) -> Unit) -> Unit,
     onCancelPendingJoin: () -> Unit,
     modifier: Modifier = Modifier,
@@ -43,8 +48,57 @@ fun TripSetupScreen(
             return@Column
         }
 
-        Button(onClick = onCreateTrip, modifier = Modifier.fillMaxWidth()) {
-            Text("새 여행 만들기")
+        var tripName by remember { mutableStateOf("") }
+        var startDate by remember { mutableStateOf(LocalDate.now()) }
+        var endDate by remember { mutableStateOf(LocalDate.now().plusDays(6)) }
+        var currency by remember { mutableStateOf(TravelCurrency.KRW) }
+
+        Text("새 여행 만들기", style = MaterialTheme.typography.titleMedium)
+        OutlinedTextField(
+            value = tripName,
+            onValueChange = { tripName = it },
+            label = { Text("여행 이름 *") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        )
+        DateField(
+            label = "시작일",
+            date = startDate,
+            onDateChange = { date ->
+                startDate = date
+                if (endDate.isBefore(date)) endDate = date
+            },
+            modifier = Modifier.padding(top = 8.dp),
+        )
+        DateField(
+            label = "종료일",
+            date = endDate,
+            onDateChange = { date -> endDate = date },
+            modifier = Modifier.padding(top = 8.dp),
+        )
+        DropdownSelector(
+            label = "기본 통화",
+            selectedLabel = "${currency.code} (${currency.symbol})",
+            options = TravelCurrency.entries,
+            optionLabel = { "${it.code} (${it.symbol})" },
+            onSelect = { currency = it },
+            modifier = Modifier.padding(top = 8.dp),
+        )
+        Button(
+            onClick = {
+                onCreateTrip(
+                    NewTripDraft(
+                        name = tripName.trim(),
+                        startDate = startDate.format(DateTimeFormatter.ISO_LOCAL_DATE),
+                        endDate = endDate.format(DateTimeFormatter.ISO_LOCAL_DATE),
+                        defaultCurrency = currency.code,
+                    ),
+                )
+            },
+            enabled = tripName.isNotBlank() && !endDate.isBefore(startDate),
+            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+        ) {
+            Text("여행 만들기")
         }
         createError?.let {
             Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp))
@@ -66,7 +120,7 @@ fun TripSetupScreen(
         )
         Button(
             onClick = {
-                onRequestToJoin(inviteCode) { result ->
+                onRequestToJoin(inviteCode.trim()) { result ->
                     result.onFailure { joinError = it.message ?: "참여 요청에 실패했습니다." }
                 }
             },

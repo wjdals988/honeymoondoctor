@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.jeongmin.honeymoondoctor.core.demo.DemoModeManager
 import com.jeongmin.honeymoondoctor.data.local.prefs.AppPreferences
 import com.jeongmin.honeymoondoctor.domain.model.AuthUser
+import com.jeongmin.honeymoondoctor.domain.model.NewTripDraft
 import com.jeongmin.honeymoondoctor.domain.model.Trip
 import com.jeongmin.honeymoondoctor.domain.repository.AuthRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
@@ -65,9 +66,9 @@ class AuthGateViewModel @Inject constructor(
         }
     }
 
-    fun createTrip(user: AuthUser, onError: (Throwable) -> Unit) {
+    fun createTrip(user: AuthUser, draft: NewTripDraft, onError: (Throwable) -> Unit) {
         viewModelScope.launch {
-            runCatching { tripRepository.createTripWithSeed(user.uid, user.displayName) }
+            runCatching { tripRepository.createTrip(user.uid, user.displayName, draft) }
                 .onFailure(onError)
         }
     }

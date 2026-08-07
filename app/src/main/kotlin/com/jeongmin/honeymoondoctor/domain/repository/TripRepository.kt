@@ -1,6 +1,7 @@
 package com.jeongmin.honeymoondoctor.domain.repository
 
 import com.jeongmin.honeymoondoctor.domain.model.JoinRequest
+import com.jeongmin.honeymoondoctor.domain.model.NewTripDraft
 import com.jeongmin.honeymoondoctor.domain.model.Trip
 import com.jeongmin.honeymoondoctor.domain.model.TripMember
 import kotlinx.coroutines.flow.Flow
@@ -14,8 +15,8 @@ interface TripRepository {
     /** 소유자에게만 유효한 목록. 구성원이 아닌 사용자가 호출하면 규칙에 의해 빈 목록/오류로 처리된다. */
     fun observePendingJoinRequests(tripId: String): Flow<List<JoinRequest>>
 
-    /** 여행 최초 생성 + 시드 데이터 1회 삽입. ownerUid가 유일한 최초 구성원이 된다. */
-    suspend fun createTripWithSeed(ownerUid: String, ownerDisplayName: String): Trip
+    /** 여행 최초 생성 + 기본 준비물 체크리스트 1회 삽입. ownerUid가 유일한 최초 구성원이 된다. */
+    suspend fun createTrip(ownerUid: String, ownerDisplayName: String, draft: NewTripDraft): Trip
 
     /** 새 초대코드를 생성하고 해시만 저장한 뒤, 공유용 원문 코드를 반환한다(재발급 시 이전 코드는 즉시 무효화). */
     suspend fun regenerateInviteCode(tripId: String): String

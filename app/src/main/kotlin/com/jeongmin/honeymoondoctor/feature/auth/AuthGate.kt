@@ -43,9 +43,9 @@ fun AuthGate(viewModel: AuthGateViewModel = hiltViewModel()) {
                     user = state.user,
                     pendingJoinTripId = state.pendingJoinTripId,
                     createError = createError,
-                    onCreateTrip = {
+                    onCreateTrip = { draft ->
                         createError = null
-                        viewModel.createTrip(state.user) { createError = it.message ?: "여행 생성에 실패했습니다." }
+                        viewModel.createTrip(state.user, draft) { createError = it.message ?: "여행 생성에 실패했습니다." }
                     },
                     onRequestToJoin = { code, onResult -> viewModel.requestToJoin(state.user, code, onResult) },
                     onCancelPendingJoin = viewModel::cancelPendingJoin,

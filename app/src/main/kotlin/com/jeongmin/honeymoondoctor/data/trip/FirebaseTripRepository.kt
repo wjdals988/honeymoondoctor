@@ -5,19 +5,12 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.jeongmin.honeymoondoctor.core.security.InviteCode
 import com.jeongmin.honeymoondoctor.data.checklist.toFirestoreMap
-import com.jeongmin.honeymoondoctor.data.city.toFirestoreMap
-import com.jeongmin.honeymoondoctor.data.decision.toFirestoreMap
 import com.jeongmin.honeymoondoctor.data.firestore.snapshotFlow
-import com.jeongmin.honeymoondoctor.data.itinerary.toFirestoreMap
-import com.jeongmin.honeymoondoctor.data.reservation.toFirestoreMap
 import com.jeongmin.honeymoondoctor.data.seed.SeedAssetLoader
 import com.jeongmin.honeymoondoctor.data.seed.toDomainChecklistItem
-import com.jeongmin.honeymoondoctor.data.seed.toDomainCity
-import com.jeongmin.honeymoondoctor.data.seed.toDomainDecision
-import com.jeongmin.honeymoondoctor.data.seed.toDomainItem
-import com.jeongmin.honeymoondoctor.data.seed.toDomainReservation
 import com.jeongmin.honeymoondoctor.domain.model.JoinRequest
 import com.jeongmin.honeymoondoctor.domain.model.JoinRequestStatus
+import com.jeongmin.honeymoondoctor.domain.model.NewTripDraft
 import com.jeongmin.honeymoondoctor.domain.model.Trip
 import com.jeongmin.honeymoondoctor.domain.model.TripMember
 import com.jeongmin.honeymoondoctor.domain.model.TripRole
@@ -58,19 +51,19 @@ class FirebaseTripRepository @Inject constructor(
             .snapshotFlow()
             .map { snapshot -> snapshot?.documents.orEmpty().mapNotNull { it.toJoinRequest() } }
 
-    override suspend fun createTripWithSeed(ownerUid: String, ownerDisplayName: String): Trip {
-        val seed = seedAssetLoader.loadHoneymoonTripSeed()
+    override suspend fun createTrip(ownerUid: String, ownerDisplayName: String, draft: NewTripDraft): Trip {
+        val defaults = seedAssetLoader.loadNewTripDefaults()
         val tripRef = firestore.collection(TRIPS).document()
         val tripData = mapOf(
-            "name" to seed.trip.name,
-            "startDate" to seed.trip.startDate,
-            "endDate" to seed.trip.endDate,
-            "defaultCurrency" to seed.trip.defaultCurrency,
+            "name" to draft.name,
+            "startDate" to draft.startDate,
+            "endDate" to draft.endDate,
+            "defaultCurrency" to draft.defaultCurrency,
             "ownerId" to ownerUid,
             "memberIds" to listOf(ownerUid),
             "inviteCodeHash" to null,
             "status" to TripStatus.ACTIVE.name,
-            "seedVersion" to seed.seedVersion,
+            "seedVersion" to defaults.seedVersion,
             "createdAt" to FieldValue.serverTimestamp(),
             "updatedAt" to FieldValue.serverTimestamp(),
         )
@@ -85,58 +78,18 @@ class FirebaseTripRepository @Inject constructor(
         // 시점의 상태(즉 아직 존재하지 않음)로 평가하므로, 여행 문서와 구성원·시드 데이터를 한
         // 트랜잭션에 함께 넣으면 프로덕션에서 항상 PERMISSION_DENIED가 난다(Emulator 규칙 테스트는
         // 이 조합을 검증하지 않아 이 문제를 잡지 못했다 — 실제 Firebase 연동 후에야 발견됨).
-        // 그래서 여행 문서를 먼저 커밋해 get()이 볼 수 있게 만든 뒤, 구성원+시드 데이터를 별도
+        // 그래서 여행 문서를 먼저 커밋해 get()이 볼 수 있게 만든 뒤, 구성원+체크리스트를 별도
         // 트랜잭션으로 묶는다. 두 번째 트랜잭션이 실패하면 첫 번째에서 만든 여행 문서를 정리해
-        // "구성원도 시드도 없는 빈 여행"이 남지 않게 한다.
+        // "구성원도 없는 빈 여행"이 남지 않게 한다.
         tripRef.set(tripData).await()
         runCatching {
             firestore.runTransaction { transaction ->
                 transaction.set(memberRef, memberData)
-                seed.cities.forEach { citySeed ->
-                    val city = citySeed.toDomainCity()
-                    transaction.set(
-                        tripRef.collection("cities").document(city.id),
-                        city.toFirestoreMap() + mapOf(
-                            "createdAt" to FieldValue.serverTimestamp(),
-                            "updatedAt" to FieldValue.serverTimestamp(),
-                        ),
-                    )
-                }
-                seed.itinerary.forEach { itemSeed ->
-                    val item = itemSeed.toDomainItem()
-                    transaction.set(
-                        tripRef.collection("itinerary").document(item.id),
-                        item.toFirestoreMap() + mapOf(
-                            "createdAt" to FieldValue.serverTimestamp(),
-                            "updatedAt" to FieldValue.serverTimestamp(),
-                        ),
-                    )
-                }
-                seed.reservations.forEach { reservationSeed ->
-                    val reservation = reservationSeed.toDomainReservation()
-                    transaction.set(
-                        tripRef.collection("reservations").document(reservation.id),
-                        reservation.toFirestoreMap() + mapOf(
-                            "createdAt" to FieldValue.serverTimestamp(),
-                            "updatedAt" to FieldValue.serverTimestamp(),
-                        ),
-                    )
-                }
-                seed.checklistItems.forEach { checklistSeed ->
+                defaults.checklistItems.forEach { checklistSeed ->
                     val checklistItem = checklistSeed.toDomainChecklistItem()
                     transaction.set(
                         tripRef.collection("checklistItems").document(checklistItem.id),
                         checklistItem.toFirestoreMap() + mapOf(
-                            "createdAt" to FieldValue.serverTimestamp(),
-                            "updatedAt" to FieldValue.serverTimestamp(),
-                        ),
-                    )
-                }
-                seed.decisions.forEach { decisionSeed ->
-                    val decision = decisionSeed.toDomainDecision()
-                    transaction.set(
-                        tripRef.collection("decisions").document(decision.id),
-                        decision.toFirestoreMap() + mapOf(
                             "createdAt" to FieldValue.serverTimestamp(),
                             "updatedAt" to FieldValue.serverTimestamp(),
                         ),
@@ -150,15 +103,15 @@ class FirebaseTripRepository @Inject constructor(
 
         return Trip(
             id = tripRef.id,
-            name = seed.trip.name,
-            startDate = seed.trip.startDate,
-            endDate = seed.trip.endDate,
-            defaultCurrency = seed.trip.defaultCurrency,
+            name = draft.name,
+            startDate = draft.startDate,
+            endDate = draft.endDate,
+            defaultCurrency = draft.defaultCurrency,
             ownerId = ownerUid,
             memberIds = listOf(ownerUid),
             inviteCodeHash = null,
             status = TripStatus.ACTIVE,
-            seedVersion = seed.seedVersion,
+            seedVersion = defaults.seedVersion,
         )
     }
 

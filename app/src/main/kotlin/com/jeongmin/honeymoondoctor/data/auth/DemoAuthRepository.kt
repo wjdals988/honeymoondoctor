@@ -7,7 +7,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-private val DEMO_OWNER = AuthUser(uid = "demo-owner-uid", displayName = "정민", email = null)
+private val DEMO_OWNER = AuthUser(uid = "demo-owner-uid", displayName = "데모 사용자", email = null)
 
 /** 데모 모드에서는 실제 Google 계정 없이 항상 같은 로컬 가상 사용자로 진입한다. */
 @Singleton

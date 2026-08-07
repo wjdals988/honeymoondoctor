@@ -13,7 +13,7 @@ enum class ChecklistCategory(val labelKo: String) {
 }
 
 /**
- * 준비물 항목. [ownerUid]가 null이면 공용, 아니면 해당 구성원(정민/찬희) 전용이다.
+ * 준비물 항목. [ownerUid]가 null이면 공용, 아니면 해당 구성원 전용이다.
  * 시드의 ownerScope=SHARED가 ownerUid=null로 매핑된다.
  */
 data class ChecklistItem(
