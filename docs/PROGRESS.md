@@ -81,6 +81,18 @@ cd firebase && npm test
 - 의존성 버전은 절대 기억에 의존하지 말고 `curl -s https://dl.google.com/dl/android/maven2/.../maven-metadata.xml` (Google Maven) / `https://repo1.maven.org/maven2/.../maven-metadata.xml` (Maven Central)로 실제 최신 안정 버전을 확인한 뒤 `gradle/libs.versions.toml`에 반영했다. Phase 4 이후 새 라이브러리를 추가할 때도 이 방식을 유지할 것.
 - 에뮬레이터 관련 사고: 이미 떠 있던 `emulator-5554`가 다른 세션의 실제 QA 자동화 배치가 쓰던 공유 장비인 줄 모르고 잠깐 앱을 설치·실행했다가 그 배치를 방해할 뻔했다. 반드시 `HoneymoonDoctor_Dev` 전용 에뮬레이터만 사용할 것.
 
+## Firebase 콘솔 연동 진행 중 (2026-08-07, 사용자가 직접 진행)
+
+- 사용자가 Firebase 콘솔에서 프로젝트(`honeymoon-doctor`)와 Android 앱(`com.jeongmin.honeymoondoctor`)을
+  등록하고 `app/google-services.json`을 받아 배치함.
+- **디버그 빌드의 `applicationIdSuffix = ".debug"`를 제거함**(app/build.gradle.kts). 이유: 이 앱은
+  2인 개인용이라 release와 debug를 같은 기기에 동시 설치할 필요가 없고, 접미사가 있으면
+  Firebase에 앱을 2개(정식+debug) 등록해야 해서 불필요하게 복잡해짐. 제거 후 디버그 빌드의
+  실제 패키지명도 `com.jeongmin.honeymoondoctor`로 통일됨(이전 세션 기록에 `.debug`로 adb
+  설치했던 예시들은 이제 접미사 없이 그대로 쓰면 됨).
+- 아직 남은 것: Authentication에서 Google 로그인 활성화 → SHA-1 등록 → google-services.json
+  재다운로드(웹 클라이언트 ID 포함) → 실제 Firebase 모드 빌드 검증.
+
 ## Firebase 설정 — 사용자가 직접 해야 하는 것 (아직 아무것도 안 받음)
 
 1. Firebase 콘솔에서 프로젝트 생성 → Android 앱 등록(패키지명 `com.jeongmin.honeymoondoctor`) → `google-services.json`을 `app/google-services.json`에 저장(자동으로 `.gitignore`에 걸려 커밋되지 않음).

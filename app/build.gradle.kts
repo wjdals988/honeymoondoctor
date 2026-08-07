@@ -72,7 +72,8 @@ android {
     buildTypes {
         debug {
             isDebuggable = true
-            applicationIdSuffix = ".debug"
+            // 개인 2인용 앱이라 release와 동시 설치할 일이 없어, Firebase 앱 등록을 하나로
+            // 유지하기 위해 접미사를 붙이지 않는다(패키지명 com.jeongmin.honeymoondoctor로 통일).
             buildConfigField("boolean", "IS_DEMO_FORCED", "false")
         }
         release {
