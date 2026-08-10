@@ -46,6 +46,7 @@ class DemoTripRepository @Inject constructor(
         prefs[DEMO_TRIP_STATE_KEY]?.let { json.decodeFromString(DemoTripStateDto.serializer(), it) }
     }
 
+    // 완료된 여행도 계속 이 값으로 조회된다. FirebaseTripRepository의 observeMyTrip 주석 참고.
     override fun observeMyTrip(uid: String): Flow<Trip?> = stateFlow.map { state ->
         state?.takeIf { uid in it.memberIds }?.toDomain()
     }
@@ -150,6 +151,17 @@ class DemoTripRepository @Inject constructor(
         saveState(state.copy(joinRequests = updatedRequests))
     }
 
+    override suspend fun setStatus(tripId: String, status: TripStatus) {
+        val state = requireCurrentState(tripId)
+        val now = Instant.now().toEpochMilli()
+        saveState(
+            state.copy(
+                status = status.name,
+                completedAtEpochMillis = if (status == TripStatus.COMPLETED) now else null,
+            ),
+        )
+    }
+
     private suspend fun requireCurrentState(tripId: String): DemoTripStateDto {
         val state = stateFlow.first()
         check(state != null && state.id == tripId) { "여행을 찾을 수 없습니다: $tripId" }
@@ -169,8 +181,11 @@ class DemoTripRepository @Inject constructor(
         ownerId = ownerId,
         memberIds = memberIds,
         inviteCodeHash = inviteCodeHash,
-        status = TripStatus.ACTIVE,
+        status = runCatching { TripStatus.valueOf(status) }.getOrDefault(TripStatus.ACTIVE),
         seedVersion = seedVersion,
+        isPublic = isPublic,
+        completedAt = completedAtEpochMillis?.let { Instant.ofEpochMilli(it) },
+        publishedAt = publishedAtEpochMillis?.let { Instant.ofEpochMilli(it) },
     )
 
     private fun DemoJoinRequestDto.toDomain() = JoinRequest(

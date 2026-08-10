@@ -24,6 +24,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.ui.CityFormDialog
 import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.TripRole
+import com.jeongmin.honeymoondoctor.domain.model.TripStatus
+import com.jeongmin.honeymoondoctor.domain.model.isReadOnly
 
 @Composable
 fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel = hiltViewModel()) {
@@ -39,9 +41,34 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
             Text(
                 "${trip.startDate} ~ ${trip.endDate} · ${trip.defaultCurrency}",
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(top = 4.dp, bottom = 16.dp),
+                modifier = Modifier.padding(top = 4.dp),
             )
-            Text("구성원 (${state.members.size}/2)", style = MaterialTheme.typography.titleMedium)
+            if (trip.isReadOnly) {
+                Text(
+                    "완료된 여행 — 더 이상 수정할 수 없습니다.",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+            if (isOwner) {
+                TextButton(
+                    onClick = {
+                        viewModel.setStatus(
+                            trip.id,
+                            if (trip.isReadOnly) TripStatus.ACTIVE else TripStatus.COMPLETED,
+                        )
+                    },
+                    modifier = Modifier.padding(top = 4.dp),
+                ) {
+                    Text(if (trip.isReadOnly) "다시 활성화" else "여행 완료 처리")
+                }
+            }
+            Text(
+                "구성원 (${state.members.size}/2)",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = 12.dp),
+            )
         }
         items(state.members) { member ->
             ListItem(
@@ -54,7 +81,9 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("도시", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                TextButton(onClick = { editingCity = null; showCityDialog = true }) { Text("+ 도시 추가") }
+                if (!trip.isReadOnly) {
+                    TextButton(onClick = { editingCity = null; showCityDialog = true }) { Text("+ 도시 추가") }
+                }
             }
         }
         if (state.cities.isEmpty()) {
@@ -71,7 +100,9 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
                 headlineContent = { Text(city.displayName) },
                 supportingContent = { Text(listOfNotNull(city.countryCode.ifBlank { null }, city.timeZoneId).joinToString(" · ")) },
                 trailingContent = {
-                    TextButton(onClick = { editingCity = city; showCityDialog = true }) { Text("수정") }
+                    if (!trip.isReadOnly) {
+                        TextButton(onClick = { editingCity = city; showCityDialog = true }) { Text("수정") }
+                    }
                 },
             )
         }

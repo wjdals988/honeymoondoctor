@@ -4,7 +4,7 @@ import java.time.Instant
 
 enum class TripRole { OWNER, MEMBER }
 
-enum class TripStatus { ACTIVE, ARCHIVED }
+enum class TripStatus { ACTIVE, COMPLETED }
 
 data class TripMember(
     val uid: String,
@@ -24,7 +24,13 @@ data class Trip(
     val inviteCodeHash: String?,
     val status: TripStatus,
     val seedVersion: String?,
+    val isPublic: Boolean = false,
+    val completedAt: Instant? = null,
+    val publishedAt: Instant? = null,
 )
+
+/** 완료된 여행은 구성원도 더 이상 수정할 수 없다(Firestore 규칙에서도 동일하게 서버 측에서 강제). */
+val Trip.isReadOnly: Boolean get() = status == TripStatus.COMPLETED
 
 enum class JoinRequestStatus { PENDING, APPROVED, REJECTED }
 

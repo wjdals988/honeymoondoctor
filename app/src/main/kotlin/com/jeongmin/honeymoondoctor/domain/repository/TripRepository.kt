@@ -4,6 +4,7 @@ import com.jeongmin.honeymoondoctor.domain.model.JoinRequest
 import com.jeongmin.honeymoondoctor.domain.model.NewTripDraft
 import com.jeongmin.honeymoondoctor.domain.model.Trip
 import com.jeongmin.honeymoondoctor.domain.model.TripMember
+import com.jeongmin.honeymoondoctor.domain.model.TripStatus
 import kotlinx.coroutines.flow.Flow
 
 interface TripRepository {
@@ -30,4 +31,7 @@ interface TripRepository {
     suspend fun approveJoinRequest(tripId: String, requestId: String)
 
     suspend fun rejectJoinRequest(tripId: String, requestId: String)
+
+    /** 여행을 완료 처리(구성원 쓰기 잠금)하거나 ACTIVE로 되돌린다. 소유자만 호출 가능(규칙에서 강제). */
+    suspend fun setStatus(tripId: String, status: TripStatus)
 }

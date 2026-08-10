@@ -42,6 +42,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
+import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.domain.model.Decision
 import com.jeongmin.honeymoondoctor.domain.model.DecisionCategory
 import com.jeongmin.honeymoondoctor.domain.model.DecisionOption
@@ -153,11 +154,13 @@ fun DecisionScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = {
-                editorTarget = null
-                showEditor = true
-            }) {
-                Icon(Icons.Filled.Add, contentDescription = "결정 항목 추가")
+            if (!LocalTripReadOnly.current) {
+                FloatingActionButton(onClick = {
+                    editorTarget = null
+                    showEditor = true
+                }) {
+                    Icon(Icons.Filled.Add, contentDescription = "결정 항목 추가")
+                }
             }
         },
     ) { innerPadding ->

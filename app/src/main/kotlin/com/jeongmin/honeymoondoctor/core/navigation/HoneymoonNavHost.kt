@@ -7,8 +7,12 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
+import com.jeongmin.honeymoondoctor.core.ui.ReadOnlyEditorPanel
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -67,7 +71,9 @@ private fun placeEditRoute(placeId: String?): String =
 fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
     val isDemoMode = viewModel.isDemoMode
     val navController = rememberNavController()
+    val isReadOnly by viewModel.isTripReadOnly.collectAsState()
 
+    CompositionLocalProvider(LocalTripReadOnly provides isReadOnly) {
     Scaffold(
         bottomBar = { HoneymoonBottomBar(navController) },
     ) { innerPadding ->
@@ -100,7 +106,11 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                     },
                 ),
             ) {
-                ItineraryEditScreen(onNavigateBack = { navController.popBackStack() })
+                if (LocalTripReadOnly.current) {
+                    ReadOnlyEditorPanel(onNavigateBack = { navController.popBackStack() })
+                } else {
+                    ItineraryEditScreen(onNavigateBack = { navController.popBackStack() })
+                }
             }
             composable(BottomTab.NEARBY.route) {
                 NearbyScreen(onOpenEditor = { placeId -> navController.navigate(placeEditRoute(placeId)) })
@@ -115,7 +125,11 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                     },
                 ),
             ) {
-                PlaceEditScreen(onNavigateBack = { navController.popBackStack() })
+                if (LocalTripReadOnly.current) {
+                    ReadOnlyEditorPanel(onNavigateBack = { navController.popBackStack() })
+                } else {
+                    PlaceEditScreen(onNavigateBack = { navController.popBackStack() })
+                }
             }
             composable(ROUTE_PLACE_IMPORT) {
                 PlaceImportScreen(onNavigateBack = { navController.popBackStack() })
@@ -140,7 +154,11 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                     },
                 ),
             ) {
-                ExpenseEditScreen(onNavigateBack = { navController.popBackStack() })
+                if (LocalTripReadOnly.current) {
+                    ReadOnlyEditorPanel(onNavigateBack = { navController.popBackStack() })
+                } else {
+                    ExpenseEditScreen(onNavigateBack = { navController.popBackStack() })
+                }
             }
             composable(ROUTE_BUDGETS) {
                 BudgetScreen(onNavigateBack = { navController.popBackStack() })
@@ -191,9 +209,14 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                     },
                 ),
             ) {
-                ReservationEditScreen(onNavigateBack = { navController.popBackStack() })
+                if (LocalTripReadOnly.current) {
+                    ReadOnlyEditorPanel(onNavigateBack = { navController.popBackStack() })
+                } else {
+                    ReservationEditScreen(onNavigateBack = { navController.popBackStack() })
+                }
             }
         }
+    }
     }
 }
 

@@ -7,6 +7,7 @@ import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.JoinRequest
 import com.jeongmin.honeymoondoctor.domain.model.Trip
 import com.jeongmin.honeymoondoctor.domain.model.TripMember
+import com.jeongmin.honeymoondoctor.domain.model.TripStatus
 import com.jeongmin.honeymoondoctor.domain.repository.AuthRepository
 import com.jeongmin.honeymoondoctor.domain.repository.CityRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
@@ -91,5 +92,9 @@ class TripInfoViewModel @Inject constructor(
 
     fun reject(tripId: String, requestId: String) {
         viewModelScope.launch { tripRepository.rejectJoinRequest(tripId, requestId) }
+    }
+
+    fun setStatus(tripId: String, status: TripStatus) {
+        viewModelScope.launch { tripRepository.setStatus(tripId, status) }
     }
 }

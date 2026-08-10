@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
+import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.domain.model.ChecklistCategory
 import com.jeongmin.honeymoondoctor.domain.model.ChecklistItem
 import com.jeongmin.honeymoondoctor.domain.model.TripMember
@@ -72,11 +73,13 @@ fun ChecklistScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = {
-                editorTarget = null
-                showEditor = true
-            }) {
-                Icon(Icons.Filled.Add, contentDescription = "준비물 추가")
+            if (!LocalTripReadOnly.current) {
+                FloatingActionButton(onClick = {
+                    editorTarget = null
+                    showEditor = true
+                }) {
+                    Icon(Icons.Filled.Add, contentDescription = "준비물 추가")
+                }
             }
         },
     ) { innerPadding ->
@@ -198,7 +201,11 @@ private fun ChecklistRow(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Checkbox(checked = item.completed, onCheckedChange = { onToggle() })
+        Checkbox(
+            checked = item.completed,
+            onCheckedChange = { onToggle() },
+            enabled = !LocalTripReadOnly.current,
+        )
         Column(
             modifier = Modifier
                 .weight(1f)

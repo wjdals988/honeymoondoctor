@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.time.LocalTimes
 import com.jeongmin.honeymoondoctor.core.time.koreanZoneLabel
+import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.copyToClipboard
 import com.jeongmin.honeymoondoctor.core.ui.openGoogleMapsDirections
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryItem
@@ -61,8 +62,10 @@ fun ItineraryScreen(
     Scaffold(
         modifier = modifier,
         floatingActionButton = {
-            FloatingActionButton(onClick = { onOpenEditor(null) }) {
-                Icon(Icons.Filled.Add, contentDescription = "일정 추가")
+            if (!LocalTripReadOnly.current) {
+                FloatingActionButton(onClick = { onOpenEditor(null) }) {
+                    Icon(Icons.Filled.Add, contentDescription = "일정 추가")
+                }
             }
         },
     ) { innerPadding ->

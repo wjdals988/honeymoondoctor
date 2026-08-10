@@ -33,6 +33,10 @@ class FirebaseTripRepository @Inject constructor(
     private val seedAssetLoader: SeedAssetLoader,
 ) : TripRepository {
 
+    // 완료된 여행도 계속 이 값으로 조회된다 — 완료 후에도 소유자가 여행 정보 화면에서
+    // 공개 토글을 켜거나 다시 활성화할 수 있어야 하기 때문이다(완료 즉시 화면에서 밀려나면
+    // 공개 처리를 할 화면 자체가 사라진다). 계정당 여행이 1개인 현재 구조에서 "완료 후 새
+    // 여행을 곧바로 또 만드는" 흐름은 이번 범위에 포함하지 않았다(§보류: 여러 여행 전환 UI).
     override fun observeMyTrip(uid: String): Flow<Trip?> =
         firestore.collection(TRIPS)
             .whereArrayContains("memberIds", uid)
@@ -63,6 +67,7 @@ class FirebaseTripRepository @Inject constructor(
             "memberIds" to listOf(ownerUid),
             "inviteCodeHash" to null,
             "status" to TripStatus.ACTIVE.name,
+            "isPublic" to false,
             "seedVersion" to defaults.seedVersion,
             "createdAt" to FieldValue.serverTimestamp(),
             "updatedAt" to FieldValue.serverTimestamp(),
@@ -184,6 +189,16 @@ class FirebaseTripRepository @Inject constructor(
             .await()
     }
 
+    override suspend fun setStatus(tripId: String, status: TripStatus) {
+        val updates = mutableMapOf<String, Any?>(
+            "status" to status.name,
+            "updatedAt" to FieldValue.serverTimestamp(),
+        )
+        // 완료 처리 시각을 기록하고, 재개(ACTIVE로 되돌림) 시에는 지워 다음 완료 때 다시 채워지게 한다.
+        updates["completedAt"] = if (status == TripStatus.COMPLETED) FieldValue.serverTimestamp() else null
+        firestore.collection(TRIPS).document(tripId).update(updates).await()
+    }
+
     private fun DocumentSnapshot.toTrip(): Trip? {
         val ownerId = getString("ownerId") ?: return null
         @Suppress("UNCHECKED_CAST")
@@ -199,6 +214,9 @@ class FirebaseTripRepository @Inject constructor(
             inviteCodeHash = getString("inviteCodeHash"),
             status = runCatching { TripStatus.valueOf(getString("status").orEmpty()) }.getOrDefault(TripStatus.ACTIVE),
             seedVersion = getString("seedVersion"),
+            isPublic = getBoolean("isPublic") ?: false,
+            completedAt = getTimestamp("completedAt")?.toDate()?.toInstant(),
+            publishedAt = getTimestamp("publishedAt")?.toDate()?.toInstant(),
         )
     }
 

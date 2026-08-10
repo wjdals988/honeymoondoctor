@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.time.LocalTimes
 import com.jeongmin.honeymoondoctor.core.time.koreanZoneLabel
+import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.domain.model.Reservation
 import com.jeongmin.honeymoondoctor.domain.model.ReservationStatus
 import com.jeongmin.honeymoondoctor.domain.model.maskSecret
@@ -63,8 +64,10 @@ fun ReservationListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onCreate) {
-                Icon(Icons.Filled.Add, contentDescription = "예약 추가")
+            if (!LocalTripReadOnly.current) {
+                FloatingActionButton(onClick = onCreate) {
+                    Icon(Icons.Filled.Add, contentDescription = "예약 추가")
+                }
             }
         },
     ) { innerPadding ->

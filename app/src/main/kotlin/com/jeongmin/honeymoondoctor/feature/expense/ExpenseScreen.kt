@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.time.LocalTimes
+import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.domain.model.Expense
 import com.jeongmin.honeymoondoctor.domain.model.TravelCurrency
 import com.jeongmin.honeymoondoctor.domain.usecase.KrwConverter
@@ -63,8 +64,10 @@ fun ExpenseScreen(
     Scaffold(
         modifier = modifier,
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddExpense) {
-                Icon(Icons.Filled.Add, contentDescription = "지출 추가")
+            if (!LocalTripReadOnly.current) {
+                FloatingActionButton(onClick = onAddExpense) {
+                    Icon(Icons.Filled.Add, contentDescription = "지출 추가")
+                }
             }
         },
     ) { innerPadding ->

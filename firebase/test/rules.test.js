@@ -50,16 +50,16 @@ test.beforeEach(async () => {
   await testEnv.withSecurityRulesDisabled(async (context) => {
     const db = context.firestore();
     await setDoc(doc(db, "trips", TRIP_ID), {
-      name: "정민·찬희 신혼여행",
+      name: "테스트 여행",
       ownerId: OWNER_UID,
       memberIds: [OWNER_UID, PARTNER_UID],
       inviteCodeHash: REAL_INVITE_HASH,
       defaultCurrency: "KRW",
       status: "ACTIVE",
     });
-    await setDoc(doc(db, "trips", TRIP_ID, "members", OWNER_UID), { displayName: "정민", role: "OWNER" });
-    await setDoc(doc(db, "trips", TRIP_ID, "members", PARTNER_UID), { displayName: "찬희", role: "MEMBER" });
-    await setDoc(doc(db, "trips", TRIP_ID, "itinerary", "seed-item"), { title: "인천 → 프라하" });
+    await setDoc(doc(db, "trips", TRIP_ID, "members", OWNER_UID), { displayName: "소유자", role: "OWNER" });
+    await setDoc(doc(db, "trips", TRIP_ID, "members", PARTNER_UID), { displayName: "구성원", role: "MEMBER" });
+    await setDoc(doc(db, "trips", TRIP_ID, "itinerary", "seed-item"), { title: "샘플 일정" });
   });
 });
 
@@ -215,4 +215,37 @@ test("신규 여행 생성: 트립 문서를 먼저 커밋한 뒤 구성원+시�
       });
     }),
   );
+});
+
+test("완료된 여행은 구성원도 하위 컬렉션을 쓸 수 없다", async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await updateDoc(doc(context.firestore(), "trips", TRIP_ID), { status: "COMPLETED" });
+  });
+  const partnerDb = testEnv.authenticatedContext(PARTNER_UID).firestore();
+  await assertFails(
+    setDoc(doc(partnerDb, "trips", TRIP_ID, "expenses", "e-after-complete"), { amountMinor: 1000 }),
+  );
+  const ownerDb = testEnv.authenticatedContext(OWNER_UID).firestore();
+  await assertFails(
+    updateDoc(doc(ownerDb, "trips", TRIP_ID, "itinerary", "seed-item"), { title: "수정 시도" }),
+  );
+});
+
+test("완료된 여행도 구성원은 계속 읽을 수 있다", async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await updateDoc(doc(context.firestore(), "trips", TRIP_ID), { status: "COMPLETED" });
+  });
+  const partnerDb = testEnv.authenticatedContext(PARTNER_UID).firestore();
+  await assertSucceeds(getDoc(doc(partnerDb, "trips", TRIP_ID, "itinerary", "seed-item")));
+});
+
+test("소유자는 여행을 완료 처리하고 다시 활성화할 수 있다", async () => {
+  const ownerDb = testEnv.authenticatedContext(OWNER_UID).firestore();
+  await assertSucceeds(updateDoc(doc(ownerDb, "trips", TRIP_ID), { status: "COMPLETED" }));
+  await assertSucceeds(updateDoc(doc(ownerDb, "trips", TRIP_ID), { status: "ACTIVE" }));
+});
+
+test("소유자가 아닌 구성원은 여행 상태를 바꿀 수 없다", async () => {
+  const partnerDb = testEnv.authenticatedContext(PARTNER_UID).firestore();
+  await assertFails(updateDoc(doc(partnerDb, "trips", TRIP_ID), { status: "COMPLETED" }));
 });

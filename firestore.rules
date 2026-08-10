@@ -33,6 +33,10 @@ service cloud.firestore {
         request.auth.uid == tripDoc(tripId).data.ownerId;
     }
 
+    function isTripActive(tripId) {
+      return tripDoc(tripId).data.get('status', 'ACTIVE') == 'ACTIVE';
+    }
+
     // ── trips/{tripId} ─────────────────────────────────────────────
     match /trips/{tripId} {
       // get/list 모두 resource.data 기준으로 동일하게 검사한다. array-contains 필터가
@@ -84,8 +88,14 @@ service cloud.firestore {
 
       // ── 여행 구성원이라면 CRUD 가능한 운영 데이터 컬렉션 ─────────
       // (일정, 예약, 준비물, 경비, 예산, 장소, 결정함, 도시)
+      // 완료된 여행(status != ACTIVE)은 구성원도 더 이상 쓸 수 없다 — 읽기는 계속 허용해
+      // 완료 후에도 내용을 볼 수 있게 한다.
       match /{collection}/{docId} {
-        allow read, write: if isTripMember(tripId) && collection in [
+        allow read: if isTripMember(tripId) && collection in [
+          'cities', 'itinerary', 'reservations', 'checklistItems',
+          'expenses', 'budgets', 'places', 'decisions'
+        ];
+        allow write: if isTripMember(tripId) && isTripActive(tripId) && collection in [
           'cities', 'itinerary', 'reservations', 'checklistItems',
           'expenses', 'budgets', 'places', 'decisions'
         ];

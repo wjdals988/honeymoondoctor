@@ -16,6 +16,10 @@ data class DemoTripStateDto(
     val seedVersion: String?,
     val members: List<DemoMemberDto>,
     val joinRequests: List<DemoJoinRequestDto> = emptyList(),
+    val status: String = "ACTIVE",
+    val isPublic: Boolean = false,
+    val completedAtEpochMillis: Long? = null,
+    val publishedAtEpochMillis: Long? = null,
 )
 
 @Serializable

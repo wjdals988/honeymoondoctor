@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.openGoogleMapsDirections
 import com.jeongmin.honeymoondoctor.core.ui.openUrl
 import com.jeongmin.honeymoondoctor.domain.model.Place
@@ -74,8 +75,10 @@ fun NearbyScreen(
     Scaffold(
         modifier = modifier,
         floatingActionButton = {
-            FloatingActionButton(onClick = { onOpenEditor(null) }) {
-                Icon(Icons.Filled.Add, contentDescription = "장소 추가")
+            if (!LocalTripReadOnly.current) {
+                FloatingActionButton(onClick = { onOpenEditor(null) }) {
+                    Icon(Icons.Filled.Add, contentDescription = "장소 추가")
+                }
             }
         },
     ) { innerPadding ->
