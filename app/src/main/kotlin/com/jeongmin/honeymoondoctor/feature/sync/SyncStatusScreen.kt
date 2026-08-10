@@ -18,8 +18,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -46,6 +44,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.jeongmin.honeymoondoctor.core.time.LocalTimes
+import com.jeongmin.honeymoondoctor.core.ui.AppCard
+import com.jeongmin.honeymoondoctor.core.ui.CardTone
 import java.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -119,76 +119,78 @@ fun SyncStatusScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = if (status?.isOnline == true) "온라인" else "오프라인",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = if (status?.isOnline == true) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.error
-                            },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
+            AppCard(
+                modifier = Modifier.fillMaxWidth(),
+                tone = if (status?.isOnline == true) CardTone.Neutral else CardTone.Warn,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = if (status?.isDemoMode == true) {
-                            "데모 모드 — 이 기기에만 저장되며 원격 동기화가 없습니다."
+                        text = if (status?.isOnline == true) "온라인" else "오프라인",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (status?.isOnline == true) {
+                            MaterialTheme.colorScheme.primary
                         } else {
-                            "마지막 동기화: " + (status?.lastSyncAt?.let { formatSyncTime(it) } ?: "아직 없음")
+                            MaterialTheme.colorScheme.error
                         },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Text(
+                    text = if (status?.isDemoMode == true) {
+                        "데모 모드 — 이 기기에만 저장되며 원격 동기화가 없습니다."
+                    } else {
+                        "마지막 동기화: " + (status?.lastSyncAt?.let { formatSyncTime(it) } ?: "아직 없음")
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (status?.isDemoMode != true) {
+                    Text(
+                        text = "동기화 대기 변경: ${status?.pendingChangeCount ?: 0}건",
                         style = MaterialTheme.typography.bodyMedium,
                     )
-                    if (status?.isDemoMode != true) {
-                        Text(
-                            text = "동기화 대기 변경: ${status?.pendingChangeCount ?: 0}건",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
                 }
             }
 
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                    Text("중요 일정 알림", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        text = "일정 시작 24시간·3시간·1시간 전에 로컬 알림을 보냅니다.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+            AppCard(
+                modifier = Modifier.fillMaxWidth(),
+                tone = if (!notificationGranted || !exactAlarmAllowed) CardTone.Warn else CardTone.Neutral,
+            ) {
+                Text("중요 일정 알림", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = "일정 시작 24시간·3시간·1시간 전에 로컬 알림을 보냅니다.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
 
-                    PermissionRow(
-                        label = "알림 권한",
-                        granted = notificationGranted,
-                        deniedMessage = "거절 시 앱의 핵심 기능은 그대로 동작하며, 일정 알림만 표시되지 않습니다.",
-                        onRequest = {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            }
-                        },
-                        onOpenSettings = { context.startActivity(appNotificationSettingsIntent(context.packageName)) },
-                    )
+                PermissionRow(
+                    label = "알림 권한",
+                    granted = notificationGranted,
+                    deniedMessage = "거절 시 앱의 핵심 기능은 그대로 동작하며, 일정 알림만 표시되지 않습니다.",
+                    onRequest = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    },
+                    onOpenSettings = { context.startActivity(appNotificationSettingsIntent(context.packageName)) },
+                )
 
-                    PermissionRow(
-                        label = "정확한 알람 권한",
-                        granted = exactAlarmAllowed,
-                        deniedMessage = "거절 시 WorkManager 기반 알림으로 대체됩니다. 정시가 아닌 " +
-                            "몇 분~수십 분 정도 지연될 수 있습니다.",
-                        onRequest = {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                context.startActivity(
-                                    Intent(
-                                        Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                                        Uri.parse("package:${context.packageName}"),
-                                    ),
-                                )
-                            }
-                        },
-                        onOpenSettings = null,
-                    )
-                }
+                PermissionRow(
+                    label = "정확한 알람 권한",
+                    granted = exactAlarmAllowed,
+                    deniedMessage = "거절 시 WorkManager 기반 알림으로 대체됩니다. 정시가 아닌 " +
+                        "몇 분~수십 분 정도 지연될 수 있습니다.",
+                    onRequest = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            context.startActivity(
+                                Intent(
+                                    Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                                    Uri.parse("package:${context.packageName}"),
+                                ),
+                            )
+                        }
+                    },
+                    onOpenSettings = null,
+                )
             }
         }
     }

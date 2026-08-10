@@ -45,6 +45,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
+import com.jeongmin.honeymoondoctor.core.ui.EmptyState
+import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.domain.model.ChecklistCategory
 import com.jeongmin.honeymoondoctor.domain.model.ChecklistItem
@@ -134,15 +136,15 @@ fun ChecklistScreen(
 
             if (uiState.items.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "표시할 준비물이 없습니다.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    EmptyState(title = "표시할 준비물이 없습니다.")
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 8.dp, bottom = 88.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        top = 8.dp,
+                        bottom = FabSpacing.ContentBottomPadding,
+                    ),
                 ) {
                     items(uiState.items, key = { it.id }) { item ->
                         ChecklistRow(

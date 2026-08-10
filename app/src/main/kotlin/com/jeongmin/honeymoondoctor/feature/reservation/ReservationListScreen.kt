@@ -16,7 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -37,6 +36,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.time.LocalTimes
 import com.jeongmin.honeymoondoctor.core.time.koreanZoneLabel
+import com.jeongmin.honeymoondoctor.core.ui.AppCard
+import com.jeongmin.honeymoondoctor.core.ui.CardTone
+import com.jeongmin.honeymoondoctor.core.ui.EmptyState
+import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.domain.model.Reservation
 import com.jeongmin.honeymoondoctor.domain.model.ReservationStatus
@@ -108,11 +111,11 @@ fun ReservationListScreen(
 
             if (uiState.reservations.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("표시할 예약이 없습니다.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    EmptyState(title = "표시할 예약이 없습니다.")
                 }
             } else {
                 LazyColumn(
-                    contentPadding = PaddingValues(bottom = 88.dp),
+                    contentPadding = PaddingValues(bottom = FabSpacing.ContentBottomPadding),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(uiState.reservations, key = { it.id }) { reservation ->
@@ -126,45 +129,43 @@ fun ReservationListScreen(
 
 @Composable
 private fun ReservationCard(reservation: Reservation, onClick: () -> Unit) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+    AppCard(modifier = Modifier.fillMaxWidth(), tone = CardTone.Neutral, onClick = onClick) {
+        Text(
+            text = reservationScheduleLabel(reservation) ?: "일시 미정",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = reservation.title,
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (reservation.vendor.isNotBlank() && reservation.vendor != reservation.title) {
             Text(
-                text = reservationScheduleLabel(reservation) ?: "일시 미정",
-                style = MaterialTheme.typography.labelLarge,
+                text = reservation.vendor,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = reservation.title,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (reservation.vendor.isNotBlank() && reservation.vendor != reservation.title) {
-                Text(
-                    text = reservation.vendor,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(top = 6.dp),
-            ) {
-                AssistChip(onClick = {}, label = { Text(reservation.type.labelKo) })
-                AssistChip(onClick = {}, label = { Text(reservation.status.labelKo) })
-            }
-            // 목록에서는 예약번호·PIN을 항상 마스킹한다(스펙 7-4). 원문은 상세 화면에서만.
-            maskSecret(reservation.confirmationCode)?.let { masked ->
-                Text(
-                    text = "예약번호 $masked",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
-            }
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(top = 6.dp),
+        ) {
+            AssistChip(onClick = {}, label = { Text(reservation.type.labelKo) })
+            AssistChip(onClick = {}, label = { Text(reservation.status.labelKo) })
+        }
+        // 목록에서는 예약번호·PIN을 항상 마스킹한다(스펙 7-4). 원문은 상세 화면에서만.
+        maskSecret(reservation.confirmationCode)?.let { masked ->
+            Text(
+                text = "예약번호 $masked",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
         }
     }
 }

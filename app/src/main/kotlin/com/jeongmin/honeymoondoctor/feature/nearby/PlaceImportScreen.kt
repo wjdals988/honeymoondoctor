@@ -14,8 +14,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -34,6 +32,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.jeongmin.honeymoondoctor.core.ui.AppCard
+import com.jeongmin.honeymoondoctor.core.ui.CardTone
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,14 +107,11 @@ fun PlaceImportScreen(
             }
             uiState.importedCount?.let { imported ->
                 item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    AppCard(
+                        tone = CardTone.Highlight,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(
-                            text = "가져오기 완료: ${imported}건이 추가됐습니다.",
-                            modifier = Modifier.padding(16.dp),
-                        )
+                        Text(text = "가져오기 완료: ${imported}건이 추가됐습니다.")
                     }
                 }
             }
@@ -134,29 +131,25 @@ fun PlaceImportScreen(
                 }
                 items(preview.rows, key = { it.lineNumber }) { row ->
                     val isDuplicate = row.lineNumber in preview.duplicateLineNumbers
-                    Card(
-                        colors = when {
-                            row.errors.isNotEmpty() ->
-                                CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
-                            isDuplicate ->
-                                CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                            else -> CardDefaults.cardColors()
+                    AppCard(
+                        tone = when {
+                            row.errors.isNotEmpty() -> CardTone.Warn
+                            isDuplicate -> CardTone.Done
+                            else -> CardTone.Neutral
                         },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = "행 ${row.lineNumber}: ${row.place?.name ?: "(파싱 실패)"}" +
+                                if (isDuplicate) " — 중복(제외됨)" else "",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        row.errors.forEach { message ->
                             Text(
-                                text = "행 ${row.lineNumber}: ${row.place?.name ?: "(파싱 실패)"}" +
-                                    if (isDuplicate) " — 중복(제외됨)" else "",
-                                style = MaterialTheme.typography.bodyMedium,
+                                text = "• $message",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
                             )
-                            row.errors.forEach { message ->
-                                Text(
-                                    text = "• $message",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onErrorContainer,
-                                )
-                            }
                         }
                     }
                 }

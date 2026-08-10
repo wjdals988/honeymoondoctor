@@ -15,7 +15,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -39,7 +38,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jeongmin.honeymoondoctor.core.ui.AppCard
+import com.jeongmin.honeymoondoctor.core.ui.CardTone
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
+import com.jeongmin.honeymoondoctor.core.ui.EmptyState
+import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.domain.model.Budget
 import com.jeongmin.honeymoondoctor.domain.model.City
@@ -170,15 +173,20 @@ fun BudgetScreen(
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = "설정된 예산이 없습니다.\n+ 버튼으로 도시·카테고리별 예산을 추가하세요.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                EmptyState(
+                    title = "설정된 예산이 없습니다",
+                    description = "+ 버튼으로 도시·카테고리별 예산을 추가하세요.",
                 )
             }
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 8.dp,
+                    bottom = FabSpacing.ContentBottomPadding,
+                ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(uiState.rows, key = { it.budget.id }) { row ->
@@ -218,10 +226,10 @@ private fun BudgetCard(
 ) {
     val budget = row.budget
     val remaining = budget.budgetKrw - row.spentKrw
-    Card(onClick = onEdit, modifier = Modifier.fillMaxWidth()) {
+    AppCard(onClick = onEdit, modifier = Modifier.fillMaxWidth(), tone = CardTone.Neutral) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 10.dp, bottom = 10.dp, end = 4.dp),
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(

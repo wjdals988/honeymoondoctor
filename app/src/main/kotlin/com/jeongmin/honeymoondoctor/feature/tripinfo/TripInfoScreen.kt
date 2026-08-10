@@ -24,6 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.ui.CityFormDialog
+import com.jeongmin.honeymoondoctor.core.ui.EmptyState
+import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
 import com.jeongmin.honeymoondoctor.core.ui.copyToClipboard
 import com.jeongmin.honeymoondoctor.core.ui.shareText
 import com.jeongmin.honeymoondoctor.domain.model.City
@@ -99,9 +101,8 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
                     TextButton(onClick = { showPublishDialog = true }) { Text("다른 사용자에게 공개") }
                 }
             }
-            Text(
-                "구성원 (${state.members.size}/2)",
-                style = MaterialTheme.typography.titleMedium,
+            SectionHeader(
+                title = "구성원 (${state.members.size}/2)",
                 modifier = Modifier.padding(top = 12.dp),
             )
         }
@@ -114,18 +115,19 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
         item { HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp)) }
 
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("도시", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                if (!trip.isReadOnly) {
-                    TextButton(onClick = { editingCity = null; showCityDialog = true }) { Text("+ 도시 추가") }
-                }
-            }
+            SectionHeader(
+                title = "도시",
+                trailing = if (!trip.isReadOnly) {
+                    { TextButton(onClick = { editingCity = null; showCityDialog = true }) { Text("+ 도시 추가") } }
+                } else {
+                    null
+                },
+            )
         }
         if (state.cities.isEmpty()) {
             item {
-                Text(
-                    "등록된 도시가 없습니다. 일정·장소·경비 화면에서도 바로 추가할 수 있습니다.",
-                    style = MaterialTheme.typography.bodyMedium,
+                EmptyState(
+                    title = "등록된 도시가 없습니다. 일정·장소·경비 화면에서도 바로 추가할 수 있습니다.",
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
@@ -145,7 +147,7 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
 
         if (isOwner) {
             item {
-                Text("초대", style = MaterialTheme.typography.titleMedium)
+                SectionHeader(title = "초대")
                 if (state.members.size >= 2) {
                     Text(
                         "이미 구성원이 2명입니다.",
@@ -190,13 +192,12 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
                     }
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-                Text("참여 요청", style = MaterialTheme.typography.titleMedium)
+                SectionHeader(title = "참여 요청")
             }
             if (state.pendingJoinRequests.isEmpty()) {
                 item {
-                    Text(
-                        "대기 중인 참여 요청이 없습니다.",
-                        style = MaterialTheme.typography.bodyMedium,
+                    EmptyState(
+                        title = "대기 중인 참여 요청이 없습니다.",
                         modifier = Modifier.padding(top = 8.dp),
                     )
                 }

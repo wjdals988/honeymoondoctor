@@ -16,8 +16,6 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -42,6 +40,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.time.LocalTimes
 import com.jeongmin.honeymoondoctor.core.time.koreanZoneLabel
+import com.jeongmin.honeymoondoctor.core.ui.AppCard
+import com.jeongmin.honeymoondoctor.core.ui.CardTone
+import com.jeongmin.honeymoondoctor.core.ui.EmptyState
+import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.copyToClipboard
 import com.jeongmin.honeymoondoctor.core.ui.openGoogleMapsDirections
@@ -83,7 +85,7 @@ fun ItineraryScreen(
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                    start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp,
+                    start = 16.dp, end = 16.dp, top = 8.dp, bottom = FabSpacing.ContentBottomPadding,
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -102,12 +104,7 @@ fun ItineraryScreen(
                     }
                     if (day.timedItems.isEmpty() && day.allDayItems.isEmpty()) {
                         item(key = "empty-${day.date}") {
-                            Text(
-                                text = "일정 없음",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(start = 8.dp, bottom = 4.dp),
-                            )
+                            EmptyState(title = "일정 없음")
                         }
                     }
                     items(day.timedItems.size, key = { i -> "timed-${day.timedItems[i].id}" }) { i ->
@@ -170,80 +167,75 @@ private fun ItineraryCard(
     val context = LocalContext.current
     val dimmed = item.status != ItineraryStatus.PLANNED
 
-    Card(
+    AppCard(
+        modifier = Modifier.fillMaxWidth(),
+        tone = if (dimmed) CardTone.Done else CardTone.Neutral,
         onClick = { onEdit(item.id) },
-        colors = if (dimmed) {
-            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-        } else {
-            CardDefaults.cardColors()
-        },
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = timeLabel(item),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = item.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        textDecoration = if (item.status == ItineraryStatus.SKIPPED) TextDecoration.LineThrough else null,
-                    )
-                }
-                ItemMenu(
-                    item = item,
-                    onEdit = { onEdit(item.id) },
-                    onSetStatus = onSetStatus,
-                    onDeleteRequest = onDeleteRequest,
-                    onDirections = {
-                        val destination = item.address?.takeIf { it.isNotBlank() }
-                            ?: item.location?.takeIf { it.isNotBlank() }
-                        destination?.let { openGoogleMapsDirections(context, it) }
-                    },
-                    onCopyAddress = {
-                        item.address?.takeIf { it.isNotBlank() }?.let { copyToClipboard(context, "주소", it) }
-                    },
-                )
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.padding(top = 4.dp),
-            ) {
-                AssistChip(onClick = {}, label = { Text(item.type.labelKo) })
-                if (item.status != ItineraryStatus.PLANNED) {
-                    AssistChip(onClick = {}, label = { Text(item.status.labelKo) })
-                }
-                if (isConflicting) {
-                    AssistChip(
-                        onClick = {},
-                        label = { Text("과로 경고: 시간 겹침") },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Filled.Warning,
-                                contentDescription = "시간이 겹치는 일정",
-                                tint = MaterialTheme.colorScheme.error,
-                            )
-                        },
-                    )
-                }
-            }
-
-            val details = buildList {
-                item.location?.takeIf { it.isNotBlank() }?.let { add(it) }
-                item.estimatedKrw?.let { add("예상 ${NumberFormat.getNumberInstance(Locale.KOREA).format(it)}원") }
-            }
-            if (details.isNotEmpty()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = details.joinToString(" · "),
-                    style = MaterialTheme.typography.bodySmall,
+                    text = timeLabel(item),
+                    style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
+                )
+                Text(
+                    text = item.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    textDecoration = if (item.status == ItineraryStatus.SKIPPED) TextDecoration.LineThrough else null,
                 )
             }
+            ItemMenu(
+                item = item,
+                onEdit = { onEdit(item.id) },
+                onSetStatus = onSetStatus,
+                onDeleteRequest = onDeleteRequest,
+                onDirections = {
+                    val destination = item.address?.takeIf { it.isNotBlank() }
+                        ?: item.location?.takeIf { it.isNotBlank() }
+                    destination?.let { openGoogleMapsDirections(context, it) }
+                },
+                onCopyAddress = {
+                    item.address?.takeIf { it.isNotBlank() }?.let { copyToClipboard(context, "주소", it) }
+                },
+            )
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(top = 4.dp),
+        ) {
+            AssistChip(onClick = {}, label = { Text(item.type.labelKo) })
+            if (item.status != ItineraryStatus.PLANNED) {
+                AssistChip(onClick = {}, label = { Text(item.status.labelKo) })
+            }
+            if (isConflicting) {
+                AssistChip(
+                    onClick = {},
+                    label = { Text("과로 경고: 시간 겹침") },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Filled.Warning,
+                            contentDescription = "시간이 겹치는 일정",
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    },
+                )
+            }
+        }
+
+        val details = buildList {
+            item.location?.takeIf { it.isNotBlank() }?.let { add(it) }
+            item.estimatedKrw?.let { add("예상 ${NumberFormat.getNumberInstance(Locale.KOREA).format(it)}원") }
+        }
+        if (details.isNotEmpty()) {
+            Text(
+                text = details.joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
         }
     }
 }

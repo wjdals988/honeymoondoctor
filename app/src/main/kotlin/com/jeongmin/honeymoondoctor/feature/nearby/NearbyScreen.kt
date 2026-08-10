@@ -19,8 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -47,7 +45,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.jeongmin.honeymoondoctor.core.ui.AppCard
+import com.jeongmin.honeymoondoctor.core.ui.CardTone
+import com.jeongmin.honeymoondoctor.core.ui.EmptyState
+import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
+import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
 import com.jeongmin.honeymoondoctor.core.ui.openGoogleMapsDirections
 import com.jeongmin.honeymoondoctor.core.ui.openUrl
 import com.jeongmin.honeymoondoctor.domain.model.Place
@@ -97,7 +100,12 @@ fun NearbyScreen(
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 8.dp,
+                    bottom = FabSpacing.ContentBottomPadding,
+                ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 item {
@@ -120,20 +128,16 @@ fun NearbyScreen(
 
                 if (uiState.totalPlaceCount == 0) {
                     item {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = "저장된 장소가 없습니다.\n+ 버튼으로 추가하거나 전체 탭의 \"장소 가져오기\"를 사용하세요.",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                        EmptyState(
+                            title = "저장된 장소가 없습니다",
+                            modifier = Modifier.padding(top = 48.dp),
+                            description = "+ 버튼으로 추가하거나 전체 탭의 \"장소 가져오기\"를 사용하세요.",
+                        )
                     }
                 } else {
                     if (uiState.top3.isNotEmpty()) {
                         item {
-                            Text("지금 가기 좋은 처방", style = MaterialTheme.typography.titleMedium)
+                            SectionHeader(title = "지금 가기 좋은 처방")
                         }
                         items(uiState.top3, key = { "top-${it.place.id}" }) { scored ->
                             TopPlaceCard(
@@ -147,9 +151,8 @@ fun NearbyScreen(
                     }
                     if (uiState.others.isNotEmpty()) {
                         item {
-                            Text(
-                                text = "전체 목록 (${uiState.sort.labelKo})",
-                                style = MaterialTheme.typography.titleMedium,
+                            SectionHeader(
+                                title = "전체 목록 (${uiState.sort.labelKo})",
                                 modifier = Modifier.padding(top = 8.dp),
                             )
                         }
@@ -166,9 +169,8 @@ fun NearbyScreen(
                     if (uiState.noCoordinates.isNotEmpty()) {
                         item {
                             Column {
-                                Text(
-                                    text = "위치 미확인",
-                                    style = MaterialTheme.typography.titleMedium,
+                                SectionHeader(
+                                    title = "위치 미확인",
                                     modifier = Modifier.padding(top = 8.dp),
                                 )
                                 Text(
@@ -231,18 +233,16 @@ private fun StatusHeader(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (!uiState.hasLocationPermission) {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+            AppCard(
+                tone = CardTone.Warn,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = "위치 권한이 없어 선택 도시 기준으로 표시합니다.\n현재 위치와의 거리 계산은 불가능합니다.",
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    TextButton(onClick = onRequestPermission) { Text("위치 권한 허용") }
-                }
+                Text(
+                    text = "위치 권한이 없어 선택 도시 기준으로 표시합니다.\n현재 위치와의 거리 계산은 불가능합니다.",
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                TextButton(onClick = onRequestPermission) { Text("위치 권한 허용") }
             }
         }
         Row(
@@ -331,53 +331,52 @@ private fun TopPlaceCard(
     onToggleVisited: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    Card(
+    AppCard(
         onClick = onEdit,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        tone = CardTone.Highlight,
+        shape = MaterialTheme.shapes.large,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = scored.place.name,
-                        style = MaterialTheme.typography.titleLarge,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = listOfNotNull(
-                            scored.distanceMeters?.let { formatDistance(it) },
-                            scored.place.category.labelKo,
-                            scored.place.priority.labelKo,
-                            if (scored.place.visited) "방문함" else null,
-                        ).joinToString(" · "),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-                PlaceMenu(
-                    place = scored.place,
-                    onEdit = onEdit,
-                    onToggleVisited = onToggleVisited,
-                    onDelete = onDelete,
-                )
-            }
-            Text(
-                text = scoreBreakdownText(scored),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-            scored.place.notes?.let {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
+                    text = scored.place.name,
+                    style = MaterialTheme.typography.titleLarge,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
+                Text(
+                    text = listOfNotNull(
+                        scored.distanceMeters?.let { formatDistance(it) },
+                        scored.place.category.labelKo,
+                        scored.place.priority.labelKo,
+                        if (scored.place.visited) "방문함" else null,
+                    ).joinToString(" · "),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
             }
-            TextButton(onClick = onDirections) { Text("Google Maps 길찾기") }
+            PlaceMenu(
+                place = scored.place,
+                onEdit = onEdit,
+                onToggleVisited = onToggleVisited,
+                onDelete = onDelete,
+            )
         }
+        Text(
+            text = scoreBreakdownText(scored),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+        scored.place.notes?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        TextButton(onClick = onDirections) { Text("Google Maps 길찾기") }
     }
 }
 
@@ -391,10 +390,10 @@ private fun PlaceRow(
     showScore: Boolean = true,
 ) {
     val place = scored.place
-    Card(onClick = onEdit, modifier = Modifier.fillMaxWidth()) {
+    AppCard(onClick = onEdit, tone = CardTone.Neutral, modifier = Modifier.fillMaxWidth()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 10.dp, bottom = 10.dp, end = 4.dp),
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(

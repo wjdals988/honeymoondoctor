@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">허니문닥터</string>
-    <string name="app_tagline">정민·찬희 신혼여행 전담 주치의</string>
+    <string name="app_name">동행일기</string>
+    <string name="app_tagline">둘이 함께 쓰는 여행 일기</string>
 
     <!-- 데모 모드 -->
     <string name="demo_mode_banner">데모 모드 · 이 기기에만 저장됩니다</string>

@@ -16,7 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
@@ -39,7 +38,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.time.LocalTimes
+import com.jeongmin.honeymoondoctor.core.ui.AppCard
+import com.jeongmin.honeymoondoctor.core.ui.CardTone
+import com.jeongmin.honeymoondoctor.core.ui.EmptyState
+import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
+import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
 import com.jeongmin.honeymoondoctor.domain.model.Expense
 import com.jeongmin.honeymoondoctor.domain.model.TravelCurrency
 import com.jeongmin.honeymoondoctor.domain.usecase.KrwConverter
@@ -81,7 +85,12 @@ fun ExpenseScreen(
 
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(innerPadding),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = 8.dp,
+                bottom = FabSpacing.ContentBottomPadding,
+            ),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             item {
@@ -103,14 +112,12 @@ fun ExpenseScreen(
             }
             if (uiState.categoryTotals.isNotEmpty()) {
                 item {
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                            Text("카테고리별 지출", style = MaterialTheme.typography.titleSmall)
-                            uiState.categoryTotals.forEach { total ->
-                                Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
-                                    Text(total.category.labelKo, modifier = Modifier.weight(1f))
-                                    Text(formatKrw(total.totalKrw))
-                                }
+                    AppCard(modifier = Modifier.fillMaxWidth(), tone = CardTone.Neutral) {
+                        SectionHeader(title = "카테고리별 지출")
+                        uiState.categoryTotals.forEach { total ->
+                            Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                                Text(total.category.labelKo, modifier = Modifier.weight(1f))
+                                Text(formatKrw(total.totalKrw))
                             }
                         }
                     }
@@ -118,12 +125,11 @@ fun ExpenseScreen(
             }
             if (uiState.expenses.isEmpty()) {
                 item {
-                    Box(modifier = Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "아직 기록한 지출이 없습니다.\n+ 버튼으로 첫 지출을 추가해 보세요.",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    EmptyState(
+                        title = "아직 기록한 지출이 없습니다",
+                        modifier = Modifier.padding(top = 48.dp),
+                        description = "+ 버튼으로 첫 지출을 추가해 보세요.",
+                    )
                 }
             } else {
                 items(uiState.expenses, key = { it.id }) { expense ->
@@ -156,52 +162,54 @@ fun ExpenseScreen(
 
 @Composable
 private fun SummaryCard(uiState: ExpenseUiState, onOpenBudgets: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("경비 요약", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                TextButton(onClick = onOpenBudgets) { Text("예산 관리") }
+    AppCard(
+        modifier = Modifier.fillMaxWidth(),
+        tone = CardTone.Highlight,
+        shape = MaterialTheme.shapes.large,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("경비 요약", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+            TextButton(onClick = onOpenBudgets) { Text("예산 관리") }
+        }
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Text("총지출", modifier = Modifier.weight(1f))
+            Text(formatKrw(uiState.totalSpentKrw), style = MaterialTheme.typography.titleMedium)
+        }
+        if (uiState.totalBudgetKrw > 0) {
+            val remaining = uiState.totalBudgetKrw - uiState.totalSpentKrw
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text("총예산", modifier = Modifier.weight(1f))
+                Text(formatKrw(uiState.totalBudgetKrw))
             }
             Row(modifier = Modifier.fillMaxWidth()) {
-                Text("총지출", modifier = Modifier.weight(1f))
-                Text(formatKrw(uiState.totalSpentKrw), style = MaterialTheme.typography.titleMedium)
-            }
-            if (uiState.totalBudgetKrw > 0) {
-                val remaining = uiState.totalBudgetKrw - uiState.totalSpentKrw
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Text("총예산", modifier = Modifier.weight(1f))
-                    Text(formatKrw(uiState.totalBudgetKrw))
-                }
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Text(if (remaining >= 0) "잔여 예산" else "예산 초과", modifier = Modifier.weight(1f))
-                    Text(
-                        text = formatKrw(if (remaining >= 0) remaining else -remaining),
-                        color = if (remaining >= 0) {
-                            MaterialTheme.colorScheme.onSurface
-                        } else {
-                            MaterialTheme.colorScheme.error
-                        },
-                    )
-                }
-            }
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Text("공동지출 1/2 정산 예상", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                Text(formatKrw(uiState.settlementPerPersonKrw), style = MaterialTheme.typography.bodySmall)
-            }
-            Row(modifier = Modifier.fillMaxWidth()) {
+                Text(if (remaining >= 0) "잔여 예산" else "예산 초과", modifier = Modifier.weight(1f))
                 Text(
-                    text = "예약 예상비 합계(실지출과 별도)",
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = formatKrw(uiState.reservationEstimateKrw),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = formatKrw(if (remaining >= 0) remaining else -remaining),
+                    color = if (remaining >= 0) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.error
+                    },
                 )
             }
+        }
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Text("공동지출 1/2 정산 예상", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+            Text(formatKrw(uiState.settlementPerPersonKrw), style = MaterialTheme.typography.bodySmall)
+        }
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "예약 예상비 합계(실지출과 별도)",
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = formatKrw(uiState.reservationEstimateKrw),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -213,10 +221,10 @@ private fun ExpenseRow(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    Card(onClick = onEdit, modifier = Modifier.fillMaxWidth()) {
+    AppCard(onClick = onEdit, modifier = Modifier.fillMaxWidth(), tone = CardTone.Neutral) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 10.dp, bottom = 10.dp, end = 4.dp),
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(

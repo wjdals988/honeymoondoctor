@@ -247,6 +247,42 @@ cd firebase && npm test
 한국어 안내문으로 치환(우리 코드가 직접 던지는 한국어 메시지는 그대로 유지). 회귀 테스트
 2건 추가(최종 28/28 통과).
 
+## 브랜드 리뉴얼 + UI/UX 리디자인 Part 1 (2026-08-11)
+
+"허니문닥터"를 실제 배포까지 염두에 두고 "동행일기"로 리브랜딩하고, 5개 탭 전체를 "따뜻하고
+감성적"인 방향으로 리디자인했다(계획: `/Users/user/.claude/plans/enchanted-launching-breeze.md`).
+Phase 1(무드보드 Artifact로 팔레트·타이포·아이콘·대표 화면 목업·이름 후보 3개 제시) 승인 후
+진행:
+
+- **팔레트**: 딥네이비 중심의 "프리미엄 업무 툴" 톤을 버리고 테라코타(primary)·더스티
+  로즈(secondary)·세이지(tertiary) 조합으로 교체(`core/theme/Color.kt`/`Theme.kt`, WCAG
+  4.5:1 이상 확인). primary/tertiary를 짝지어 "두 사람"을 색으로만 암시.
+- **Shape**: `core/theme/Shape.kt` 신규 — M3 기본(4/8/12/16/28dp)보다 둥글게(10/14/20/28/36dp).
+- **타이포**: 손글씨체 Gaegu(OFL 1.1, `docs/THIRD_PARTY_LICENSES.md`)를 `res/font/`에 정적
+  번들, `display*`/`headline*`에만 적용 — 숫자(일정 시각·경비 금액)가 중요한 `title*/body*/
+  label*`는 계속 시스템 폰트 유지. 기존에 비어 있던 `titleSmall/bodySmall/labelMedium/
+  displaySmall/headlineSmall`도 이번에 채움.
+- **공용 컴포넌트 신설**(`core/ui/`): `AppCard`+`CardTone`(Neutral/Highlight/Warn/Done),
+  `EmptyState`, `SectionHeader`, `FabSpacing` — 화면마다 각자 구현하던 카드 색 분기·빈 상태
+  문구·88dp FAB 여백 매직넘버를 여기로 모음.
+- **전체 화면 일괄 적용**: 10개 병렬 서브에이전트로 홈/일정/주변/경비·예산/전체/준비물/결정함/
+  예약함/동기화+여행정보/공개여행둘러보기/로그인+여행설정 화면 전부 새 컴포넌트로 교체.
+  각 에이전트가 "구조가 이미 있을 때만 교체, 없으면 강제로 만들지 않기" 원칙을 지켜 More
+  화면(설정 목록 스타일)과 로그인 화면(Card 자체가 없음)은 의도적으로 무변경.
+- **브랜드 문자열·아이콘**: `app_name`="동행일기", `app_tagline`="둘이 함께 쓰는 여행
+  일기"로 교체(`strings.xml`). `LoginScreen.kt`에 하드코딩돼 있던 구 브랜드명·태그라인도
+  발견해 `stringResource`로 교체. 런처 아이콘(`ic_launcher_background/foreground.xml`)을
+  새 팔레트로 리컬러 — 중앙의 단일 코랄 점을 크림+세이지 두 점으로 나눠 "동행"을 문구 없이
+  암시(원래 설계는 "테라코타+세이지"였으나 배경 자체가 테라코타라 점이 묻혀 크림으로 조정).
+  상태바/콜드스타트 배경(`colors.xml`/`themes.xml`/`values-night/themes.xml`)도 동기화.
+  `README.md` 제목·태그라인도 갱신(단, `docs/SPEC.md`는 "원본 스펙"이라는 역사적 기록이라
+  의도적으로 손대지 않음).
+- 빌드·유닛테스트·lint(0 에러) 통과, `HoneymoonDoctor_Dev` 에뮬레이터에서 5탭+런처 아이콘을
+  라이트/다크 모드 모두 스크린샷으로 확인.
+
+남은 것: Part 2(로그아웃, 회원 탈퇴, 개인정보처리방침·이용약관 초안, release 서명
+키스토어)는 별도 커밋으로 진행.
+
 ## 다음 세션에서 이어갈 때 프롬프트 예시
 
 ```

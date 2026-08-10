@@ -4,13 +4,18 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- 여행 경로 위의 위치 마커를 형상화한 심플한 마크. 의료 십자가 등 실제 의료를 연상시키는 요소는 사용하지 않는다. -->
+    <!-- 여행 경로 위의 위치 마커를 형상화한 심플한 마크. 의료 십자가 등 실제 의료를 연상시키는 요소는 사용하지 않는다.
+         점 2개는 "동행"(둘이 함께)을 문구 없이 암시하는 모티프 — 배경이 primary(테라코타)라 점 하나는
+         배경과 대비되는 크림, 다른 하나는 tertiary(세이지)로 골랐다. -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#FBF6EC"
+        android:strokeColor="#FDF6EE"
         android:strokeWidth="5"
         android:pathData="M54,24 a30,30 0 1,0 0.01,0 z" />
     <path
-        android:fillColor="#FF6B57"
-        android:pathData="M54,44 a10,10 0 1,0 0.01,0 z" />
+        android:fillColor="#FDF6EE"
+        android:pathData="M43,54 a7,7 0 1,0 0.01,0 z" />
+    <path
+        android:fillColor="#4C7566"
+        android:pathData="M65,54 a7,7 0 1,0 0.01,0 z" />
 </vector>

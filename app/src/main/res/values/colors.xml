@@ -2,7 +2,7 @@
 <resources>
     <!-- XML 테마(상태바/윈도우 배경 등)에서만 참조한다. Compose 화면의 실제 색상 체계는
          core/theme/Color.kt, Theme.kt 의 Material3 ColorScheme이 담당한다. -->
-    <color name="ivory">#FBF6EC</color>
-    <color name="deep_navy">#152645</color>
-    <color name="coral">#FF6B57</color>
+    <color name="warm_paper">#FDF6EE</color>
+    <color name="terracotta_clay">#B84F32</color>
+    <color name="night_plum">#241A17</color>
 </resources>

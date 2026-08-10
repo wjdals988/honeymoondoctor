@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.jeongmin.honeymoondoctor.core.ui.DateField
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
+import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
 import com.jeongmin.honeymoondoctor.domain.model.AuthUser
 import com.jeongmin.honeymoondoctor.domain.model.JoinRequestStatus
 import com.jeongmin.honeymoondoctor.domain.model.NewTripDraft
@@ -67,7 +68,7 @@ fun TripSetupScreen(
         var endDate by remember { mutableStateOf(LocalDate.now().plusDays(6)) }
         var currency by remember { mutableStateOf(TravelCurrency.KRW) }
 
-        Text("새 여행 만들기", style = MaterialTheme.typography.titleMedium)
+        SectionHeader(title = "새 여행 만들기")
         OutlinedTextField(
             value = tripName,
             onValueChange = { tripName = it },
@@ -122,7 +123,7 @@ fun TripSetupScreen(
 
         var inviteCode by remember { mutableStateOf("") }
         var joinError by remember { mutableStateOf<String?>(null) }
-        Text("초대코드로 참여하기", style = MaterialTheme.typography.titleMedium)
+        SectionHeader(title = "초대코드로 참여하기")
         OutlinedTextField(
             value = inviteCode,
             onValueChange = { inviteCode = it; joinError = null },

@@ -17,8 +17,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -36,6 +34,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.time.LocalTimes
 import com.jeongmin.honeymoondoctor.core.time.koreanZoneLabel
+import com.jeongmin.honeymoondoctor.core.ui.AppCard
+import com.jeongmin.honeymoondoctor.core.ui.CardTone
+import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryItem
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryStatus
 import com.jeongmin.honeymoondoctor.domain.usecase.NextItineraryUrgency
@@ -145,52 +146,51 @@ private fun NextItineraryCard(uiState: HomeUiState) {
     val next = snapshot.next
     val ongoing = snapshot.ongoing
 
-    Card(
+    AppCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        tone = CardTone.Highlight,
+        shape = MaterialTheme.shapes.large,
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
-            when {
-                ongoing != null && next == null -> {
-                    Text("진행 중", style = MaterialTheme.typography.labelLarge)
-                    BigItineraryBody(ongoing, uiState)
-                    ongoing.endAt?.let { end ->
-                        Text(
-                            text = "${LocalTimes.formatTime(end, ongoing.effectiveEndTimeZone)} " +
-                                "(${koreanZoneLabel(ongoing.effectiveEndTimeZone)}) 종료 예정",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
-                }
-
-                next != null -> {
-                    if (ongoing != null) {
-                        Text(
-                            text = "진행 중: ${ongoing.title}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Spacer(Modifier.height(8.dp))
-                    }
-                    Text("다음 일정", style = MaterialTheme.typography.labelLarge)
-                    BigItineraryBody(next, uiState)
-                    snapshot.remaining?.let { remaining ->
-                        Text(
-                            text = "${formatRemaining(remaining)} 남음",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = urgencyColor(snapshot.urgency),
-                        )
-                    }
-                }
-
-                else -> {
-                    Text("다음 일정", style = MaterialTheme.typography.labelLarge)
+        when {
+            ongoing != null && next == null -> {
+                Text("진행 중", style = MaterialTheme.typography.labelLarge)
+                BigItineraryBody(ongoing, uiState)
+                ongoing.endAt?.let { end ->
                     Text(
-                        text = "남은 일정이 없습니다",
-                        style = MaterialTheme.typography.headlineSmall,
+                        text = "${LocalTimes.formatTime(end, ongoing.effectiveEndTimeZone)} " +
+                            "(${koreanZoneLabel(ongoing.effectiveEndTimeZone)}) 종료 예정",
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
+            }
+
+            next != null -> {
+                if (ongoing != null) {
+                    Text(
+                        text = "진행 중: ${ongoing.title}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+                Text("다음 일정", style = MaterialTheme.typography.labelLarge)
+                BigItineraryBody(next, uiState)
+                snapshot.remaining?.let { remaining ->
+                    Text(
+                        text = "${formatRemaining(remaining)} 남음",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = urgencyColor(snapshot.urgency),
+                    )
+                }
+            }
+
+            else -> {
+                Text("다음 일정", style = MaterialTheme.typography.labelLarge)
+                Text(
+                    text = "남은 일정이 없습니다",
+                    style = MaterialTheme.typography.headlineSmall,
+                )
             }
         }
     }
@@ -222,12 +222,12 @@ private fun urgencyColor(urgency: NextItineraryUrgency?): Color = when (urgency)
 
 @Composable
 private fun ConflictWarningCard(count: Int) {
-    Card(
+    AppCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        tone = CardTone.Warn,
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -249,7 +249,7 @@ private fun ConflictWarningCard(count: Int) {
 private fun TodayTimelineSection(uiState: HomeUiState) {
     val snapshot = uiState.next ?: return
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("오늘 타임라인", style = MaterialTheme.typography.titleMedium)
+        SectionHeader("오늘 타임라인")
 
         if (snapshot.todayAllDay.isEmpty() && snapshot.todayTimed.isEmpty()) {
             Text(
@@ -299,60 +299,58 @@ private fun PreparationSummaryCard(
     onOpenReservations: () -> Unit,
     onOpenChecklist: () -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-            Text("준비 현황", style = MaterialTheme.typography.titleSmall)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    text = if (uiState.requiredChecklistIncomplete > 0) {
-                        "미완료 필수 준비물 ${uiState.requiredChecklistIncomplete}개"
-                    } else {
-                        "필수 준비물 완료"
-                    },
-                    modifier = Modifier.weight(1f),
-                    color = if (uiState.requiredChecklistIncomplete > 0) {
-                        MaterialTheme.colorScheme.error
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
-                )
-                TextButton(onClick = onOpenChecklist) { Text("준비물") }
-            }
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    text = if (uiState.attentionReservationCount > 0) {
-                        "주의 증상: 확인이 필요한 예약 ${uiState.attentionReservationCount}건"
-                    } else {
-                        "확인 필요 예약 없음"
-                    },
-                    modifier = Modifier.weight(1f),
-                    color = if (uiState.attentionReservationCount > 0) {
-                        MaterialTheme.colorScheme.error
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
-                )
-                TextButton(onClick = onOpenReservations) { Text("예약함") }
-            }
-            val budgetText = if (uiState.totalBudgetKrw > 0) {
-                val remaining = uiState.totalBudgetKrw - uiState.totalSpentKrw
-                "예산 ${formatWon(uiState.totalBudgetKrw)} · 지출 ${formatWon(uiState.totalSpentKrw)} · " +
-                    if (remaining >= 0) "잔여 ${formatWon(remaining)}" else "초과 ${formatWon(-remaining)}"
-            } else {
-                "지출 ${formatWon(uiState.totalSpentKrw)} · 예산 미설정"
-            }
+    AppCard(modifier = Modifier.fillMaxWidth()) {
+        Text("준비 현황", style = MaterialTheme.typography.titleSmall)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
             Text(
-                text = budgetText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = if (uiState.requiredChecklistIncomplete > 0) {
+                    "미완료 필수 준비물 ${uiState.requiredChecklistIncomplete}개"
+                } else {
+                    "필수 준비물 완료"
+                },
+                modifier = Modifier.weight(1f),
+                color = if (uiState.requiredChecklistIncomplete > 0) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
             )
+            TextButton(onClick = onOpenChecklist) { Text("준비물") }
         }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                text = if (uiState.attentionReservationCount > 0) {
+                    "주의 증상: 확인이 필요한 예약 ${uiState.attentionReservationCount}건"
+                } else {
+                    "확인 필요 예약 없음"
+                },
+                modifier = Modifier.weight(1f),
+                color = if (uiState.attentionReservationCount > 0) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+            )
+            TextButton(onClick = onOpenReservations) { Text("예약함") }
+        }
+        val budgetText = if (uiState.totalBudgetKrw > 0) {
+            val remaining = uiState.totalBudgetKrw - uiState.totalSpentKrw
+            "예산 ${formatWon(uiState.totalBudgetKrw)} · 지출 ${formatWon(uiState.totalSpentKrw)} · " +
+                if (remaining >= 0) "잔여 ${formatWon(remaining)}" else "초과 ${formatWon(-remaining)}"
+        } else {
+            "지출 ${formatWon(uiState.totalSpentKrw)} · 예산 미설정"
+        }
+        Text(
+            text = budgetText,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
