@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -28,6 +29,7 @@ fun MoreScreen(
     onNavigateToSyncStatus: () -> Unit,
     onNavigateToPublicTrips: () -> Unit,
     onResetDemoData: () -> Unit,
+    pendingJoinRequestCount: Int = 0,
     modifier: Modifier = Modifier,
 ) {
     val menuItems = listOf(
@@ -57,6 +59,11 @@ fun MoreScreen(
                 headlineContent = { Text(menu.label) },
                 supportingContent = if (onClick == null) {
                     { Text("추후 단계에서 제공") }
+                } else {
+                    null
+                },
+                trailingContent = if (menu.onClickKey == "trip_info" && pendingJoinRequestCount > 0) {
+                    { Text("대기 중인 참여 요청 ${pendingJoinRequestCount}건", color = MaterialTheme.colorScheme.error) }
                 } else {
                     null
                 },

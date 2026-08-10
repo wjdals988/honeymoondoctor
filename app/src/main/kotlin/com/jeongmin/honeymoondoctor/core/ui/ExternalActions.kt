@@ -40,6 +40,15 @@ fun openUrl(context: Context, url: String) {
     }
 }
 
+/** 안드로이드 공유 시트로 텍스트를 넘긴다(카카오톡·문자 등 사용자가 고른 앱으로 전달). */
+fun shareText(context: Context, text: String) {
+    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, text)
+    }
+    context.startActivity(Intent.createChooser(sendIntent, null))
+}
+
 fun copyToClipboard(context: Context, label: String, text: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     clipboard.setPrimaryClip(ClipData.newPlainText(label, text))

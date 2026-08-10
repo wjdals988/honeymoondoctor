@@ -82,10 +82,13 @@ service cloud.firestore {
           (request.auth.uid == resource.data.applicantUid || isTripOwner(tripId));
         allow list: if isTripOwner(tripId);
 
-        // 참여 요청 생성: 본인 UID + 초대코드 해시 일치를 동시에 만족해야 한다.
+        // 참여 요청 생성: 본인 UID + 초대코드 해시 일치를 동시에 만족해야 한다. 문서 ID도
+        // 본인 UID로 고정해, 신청자가 auto-ID를 몰라도 나중에 자기 요청 상태(거절 등)를
+        // 직접 조회할 수 있게 한다(위 allow get이 그 문서 하나는 본인에게 허용).
         // 승인 전 신청자는 아직 memberIds에 없으므로 위 isTripMember() 조건에 의해
         // 여행 본문/하위 컬렉션을 읽을 수 없다.
         allow create: if isSignedIn() &&
+          requestId == request.auth.uid &&
           request.resource.data.applicantUid == request.auth.uid &&
           request.resource.data.status == 'PENDING' &&
           request.resource.data.inviteCodeHash == tripDoc(tripId).data.inviteCodeHash;

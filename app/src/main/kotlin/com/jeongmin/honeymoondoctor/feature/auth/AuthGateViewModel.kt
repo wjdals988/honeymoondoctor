@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.jeongmin.honeymoondoctor.core.demo.DemoModeManager
 import com.jeongmin.honeymoondoctor.data.local.prefs.AppPreferences
 import com.jeongmin.honeymoondoctor.domain.model.AuthUser
+import com.jeongmin.honeymoondoctor.domain.model.JoinRequestStatus
 import com.jeongmin.honeymoondoctor.domain.model.NewTripDraft
 import com.jeongmin.honeymoondoctor.domain.model.Trip
 import com.jeongmin.honeymoondoctor.domain.repository.AuthRepository
@@ -18,13 +19,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 sealed interface AuthGateState {
     data object Loading : AuthGateState
     data object NeedsLogin : AuthGateState
-    data class NeedsTripSetup(val user: AuthUser, val pendingJoinTripId: String?) : AuthGateState
+    data class NeedsTripSetup(
+        val user: AuthUser,
+        val pendingJoinTripId: String?,
+        val joinRequestStatus: JoinRequestStatus? = null,
+    ) : AuthGateState
     data class Ready(val user: AuthUser, val trip: Trip) : AuthGateState
 }
 
@@ -44,10 +50,13 @@ class AuthGateViewModel @Inject constructor(
                     flowOf(AuthGateState.NeedsLogin)
                 } else {
                     combine(tripRepository.observeMyTrip(user.uid), appPreferences.snapshot) { trip, prefs ->
-                        if (trip != null) {
-                            AuthGateState.Ready(user, trip)
-                        } else {
-                            AuthGateState.NeedsTripSetup(user, prefs.pendingJoinTripId)
+                        trip to prefs.pendingJoinTripId
+                    }.flatMapLatest { (trip, pendingJoinTripId) ->
+                        when {
+                            trip != null -> flowOf(AuthGateState.Ready(user, trip))
+                            pendingJoinTripId == null -> flowOf(AuthGateState.NeedsTripSetup(user, null))
+                            else -> tripRepository.observeMyJoinRequest(pendingJoinTripId, user.uid)
+                                .map { status -> AuthGateState.NeedsTripSetup(user, pendingJoinTripId, status) }
                         }
                     }
                 }

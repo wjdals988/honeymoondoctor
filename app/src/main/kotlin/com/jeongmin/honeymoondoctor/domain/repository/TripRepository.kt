@@ -1,6 +1,7 @@
 package com.jeongmin.honeymoondoctor.domain.repository
 
 import com.jeongmin.honeymoondoctor.domain.model.JoinRequest
+import com.jeongmin.honeymoondoctor.domain.model.JoinRequestStatus
 import com.jeongmin.honeymoondoctor.domain.model.NewTripDraft
 import com.jeongmin.honeymoondoctor.domain.model.Trip
 import com.jeongmin.honeymoondoctor.domain.model.TripMember
@@ -15,6 +16,9 @@ interface TripRepository {
 
     /** 소유자에게만 유효한 목록. 구성원이 아닌 사용자가 호출하면 규칙에 의해 빈 목록/오류로 처리된다. */
     fun observePendingJoinRequests(tripId: String): Flow<List<JoinRequest>>
+
+    /** 본인이 보낸 참여 요청의 현재 상태(없으면 null). 신청자 본인이 승인/거절 결과를 확인할 수 있게 한다. */
+    fun observeMyJoinRequest(tripId: String, uid: String): Flow<JoinRequestStatus?>
 
     /** 여행 최초 생성 + 기본 준비물 체크리스트 1회 삽입. ownerUid가 유일한 최초 구성원이 된다. */
     suspend fun createTrip(ownerUid: String, ownerDisplayName: String, draft: NewTripDraft): Trip

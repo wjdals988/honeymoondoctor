@@ -216,8 +216,26 @@ cd firebase && npm test
 실제 Firestore `trips` 컬렉션을 삭제한 일이 있었음(테스트 데이터였으나 사전 동의 없이
 프로덕션 데이터 삭제 작업을 했다는 점은 사용자에게 명확히 알림).
 
-남은 것: 5단계(초대 흐름 개선 — 코드 복사/공유 버튼, 대기 배지, 거절 상태 조회, trim)는
-아직 미착수.
+5. **초대 흐름 개선**: 초대코드 생성 즉시 복사/공유 버튼(`shareText` 신규 추가) + "지금
+   복사·공유하세요, 서버엔 해시만 남아 다시 볼 수 없습니다" 안내. 전체 탭 메뉴에 소유자용
+   "대기 중인 참여 요청 N건" 배지(`MoreViewModel.pendingJoinRequestCount`). 참여 요청 문서
+   ID를 auto-ID 대신 `applicantUid`로 고정해, 거절당한 신청자가 영원히 "승인 대기 중" 화면에
+   갇히던 버그를 수정(`observeMyJoinRequest`로 본인 요청 상태 조회 가능 → 거절 시 "다른
+   초대코드로 다시 시도" 버튼 노출). `firestore.rules`의 `joinRequests` 생성 규칙에
+   `requestId == request.auth.uid` 조건 추가, 회귀 테스트 2건 추가(최종 26/26 통과).
+
+   수동 검증 중 실기기에서 **크래시 발견**: 공개(`isPublic=true`) 중인 완료 여행에서
+   "초대코드 생성·재발급"을 누르면 `firestore.rules`의 "공개 중엔 `inviteCodeHash`가 null
+   이어야 한다" 불변조건과 충돌해 `PERMISSION_DENIED`가 발생하는데, 이 예외를 아무 데서도
+   잡지 않아 앱이 그대로 죽었다. `TripInfoViewModel.regenerateInviteCode/expireInviteCode`에
+   `runCatching`을 씌워 실패를 `inviteError` 상태로 노출하고, `TripInfoScreen`은 공개 중일 때
+   해당 버튼 자체를 숨기고 "공개 중인 여행은 초대코드를 발급할 수 없습니다" 안내로 대체해
+   같은 상황이 재발해도 크래시 없이 끝나게 함. 이 정확한 시나리오("이미 공개된 여행에서
+   `inviteCodeHash`만 다시 채우면 거부된다")를 `rules.test.js` 회귀 테스트로 고정(최종
+   27/27 통과). 실기기(`HoneymoonDoctor_Dev` 에뮬레이터, 실제 Firebase)에서 공개 중단 →
+   재발급 성공 → 복사/공유 버튼 정상 동작 → 원래 상태(공개, 초대코드 없음)로 복원까지 확인.
+
+이것으로 계획된 5단계(범용화 Phase) 전부 완료.
 
 ## 다음 세션에서 이어갈 때 프롬프트 예시
 

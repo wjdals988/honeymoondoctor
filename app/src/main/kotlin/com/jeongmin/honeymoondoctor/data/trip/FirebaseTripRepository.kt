@@ -55,6 +55,11 @@ class FirebaseTripRepository @Inject constructor(
             .snapshotFlow()
             .map { snapshot -> snapshot?.documents.orEmpty().mapNotNull { it.toJoinRequest() } }
 
+    override fun observeMyJoinRequest(tripId: String, uid: String): Flow<JoinRequestStatus?> =
+        firestore.collection(TRIPS).document(tripId).collection(JOIN_REQUESTS).document(uid)
+            .snapshotFlow()
+            .map { it?.toJoinRequest()?.status }
+
     override suspend fun createTrip(ownerUid: String, ownerDisplayName: String, draft: NewTripDraft): Trip {
         val defaults = seedAssetLoader.loadNewTripDefaults()
         val tripRef = firestore.collection(TRIPS).document()
@@ -141,7 +146,9 @@ class FirebaseTripRepository @Inject constructor(
     ): Result<Unit> = runCatching {
         val tripId = InviteCode.extractTripId(inviteCode)
             ?: throw IllegalArgumentException("초대코드 형식이 올바르지 않습니다.")
-        val requestRef = firestore.collection(TRIPS).document(tripId).collection(JOIN_REQUESTS).document()
+        // 문서 ID를 applicantUid로 고정해, 신청자 본인이 나중에 이 문서를 다시 찾아 상태(거절 등)를
+        // 확인할 수 있게 한다(auto-ID였다면 list는 소유자만 가능해 본인도 자기 요청을 못 찾았다).
+        val requestRef = firestore.collection(TRIPS).document(tripId).collection(JOIN_REQUESTS).document(applicantUid)
         val data = mapOf(
             "applicantUid" to applicantUid,
             "applicantDisplayName" to applicantDisplayName,

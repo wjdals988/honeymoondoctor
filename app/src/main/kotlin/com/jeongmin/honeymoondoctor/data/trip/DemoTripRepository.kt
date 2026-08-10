@@ -63,6 +63,12 @@ class DemoTripRepository @Inject constructor(
             .map { it.toDomain() }
     }
 
+    override fun observeMyJoinRequest(tripId: String, uid: String): Flow<JoinRequestStatus?> = stateFlow.map { state ->
+        state?.takeIf { it.id == tripId }?.joinRequests.orEmpty()
+            .firstOrNull { it.applicantUid == uid }
+            ?.let { JoinRequestStatus.valueOf(it.status) }
+    }
+
     override suspend fun createTrip(ownerUid: String, ownerDisplayName: String, draft: NewTripDraft): Trip {
         val defaults = seedAssetLoader.loadNewTripDefaults()
         val tripId = "demo-trip-${UUID.randomUUID()}"

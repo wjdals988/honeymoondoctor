@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.jeongmin.honeymoondoctor.core.ui.DateField
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.domain.model.AuthUser
+import com.jeongmin.honeymoondoctor.domain.model.JoinRequestStatus
 import com.jeongmin.honeymoondoctor.domain.model.NewTripDraft
 import com.jeongmin.honeymoondoctor.domain.model.TravelCurrency
 import java.time.LocalDate
@@ -28,6 +29,7 @@ import java.time.format.DateTimeFormatter
 fun TripSetupScreen(
     user: AuthUser,
     pendingJoinTripId: String?,
+    joinRequestStatus: JoinRequestStatus?,
     createError: String?,
     onCreateTrip: (NewTripDraft) -> Unit,
     onRequestToJoin: (String, (Result<Unit>) -> Unit) -> Unit,
@@ -43,8 +45,20 @@ fun TripSetupScreen(
         )
 
         if (pendingJoinTripId != null) {
-            Text("참여 요청을 보냈습니다. 소유자 승인을 기다리는 중입니다.", style = MaterialTheme.typography.bodyLarge)
-            TextButton(onClick = onCancelPendingJoin) { Text("요청 취소") }
+            when (joinRequestStatus) {
+                JoinRequestStatus.REJECTED -> {
+                    Text(
+                        "참여 요청이 거절되었습니다.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    TextButton(onClick = onCancelPendingJoin) { Text("다른 초대코드로 다시 시도") }
+                }
+                else -> {
+                    Text("참여 요청을 보냈습니다. 소유자 승인을 기다리는 중입니다.", style = MaterialTheme.typography.bodyLarge)
+                    TextButton(onClick = onCancelPendingJoin) { Text("요청 취소") }
+                }
+            }
             return@Column
         }
 

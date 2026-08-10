@@ -19,10 +19,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.ui.CityFormDialog
+import com.jeongmin.honeymoondoctor.core.ui.copyToClipboard
+import com.jeongmin.honeymoondoctor.core.ui.shareText
 import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.TripRole
 import com.jeongmin.honeymoondoctor.domain.model.TripStatus
@@ -31,6 +34,7 @@ import com.jeongmin.honeymoondoctor.domain.model.isReadOnly
 @Composable
 fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
     val trip = state.trip ?: return
     val isOwner = state.currentUser?.uid == trip.ownerId
     var showCityDialog by remember { mutableStateOf(false) }
@@ -131,6 +135,12 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(top = 8.dp),
                     )
+                } else if (trip.isPublic) {
+                    Text(
+                        "공개 중인 여행은 초대코드를 발급할 수 없습니다 — 공개를 중단하면 다시 사용할 수 있습니다.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
                 } else {
                     Row(modifier = Modifier.padding(top = 8.dp)) {
                         Button(onClick = { viewModel.regenerateInviteCode(trip.id) }) {
@@ -142,11 +152,33 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
                     }
                     state.lastGeneratedInviteCode?.let { code ->
                         Text(
-                            "새 초대코드(한 번만 표시됩니다): $code",
+                            "새 초대코드: $code",
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                             modifier = Modifier.padding(top = 8.dp),
                         )
+                        Text(
+                            "지금 복사하거나 공유하세요 — 화면을 벗어나면 다시 볼 수 없습니다" +
+                                "(해시만 저장하는 설계라 서버에도 원문이 남지 않습니다).",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
+                        Row(modifier = Modifier.padding(top = 4.dp)) {
+                            TextButton(onClick = { copyToClipboard(context, "초대코드", code) }) {
+                                Text("복사")
+                            }
+                            TextButton(onClick = { shareText(context, code) }) {
+                                Text("공유")
+                            }
+                        }
                     }
+                }
+                state.inviteError?.let {
+                    Text(
+                        it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
                 Text("참여 요청", style = MaterialTheme.typography.titleMedium)

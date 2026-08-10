@@ -86,7 +86,7 @@ test("승인 전 참여 신청자는 여행 데이터를 읽을 수 없다", asy
   const applicantDb = testEnv.authenticatedContext(OUTSIDER_UID).firestore();
   // 신청자는 아직 memberIds에 없으므로 참여 요청을 만들어도 여행 본문은 여전히 못 읽는다.
   await assertSucceeds(
-    setDoc(doc(applicantDb, "trips", TRIP_ID, "joinRequests", "req-1"), {
+    setDoc(doc(applicantDb, "trips", TRIP_ID, "joinRequests", OUTSIDER_UID), {
       applicantUid: OUTSIDER_UID,
       status: "PENDING",
       inviteCodeHash: REAL_INVITE_HASH,
@@ -99,7 +99,7 @@ test("승인 전 참여 신청자는 여행 데이터를 읽을 수 없다", asy
 test("초대코드 해시가 틀리면 참여 요청 생성이 거부된다", async () => {
   const applicantDb = testEnv.authenticatedContext(OUTSIDER_UID).firestore();
   await assertFails(
-    setDoc(doc(applicantDb, "trips", TRIP_ID, "joinRequests", "req-bad"), {
+    setDoc(doc(applicantDb, "trips", TRIP_ID, "joinRequests", OUTSIDER_UID), {
       applicantUid: OUTSIDER_UID,
       status: "PENDING",
       inviteCodeHash: "wrong-hash",
@@ -110,7 +110,7 @@ test("초대코드 해시가 틀리면 참여 요청 생성이 거부된다", as
 test("본인 UID가 아닌 applicantUid로는 참여 요청을 생성할 수 없다", async () => {
   const applicantDb = testEnv.authenticatedContext(OUTSIDER_UID).firestore();
   await assertFails(
-    setDoc(doc(applicantDb, "trips", TRIP_ID, "joinRequests", "req-spoof"), {
+    setDoc(doc(applicantDb, "trips", TRIP_ID, "joinRequests", OUTSIDER_UID), {
       applicantUid: PARTNER_UID,
       status: "PENDING",
       inviteCodeHash: REAL_INVITE_HASH,
@@ -120,7 +120,7 @@ test("본인 UID가 아닌 applicantUid로는 참여 요청을 생성할 수 없
 
 test("소유자가 아닌 구성원은 참여 요청을 승인할 수 없다", async () => {
   await testEnv.withSecurityRulesDisabled(async (context) => {
-    await setDoc(doc(context.firestore(), "trips", TRIP_ID, "joinRequests", "req-1"), {
+    await setDoc(doc(context.firestore(), "trips", TRIP_ID, "joinRequests", OUTSIDER_UID), {
       applicantUid: OUTSIDER_UID,
       status: "PENDING",
       inviteCodeHash: REAL_INVITE_HASH,
@@ -128,8 +128,31 @@ test("소유자가 아닌 구성원은 참여 요청을 승인할 수 없다", a
   });
   const partnerDb = testEnv.authenticatedContext(PARTNER_UID).firestore();
   await assertFails(
-    updateDoc(doc(partnerDb, "trips", TRIP_ID, "joinRequests", "req-1"), { status: "APPROVED" }),
+    updateDoc(doc(partnerDb, "trips", TRIP_ID, "joinRequests", OUTSIDER_UID), { status: "APPROVED" }),
   );
+});
+
+test("본인 참여 요청 문서 ID로 만들지 않으면 생성이 거부된다(회귀 방지)", async () => {
+  const applicantDb = testEnv.authenticatedContext(OUTSIDER_UID).firestore();
+  await assertFails(
+    setDoc(doc(applicantDb, "trips", TRIP_ID, "joinRequests", "some-other-id"), {
+      applicantUid: OUTSIDER_UID,
+      status: "PENDING",
+      inviteCodeHash: REAL_INVITE_HASH,
+    }),
+  );
+});
+
+test("신청자 본인은 문서 ID를 알지 못해도 자기 UID로 참여 요청 상태를 조회할 수 있다", async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "trips", TRIP_ID, "joinRequests", OUTSIDER_UID), {
+      applicantUid: OUTSIDER_UID,
+      status: "REJECTED",
+      inviteCodeHash: REAL_INVITE_HASH,
+    });
+  });
+  const applicantDb = testEnv.authenticatedContext(OUTSIDER_UID).firestore();
+  await assertSucceeds(getDoc(doc(applicantDb, "trips", TRIP_ID, "joinRequests", OUTSIDER_UID)));
 });
 
 test("이미 구성원이 2명인 여행에 3번째 구성원을 추가하면 차단된다", async () => {
@@ -268,6 +291,21 @@ test("완료 + 초대코드 해시 제거 상태에서는 공개를 켤 수 있�
   await assertSucceeds(
     updateDoc(doc(ownerDb, "trips", TRIP_ID), { isPublic: true, inviteCodeHash: null }),
   );
+});
+
+test("공개 중인 여행에서는 초대코드를 재발급할 수 없다(회귀 방지)", async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await updateDoc(doc(context.firestore(), "trips", TRIP_ID), {
+      status: "COMPLETED",
+      isPublic: true,
+      inviteCodeHash: null,
+    });
+  });
+  const ownerDb = testEnv.authenticatedContext(OWNER_UID).firestore();
+  // isPublic을 함께 내리지 않고 inviteCodeHash만 다시 채우면 거부된다 — 클라이언트 앱은
+  // 이 상태를 감지해 UI에서 재발급 버튼 자체를 숨기고, 앱이 PERMISSION_DENIED로 죽지 않게
+  // 예외를 처리해야 한다(TripInfoScreen/TripInfoViewModel 참고).
+  await assertFails(updateDoc(doc(ownerDb, "trips", TRIP_ID), { inviteCodeHash: "new-hash" }));
 });
 
 test("공개 중인 여행은 삭제할 수 없다", async () => {

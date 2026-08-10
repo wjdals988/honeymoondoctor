@@ -169,6 +169,7 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
             }
             composable(BottomTab.MORE.route) {
                 val moreViewModel: MoreViewModel = hiltViewModel()
+                val pendingJoinRequestCount by moreViewModel.pendingJoinRequestCount.collectAsState()
                 MoreScreen(
                     isDemoMode = isDemoMode,
                     onNavigateToTripInfo = { navController.navigate(ROUTE_TRIP_INFO) },
@@ -179,6 +180,7 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                     onNavigateToSyncStatus = { navController.navigate(ROUTE_SYNC_STATUS) },
                     onNavigateToPublicTrips = { navController.navigate(ROUTE_PUBLIC_TRIPS) },
                     onResetDemoData = moreViewModel::resetDemoData,
+                    pendingJoinRequestCount = pendingJoinRequestCount,
                 )
             }
             composable(ROUTE_TRIP_INFO) { TripInfoScreen() }

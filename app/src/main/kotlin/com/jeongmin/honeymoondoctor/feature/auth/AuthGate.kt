@@ -42,6 +42,7 @@ fun AuthGate(viewModel: AuthGateViewModel = hiltViewModel()) {
                 TripSetupScreen(
                     user = state.user,
                     pendingJoinTripId = state.pendingJoinTripId,
+                    joinRequestStatus = state.joinRequestStatus,
                     createError = createError,
                     onCreateTrip = { draft ->
                         createError = null

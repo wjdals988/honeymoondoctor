@@ -33,6 +33,7 @@ data class TripInfoUiState(
     val pendingJoinRequests: List<JoinRequest> = emptyList(),
     val lastGeneratedInviteCode: String? = null,
     val cities: List<City> = emptyList(),
+    val inviteError: String? = null,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -46,6 +47,7 @@ class TripInfoViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val lastGeneratedInviteCode = MutableStateFlow<String?>(null)
+    private val inviteError = MutableStateFlow<String?>(null)
 
     val uiState: StateFlow<TripInfoUiState> = authRepository.currentUser
         .flatMapLatest { user ->
@@ -61,8 +63,9 @@ class TripInfoViewModel @Inject constructor(
                             tripRepository.observePendingJoinRequests(trip.id),
                             lastGeneratedInviteCode,
                             cityRepository.observeCities(trip.id),
-                        ) { members, joinRequests, generatedCode, cities ->
-                            TripInfoUiState(user, trip, members, joinRequests, generatedCode, cities)
+                            inviteError,
+                        ) { members, joinRequests, generatedCode, cities, error ->
+                            TripInfoUiState(user, trip, members, joinRequests, generatedCode, cities, error)
                         }
                     }
                 }
@@ -80,14 +83,23 @@ class TripInfoViewModel @Inject constructor(
 
     fun regenerateInviteCode(tripId: String) {
         viewModelScope.launch {
-            lastGeneratedInviteCode.value = tripRepository.regenerateInviteCode(tripId)
+            runCatching { tripRepository.regenerateInviteCode(tripId) }
+                .onSuccess {
+                    lastGeneratedInviteCode.value = it
+                    inviteError.value = null
+                }
+                .onFailure { inviteError.value = it.message ?: "초대코드 생성에 실패했습니다." }
         }
     }
 
     fun expireInviteCode(tripId: String) {
         viewModelScope.launch {
-            tripRepository.expireInviteCode(tripId)
-            lastGeneratedInviteCode.value = null
+            runCatching { tripRepository.expireInviteCode(tripId) }
+                .onSuccess {
+                    lastGeneratedInviteCode.value = null
+                    inviteError.value = null
+                }
+                .onFailure { inviteError.value = it.message ?: "초대코드 만료에 실패했습니다." }
         }
     }
 
