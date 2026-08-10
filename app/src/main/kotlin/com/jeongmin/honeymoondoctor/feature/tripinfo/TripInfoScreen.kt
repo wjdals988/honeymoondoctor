@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
@@ -34,6 +35,7 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
     val isOwner = state.currentUser?.uid == trip.ownerId
     var showCityDialog by remember { mutableStateOf(false) }
     var editingCity by remember { mutableStateOf<City?>(null) }
+    var showPublishDialog by remember { mutableStateOf(false) }
 
     LazyColumn(modifier = modifier.padding(16.dp)) {
         item {
@@ -62,6 +64,18 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
                     modifier = Modifier.padding(top = 4.dp),
                 ) {
                     Text(if (trip.isReadOnly) "다시 활성화" else "여행 완료 처리")
+                }
+            }
+            if (isOwner && trip.isReadOnly) {
+                if (trip.isPublic) {
+                    Text(
+                        "다른 사용자에게 공개 중입니다.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                    TextButton(onClick = { viewModel.unpublish(trip.id) }) { Text("공개 중단") }
+                } else {
+                    TextButton(onClick = { showPublishDialog = true }) { Text("다른 사용자에게 공개") }
                 }
             }
             Text(
@@ -168,6 +182,24 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
                 if (editingCity == null) viewModel.createCity(trip.id, city) else viewModel.updateCity(trip.id, city)
                 showCityDialog = false
             },
+        )
+    }
+
+    if (showPublishDialog) {
+        AlertDialog(
+            onDismissRequest = { showPublishDialog = false },
+            title = { Text("다른 사용자에게 공개할까요?") },
+            text = {
+                Text(
+                    "공개되는 내용: 여행 이름·기간·도시 목록·일정의 제목·시각·장소명\n\n" +
+                        "공개되지 않는 내용: 예약함·경비·준비물·결정함·장소, 그리고 일정의 메모·예상경비·담당자\n\n" +
+                        "이 앱을 쓰는 다른 계정의 사용자가 \"여행 둘러보기\"에서 볼 수 있게 됩니다.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.publish(trip); showPublishDialog = false }) { Text("공개") }
+            },
+            dismissButton = { TextButton(onClick = { showPublishDialog = false }) { Text("취소") } },
         )
     }
 }

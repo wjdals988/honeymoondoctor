@@ -162,6 +162,17 @@ class DemoTripRepository @Inject constructor(
         )
     }
 
+    override suspend fun setPublic(tripId: String, isPublic: Boolean) {
+        val state = requireCurrentState(tripId)
+        saveState(
+            state.copy(
+                isPublic = isPublic,
+                inviteCodeHash = if (isPublic) null else state.inviteCodeHash,
+                publishedAtEpochMillis = if (isPublic) Instant.now().toEpochMilli() else null,
+            ),
+        )
+    }
+
     private suspend fun requireCurrentState(tripId: String): DemoTripStateDto {
         val state = stateFlow.first()
         check(state != null && state.id == tripId) { "여행을 찾을 수 없습니다: $tripId" }

@@ -34,4 +34,10 @@ interface TripRepository {
 
     /** 여행을 완료 처리(구성원 쓰기 잠금)하거나 ACTIVE로 되돌린다. 소유자만 호출 가능(규칙에서 강제). */
     suspend fun setStatus(tripId: String, status: TripStatus)
+
+    /**
+     * 공개 여부를 바꾼다. 공개(true)는 완료된 여행에서만 가능하고, 규칙이 초대코드 해시가
+     * 남아있지 않을 것을 함께 강제한다 — 공개 사본을 본 사람이 참여 요청을 위조하지 못하게.
+     */
+    suspend fun setPublic(tripId: String, isPublic: Boolean)
 }

@@ -35,6 +35,8 @@ import com.jeongmin.honeymoondoctor.feature.more.MoreViewModel
 import com.jeongmin.honeymoondoctor.feature.nearby.NearbyScreen
 import com.jeongmin.honeymoondoctor.feature.nearby.PlaceEditScreen
 import com.jeongmin.honeymoondoctor.feature.nearby.PlaceImportScreen
+import com.jeongmin.honeymoondoctor.feature.publictrip.PublicTripDetailScreen
+import com.jeongmin.honeymoondoctor.feature.publictrip.PublicTripListScreen
 import com.jeongmin.honeymoondoctor.feature.reservation.ReservationDetailScreen
 import com.jeongmin.honeymoondoctor.feature.reservation.ReservationEditScreen
 import com.jeongmin.honeymoondoctor.feature.reservation.ReservationListScreen
@@ -53,6 +55,8 @@ private const val ROUTE_BUDGETS = "budgets"
 private const val ROUTE_PLACE_EDIT = "place_edit"
 private const val ROUTE_PLACE_IMPORT = "place_import"
 private const val ROUTE_SYNC_STATUS = "sync_status"
+private const val ROUTE_PUBLIC_TRIPS = "public_trips"
+private const val ROUTE_PUBLIC_TRIP_DETAIL = "public_trip_detail"
 
 private fun itineraryEditRoute(itemId: String?): String =
     if (itemId == null) ROUTE_ITINERARY_EDIT else "$ROUTE_ITINERARY_EDIT?itemId=$itemId"
@@ -173,10 +177,23 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                     onNavigateToDecisions = { navController.navigate(ROUTE_DECISIONS) },
                     onNavigateToPlaceImport = { navController.navigate(ROUTE_PLACE_IMPORT) },
                     onNavigateToSyncStatus = { navController.navigate(ROUTE_SYNC_STATUS) },
+                    onNavigateToPublicTrips = { navController.navigate(ROUTE_PUBLIC_TRIPS) },
                     onResetDemoData = moreViewModel::resetDemoData,
                 )
             }
             composable(ROUTE_TRIP_INFO) { TripInfoScreen() }
+            composable(ROUTE_PUBLIC_TRIPS) {
+                PublicTripListScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onOpenDetail = { tripId -> navController.navigate("$ROUTE_PUBLIC_TRIP_DETAIL/$tripId") },
+                )
+            }
+            composable(
+                route = "$ROUTE_PUBLIC_TRIP_DETAIL/{tripId}",
+                arguments = listOf(navArgument("tripId") { type = NavType.StringType }),
+            ) {
+                PublicTripDetailScreen(onNavigateBack = { navController.popBackStack() })
+            }
             composable(ROUTE_CHECKLIST) {
                 ChecklistScreen(onNavigateBack = { navController.popBackStack() })
             }

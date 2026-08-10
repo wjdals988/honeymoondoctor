@@ -17,6 +17,8 @@ import com.jeongmin.honeymoondoctor.data.itinerary.DemoItineraryRepository
 import com.jeongmin.honeymoondoctor.data.itinerary.FirebaseItineraryRepository
 import com.jeongmin.honeymoondoctor.data.place.DemoPlaceRepository
 import com.jeongmin.honeymoondoctor.data.place.FirebasePlaceRepository
+import com.jeongmin.honeymoondoctor.data.publictrip.DemoPublicTripRepository
+import com.jeongmin.honeymoondoctor.data.publictrip.FirebasePublicTripRepository
 import com.jeongmin.honeymoondoctor.data.reservation.DemoReservationRepository
 import com.jeongmin.honeymoondoctor.data.reservation.FirebaseReservationRepository
 import com.jeongmin.honeymoondoctor.data.sync.DemoSyncStatusRepository
@@ -31,6 +33,7 @@ import com.jeongmin.honeymoondoctor.domain.repository.DecisionRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ExpenseRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ItineraryRepository
 import com.jeongmin.honeymoondoctor.domain.repository.PlaceRepository
+import com.jeongmin.honeymoondoctor.domain.repository.PublicTripRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ReservationRepository
 import com.jeongmin.honeymoondoctor.domain.repository.SyncStatusRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
@@ -129,6 +132,14 @@ object RepositoryModule {
         demo: Provider<DemoBudgetRepository>,
         firebase: Provider<FirebaseBudgetRepository>,
     ): BudgetRepository = if (demoModeManager.isDemoMode) demo.get() else firebase.get()
+
+    @Provides
+    @Singleton
+    fun providePublicTripRepository(
+        demoModeManager: DemoModeManager,
+        demo: Provider<DemoPublicTripRepository>,
+        firebase: Provider<FirebasePublicTripRepository>,
+    ): PublicTripRepository = if (demoModeManager.isDemoMode) demo.get() else firebase.get()
 
     @Provides
     @Singleton

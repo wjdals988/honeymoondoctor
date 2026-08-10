@@ -199,6 +199,19 @@ class FirebaseTripRepository @Inject constructor(
         firestore.collection(TRIPS).document(tripId).update(updates).await()
     }
 
+    override suspend fun setPublic(tripId: String, isPublic: Boolean) {
+        val updates = mutableMapOf<String, Any?>(
+            "isPublic" to isPublic,
+            "updatedAt" to FieldValue.serverTimestamp(),
+        )
+        if (isPublic) {
+            // 공개 사본을 본 사람이 이 해시로 참여 요청을 위조하지 못하게, 공개하는 순간 지운다.
+            updates["inviteCodeHash"] = null
+            updates["publishedAt"] = FieldValue.serverTimestamp()
+        }
+        firestore.collection(TRIPS).document(tripId).update(updates).await()
+    }
+
     private fun DocumentSnapshot.toTrip(): Trip? {
         val ownerId = getString("ownerId") ?: return null
         @Suppress("UNCHECKED_CAST")

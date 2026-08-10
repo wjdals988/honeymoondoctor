@@ -245,6 +245,68 @@ test("소유자는 여행을 완료 처리하고 다시 활성화할 수 있다"
   await assertSucceeds(updateDoc(doc(ownerDb, "trips", TRIP_ID), { status: "ACTIVE" }));
 });
 
+test("공개는 완료된 여행에서만 켤 수 있다", async () => {
+  const ownerDb = testEnv.authenticatedContext(OWNER_UID).firestore();
+  // 아직 ACTIVE인 상태에서 공개를 켜면 거부된다.
+  await assertFails(updateDoc(doc(ownerDb, "trips", TRIP_ID), { isPublic: true }));
+});
+
+test("초대코드 해시가 남아있으면 공개를 켤 수 없다", async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await updateDoc(doc(context.firestore(), "trips", TRIP_ID), { status: "COMPLETED" });
+  });
+  const ownerDb = testEnv.authenticatedContext(OWNER_UID).firestore();
+  // inviteCodeHash를 지우지 않고 공개만 켜면 거부된다.
+  await assertFails(updateDoc(doc(ownerDb, "trips", TRIP_ID), { isPublic: true }));
+});
+
+test("완료 + 초대코드 해시 제거 상태에서는 공개를 켤 수 있다", async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await updateDoc(doc(context.firestore(), "trips", TRIP_ID), { status: "COMPLETED" });
+  });
+  const ownerDb = testEnv.authenticatedContext(OWNER_UID).firestore();
+  await assertSucceeds(
+    updateDoc(doc(ownerDb, "trips", TRIP_ID), { isPublic: true, inviteCodeHash: null }),
+  );
+});
+
+test("공개 중인 여행은 삭제할 수 없다", async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await updateDoc(doc(context.firestore(), "trips", TRIP_ID), {
+      status: "COMPLETED",
+      isPublic: true,
+      inviteCodeHash: null,
+    });
+  });
+  const ownerDb = testEnv.authenticatedContext(OWNER_UID).firestore();
+  await assertFails(deleteDoc(doc(ownerDb, "trips", TRIP_ID)));
+});
+
+test("publicTrips는 로그인한 사용자라면 누구나 읽을 수 있지만, 비인증 사용자는 읽을 수 없다", async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, "publicTrips", TRIP_ID), { name: "공개된 여행" });
+    await setDoc(doc(db, "publicTrips", TRIP_ID, "itinerary", "pub-item"), { title: "공개 일정" });
+  });
+  const outsiderDb = testEnv.authenticatedContext(OUTSIDER_UID).firestore();
+  await assertSucceeds(getDoc(doc(outsiderDb, "publicTrips", TRIP_ID)));
+  await assertSucceeds(getDoc(doc(outsiderDb, "publicTrips", TRIP_ID, "itinerary", "pub-item")));
+
+  const anonDb = testEnv.unauthenticatedContext().firestore();
+  await assertFails(getDoc(doc(anonDb, "publicTrips", TRIP_ID)));
+});
+
+test("publicTrips는 원본 여행의 소유자만 쓸 수 있다", async () => {
+  const outsiderDb = testEnv.authenticatedContext(OUTSIDER_UID).firestore();
+  await assertFails(setDoc(doc(outsiderDb, "publicTrips", TRIP_ID), { name: "위조된 공개 여행" }));
+
+  const partnerDb = testEnv.authenticatedContext(PARTNER_UID).firestore();
+  await assertFails(setDoc(doc(partnerDb, "publicTrips", TRIP_ID), { name: "구성원이 공개 시도" }));
+
+  const ownerDb = testEnv.authenticatedContext(OWNER_UID).firestore();
+  await assertSucceeds(setDoc(doc(ownerDb, "publicTrips", TRIP_ID), { name: "정상 공개" }));
+});
+
 test("소유자가 아닌 구성원은 여행 상태를 바꿀 수 없다", async () => {
   const partnerDb = testEnv.authenticatedContext(PARTNER_UID).firestore();
   await assertFails(updateDoc(doc(partnerDb, "trips", TRIP_ID), { status: "COMPLETED" }));
