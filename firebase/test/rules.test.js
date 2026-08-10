@@ -308,6 +308,22 @@ test("공개 중인 여행에서는 초대코드를 재발급할 수 없다(회�
   await assertFails(updateDoc(doc(ownerDb, "trips", TRIP_ID), { inviteCodeHash: "new-hash" }));
 });
 
+test("공개 중인 여행은 isPublic을 함께 내리지 않으면 다시 활성화할 수 없다(회귀 방지)", async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await updateDoc(doc(context.firestore(), "trips", TRIP_ID), {
+      status: "COMPLETED",
+      isPublic: true,
+      inviteCodeHash: null,
+    });
+  });
+  const ownerDb = testEnv.authenticatedContext(OWNER_UID).firestore();
+  // status만 ACTIVE로 되돌리면 isPublic=true인 채로 남아 규칙과 충돌해 거부된다 — 클라이언트
+  // 앱은 이 상태를 감지해 "다시 활성화" 버튼을 숨기고 먼저 "공개 중단"을 안내해야 한다
+  // (TripInfoScreen 참고). 만에 하나 시도해도 앱은 크래시하지 않고 에러만 노출해야 한다
+  // (TripInfoViewModel.toUserMessage 참고).
+  await assertFails(updateDoc(doc(ownerDb, "trips", TRIP_ID), { status: "ACTIVE" }));
+});
+
 test("공개 중인 여행은 삭제할 수 없다", async () => {
   await testEnv.withSecurityRulesDisabled(async (context) => {
     await updateDoc(doc(context.firestore(), "trips", TRIP_ID), {

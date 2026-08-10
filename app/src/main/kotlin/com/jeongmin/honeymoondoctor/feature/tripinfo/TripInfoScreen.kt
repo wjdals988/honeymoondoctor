@@ -57,17 +57,34 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
-            if (isOwner) {
-                TextButton(
-                    onClick = {
-                        viewModel.setStatus(
-                            trip.id,
-                            if (trip.isReadOnly) TripStatus.ACTIVE else TripStatus.COMPLETED,
-                        )
-                    },
+            state.actionError?.let {
+                Text(
+                    it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(top = 4.dp),
-                ) {
-                    Text(if (trip.isReadOnly) "다시 활성화" else "여행 완료 처리")
+                )
+            }
+            if (isOwner) {
+                if (trip.isReadOnly && trip.isPublic) {
+                    Text(
+                        "공개 중에는 다시 활성화할 수 없습니다 — 먼저 공개를 중단하세요.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                } else {
+                    TextButton(
+                        onClick = {
+                            viewModel.setStatus(
+                                trip.id,
+                                if (trip.isReadOnly) TripStatus.ACTIVE else TripStatus.COMPLETED,
+                            )
+                        },
+                        modifier = Modifier.padding(top = 4.dp),
+                    ) {
+                        Text(if (trip.isReadOnly) "다시 활성화" else "여행 완료 처리")
+                    }
                 }
             }
             if (isOwner && trip.isReadOnly) {
@@ -171,14 +188,6 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
                             }
                         }
                     }
-                }
-                state.inviteError?.let {
-                    Text(
-                        it,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
                 Text("참여 요청", style = MaterialTheme.typography.titleMedium)

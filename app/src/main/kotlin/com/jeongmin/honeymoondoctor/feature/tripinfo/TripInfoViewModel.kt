@@ -2,6 +2,7 @@ package com.jeongmin.honeymoondoctor.feature.tripinfo
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.jeongmin.honeymoondoctor.domain.model.AuthUser
 import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.JoinRequest
@@ -33,7 +34,7 @@ data class TripInfoUiState(
     val pendingJoinRequests: List<JoinRequest> = emptyList(),
     val lastGeneratedInviteCode: String? = null,
     val cities: List<City> = emptyList(),
-    val inviteError: String? = null,
+    val actionError: String? = null,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -47,7 +48,7 @@ class TripInfoViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val lastGeneratedInviteCode = MutableStateFlow<String?>(null)
-    private val inviteError = MutableStateFlow<String?>(null)
+    private val actionError = MutableStateFlow<String?>(null)
 
     val uiState: StateFlow<TripInfoUiState> = authRepository.currentUser
         .flatMapLatest { user ->
@@ -63,7 +64,7 @@ class TripInfoViewModel @Inject constructor(
                             tripRepository.observePendingJoinRequests(trip.id),
                             lastGeneratedInviteCode,
                             cityRepository.observeCities(trip.id),
-                            inviteError,
+                            actionError,
                         ) { members, joinRequests, generatedCode, cities, error ->
                             TripInfoUiState(user, trip, members, joinRequests, generatedCode, cities, error)
                         }
@@ -86,9 +87,9 @@ class TripInfoViewModel @Inject constructor(
             runCatching { tripRepository.regenerateInviteCode(tripId) }
                 .onSuccess {
                     lastGeneratedInviteCode.value = it
-                    inviteError.value = null
+                    actionError.value = null
                 }
-                .onFailure { inviteError.value = it.message ?: "초대코드 생성에 실패했습니다." }
+                .onFailure { actionError.value = it.toUserMessage("초대코드 생성에 실패했습니다.") }
         }
     }
 
@@ -97,22 +98,34 @@ class TripInfoViewModel @Inject constructor(
             runCatching { tripRepository.expireInviteCode(tripId) }
                 .onSuccess {
                     lastGeneratedInviteCode.value = null
-                    inviteError.value = null
+                    actionError.value = null
                 }
-                .onFailure { inviteError.value = it.message ?: "초대코드 만료에 실패했습니다." }
+                .onFailure { actionError.value = it.toUserMessage("초대코드 만료에 실패했습니다.") }
         }
     }
 
     fun approve(tripId: String, requestId: String) {
-        viewModelScope.launch { tripRepository.approveJoinRequest(tripId, requestId) }
+        viewModelScope.launch {
+            runCatching { tripRepository.approveJoinRequest(tripId, requestId) }
+                .onSuccess { actionError.value = null }
+                .onFailure { actionError.value = it.toUserMessage("참여 요청 승인에 실패했습니다.") }
+        }
     }
 
     fun reject(tripId: String, requestId: String) {
-        viewModelScope.launch { tripRepository.rejectJoinRequest(tripId, requestId) }
+        viewModelScope.launch {
+            runCatching { tripRepository.rejectJoinRequest(tripId, requestId) }
+                .onSuccess { actionError.value = null }
+                .onFailure { actionError.value = it.toUserMessage("참여 요청 거절에 실패했습니다.") }
+        }
     }
 
     fun setStatus(tripId: String, status: TripStatus) {
-        viewModelScope.launch { tripRepository.setStatus(tripId, status) }
+        viewModelScope.launch {
+            runCatching { tripRepository.setStatus(tripId, status) }
+                .onSuccess { actionError.value = null }
+                .onFailure { actionError.value = it.toUserMessage("여행 상태 변경에 실패했습니다.") }
+        }
     }
 
     /**
@@ -123,18 +136,31 @@ class TripInfoViewModel @Inject constructor(
      */
     fun publish(trip: Trip) {
         viewModelScope.launch {
-            val cities = cityRepository.observeCities(trip.id).first()
-            val itinerary = itineraryRepository.observeItinerary(trip.id).first()
-            tripRepository.setPublic(trip.id, true)
-            publicTripRepository.publish(trip, cities, itinerary)
+            runCatching {
+                val cities = cityRepository.observeCities(trip.id).first()
+                val itinerary = itineraryRepository.observeItinerary(trip.id).first()
+                tripRepository.setPublic(trip.id, true)
+                publicTripRepository.publish(trip, cities, itinerary)
+            }
+                .onSuccess { actionError.value = null }
+                .onFailure { actionError.value = it.toUserMessage("공개에 실패했습니다.") }
         }
     }
 
     fun unpublish(tripId: String) {
         // 공개 사본을 먼저 지워 둘러보기 목록에서 즉시 사라지게 한 뒤, 원본의 공개 플래그를 내린다.
         viewModelScope.launch {
-            publicTripRepository.unpublish(tripId)
-            tripRepository.setPublic(tripId, false)
+            runCatching {
+                publicTripRepository.unpublish(tripId)
+                tripRepository.setPublic(tripId, false)
+            }
+                .onSuccess { actionError.value = null }
+                .onFailure { actionError.value = it.toUserMessage("공개 중단에 실패했습니다.") }
         }
     }
+
+    // Firestore 예외 메시지는 영어·원인코드라 그대로 보여주면 안 되고, 우리 코드가 직접 던진
+    // IllegalStateException(예: "여행 구성원은 최대 2명입니다.") 같은 한국어 메시지만 그대로 쓴다.
+    private fun Throwable.toUserMessage(fallback: String): String =
+        if (this is FirebaseFirestoreException) fallback else message ?: fallback
 }
