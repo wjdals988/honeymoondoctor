@@ -1,5 +1,6 @@
 package com.jeongmin.honeymoondoctor.core.navigation
 
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -13,8 +14,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
-import com.jeongmin.honeymoondoctor.core.ui.ReadOnlyEditorPanel
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -24,6 +23,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
+import com.jeongmin.honeymoondoctor.core.ui.ReadOnlyEditorPanel
 import com.jeongmin.honeymoondoctor.feature.checklist.ChecklistScreen
 import com.jeongmin.honeymoondoctor.feature.decision.DecisionScreen
 import com.jeongmin.honeymoondoctor.feature.expense.BudgetScreen
@@ -86,7 +87,12 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
         NavHost(
             navController = navController,
             startDestination = BottomTab.HOME.route,
-            modifier = Modifier.padding(innerPadding),
+            // consumeWindowInsets가 필요한 이유: 이 Scaffold가 이미 상태표시줄 여백을
+            // innerPadding으로 반영했는데, 하위 화면(준비물·예약함·예산·결정함 등)은 각자
+            // Scaffold + TopAppBar를 갖고 있고 TopAppBar가 같은 여백을 한 번 더 적용해
+            // 제목 위 빈 공간이 두 배로 벌어졌다. 여기서 인셋을 소비했다고 알려주면
+            // 하위 TopAppBar들은 남은 인셋(0)만 적용한다.
+            modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding),
         ) {
             composable(BottomTab.HOME.route) {
                 HomeScreen(

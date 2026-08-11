@@ -1,5 +1,6 @@
 package com.jeongmin.honeymoondoctor.feature.checklist
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,7 +13,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -29,6 +29,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -48,6 +49,7 @@ import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
+import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.domain.model.ChecklistCategory
 import com.jeongmin.honeymoondoctor.domain.model.ChecklistItem
 import com.jeongmin.honeymoondoctor.domain.model.TripMember
@@ -62,8 +64,10 @@ fun ChecklistScreen(
     var editorTarget by remember { mutableStateOf<ChecklistItem?>(null) }
     var showEditor by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<ChecklistItem?>(null) }
+    val snackbarHostState = rememberActionErrorSnackbar(uiState.actionError, viewModel::clearActionError)
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("준비물 — 출국 전 처방 체크") },
@@ -238,9 +242,12 @@ private fun ChecklistRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        TextButton(onClick = onEdit) { Text("수정") }
-        IconButton(onClick = onDelete) {
-            Icon(Icons.Filled.Delete, contentDescription = "${item.title} 삭제")
+        // 완료된 여행에서는 수정·삭제 자체를 내린다(체크박스만 비활성으로는 부족했다).
+        if (!LocalTripReadOnly.current) {
+            TextButton(onClick = onEdit) { Text("수정") }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Filled.Delete, contentDescription = "${item.title} 삭제")
+            }
         }
     }
 }

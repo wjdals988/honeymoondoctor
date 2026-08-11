@@ -3,6 +3,7 @@ package com.jeongmin.honeymoondoctor.feature.nearby
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jeongmin.honeymoondoctor.core.error.toUserMessage
 import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.Place
 import com.jeongmin.honeymoondoctor.domain.model.PlaceCategory
@@ -81,7 +82,11 @@ class PlaceEditViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PlaceEditUiState())
 
     init {
-        viewModelScope.launch { initializeForm() }
+        // 초기 데이터 읽기가 실패해도(권한·네트워크) 크래시가 아니라 오류 표시로 끝낸다.
+        viewModelScope.launch {
+            runCatching { initializeForm() }
+                .onFailure { validationError.value = it.toUserMessage("내용을 불러오지 못했습니다.") }
+        }
     }
 
     private suspend fun initializeForm() {
@@ -118,7 +123,10 @@ class PlaceEditViewModel @Inject constructor(
 
     fun createCity(city: City) {
         val tripId = uiState.value.tripId ?: return
-        viewModelScope.launch { cityRepository.create(tripId, city) }
+        viewModelScope.launch {
+            runCatching { cityRepository.create(tripId, city) }
+                .onFailure { validationError.value = it.toUserMessage("도시를 추가하지 못했습니다. 완료된 여행은 수정할 수 없습니다.") }
+        }
     }
 
     fun togglePreferredTime(time: PreferredTime) {
@@ -194,12 +202,15 @@ class PlaceEditViewModel @Inject constructor(
             preferredTimes = form.preferredTimes.toList(),
         )
         viewModelScope.launch {
-            if (form.placeId == null) {
-                placeRepository.create(tripId, place)
-            } else {
-                placeRepository.update(tripId, place)
+            runCatching {
+                if (form.placeId == null) {
+                    placeRepository.create(tripId, place)
+                } else {
+                    placeRepository.update(tripId, place)
+                }
             }
-            onSaved()
+                .onSuccess { onSaved() }
+                .onFailure { validationError.value = it.toUserMessage("저장에 실패했습니다. 완료된 여행은 수정할 수 없습니다.") }
         }
     }
 }

@@ -24,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -47,6 +48,7 @@ import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.copyToClipboard
 import com.jeongmin.honeymoondoctor.core.ui.openGoogleMapsDirections
+import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryItem
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryStatus
 import java.text.NumberFormat
@@ -60,9 +62,11 @@ fun ItineraryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var deleteTarget by remember { mutableStateOf<ItineraryItem?>(null) }
+    val snackbarHostState = rememberActionErrorSnackbar(uiState.actionError, viewModel::clearActionError)
 
     Scaffold(
         modifier = modifier,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             if (!LocalTripReadOnly.current) {
                 FloatingActionButton(onClick = { onOpenEditor(null) }) {
@@ -250,33 +254,40 @@ private fun ItemMenu(
     onCopyAddress: () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    // 완료된 여행에서는 수정 계열 항목을 아예 내린다. 길찾기·주소 복사는 읽기 동작이라 남긴다.
+    val readOnly = LocalTripReadOnly.current
+    // 남는 항목이 하나도 없으면 점 세 개 버튼까지 감춘다(빈 메뉴가 열리는 걸 실기기에서 확인).
+    val hasLocationActions = !item.address.isNullOrBlank() || !item.location.isNullOrBlank()
+    if (readOnly && !hasLocationActions) return
     Box {
         IconButton(onClick = { expanded = true }) {
             Icon(Icons.Filled.MoreVert, contentDescription = "${item.title} 일정 메뉴")
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            if (item.status != ItineraryStatus.DONE) {
+            if (!readOnly && item.status != ItineraryStatus.DONE) {
                 DropdownMenuItem(text = { Text("완료로 표시") }, onClick = {
                     expanded = false
                     onSetStatus(item, ItineraryStatus.DONE)
                 })
             }
-            if (item.status != ItineraryStatus.SKIPPED) {
+            if (!readOnly && item.status != ItineraryStatus.SKIPPED) {
                 DropdownMenuItem(text = { Text("건너뜀으로 표시") }, onClick = {
                     expanded = false
                     onSetStatus(item, ItineraryStatus.SKIPPED)
                 })
             }
-            if (item.status != ItineraryStatus.PLANNED) {
+            if (!readOnly && item.status != ItineraryStatus.PLANNED) {
                 DropdownMenuItem(text = { Text("예정으로 되돌리기") }, onClick = {
                     expanded = false
                     onSetStatus(item, ItineraryStatus.PLANNED)
                 })
             }
-            DropdownMenuItem(text = { Text("수정") }, onClick = {
-                expanded = false
-                onEdit()
-            })
+            if (!readOnly) {
+                DropdownMenuItem(text = { Text("수정") }, onClick = {
+                    expanded = false
+                    onEdit()
+                })
+            }
             if (!item.address.isNullOrBlank() || !item.location.isNullOrBlank()) {
                 DropdownMenuItem(text = { Text("Google Maps 길찾기") }, onClick = {
                     expanded = false
@@ -289,10 +300,12 @@ private fun ItemMenu(
                     onCopyAddress()
                 })
             }
-            DropdownMenuItem(text = { Text("삭제") }, onClick = {
-                expanded = false
-                onDeleteRequest(item)
-            })
+            if (!readOnly) {
+                DropdownMenuItem(text = { Text("삭제") }, onClick = {
+                    expanded = false
+                    onDeleteRequest(item)
+                })
+            }
         }
     }
 }

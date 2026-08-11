@@ -2,6 +2,8 @@ package com.jeongmin.honeymoondoctor.feature.itinerary
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jeongmin.honeymoondoctor.core.error.ActionErrorState
+import com.jeongmin.honeymoondoctor.core.error.runReporting
 import com.jeongmin.honeymoondoctor.core.time.LocalTimes
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryItem
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryStatus
@@ -20,6 +22,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -41,6 +44,7 @@ data class ItineraryUiState(
     val trip: Trip? = null,
     val days: List<ItineraryDay> = emptyList(),
     val conflictIds: Set<String> = emptySet(),
+    val actionError: String? = null,
 )
 
 private val dayHeaderFormatter = DateTimeFormatter.ofPattern("M월 d일 (E)", Locale.KOREAN)
@@ -54,6 +58,8 @@ class ItineraryViewModel @Inject constructor(
     private val reservationRepository: ReservationRepository,
 ) : ViewModel() {
 
+    private val actionError = ActionErrorState()
+
     val uiState: StateFlow<ItineraryUiState> = authRepository.currentUser
         .flatMapLatest { user ->
             if (user == null) {
@@ -63,12 +69,16 @@ class ItineraryViewModel @Inject constructor(
                     if (trip == null) {
                         flowOf(ItineraryUiState(loading = false))
                     } else {
-                        itineraryRepository.observeItinerary(trip.id).map { items ->
+                        combine(
+                            itineraryRepository.observeItinerary(trip.id),
+                            actionError.message,
+                        ) { items, error ->
                             ItineraryUiState(
                                 loading = false,
                                 trip = trip,
                                 days = buildDays(trip, items),
                                 conflictIds = ItineraryConflictDetector.findConflictingIds(items),
+                                actionError = error,
                             )
                         }
                     }
@@ -77,9 +87,15 @@ class ItineraryViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ItineraryUiState())
 
+    fun clearActionError() = actionError.clear()
+
     fun setStatus(item: ItineraryItem, status: ItineraryStatus) {
         val tripId = uiState.value.trip?.id ?: return
-        viewModelScope.launch { itineraryRepository.update(tripId, item.copy(status = status)) }
+        viewModelScope.launch {
+            actionError.runReporting("일정 상태를 바꾸지 못했습니다. 완료된 여행은 수정할 수 없습니다.") {
+                itineraryRepository.update(tripId, item.copy(status = status))
+            }
+        }
     }
 
     /**
@@ -90,10 +106,12 @@ class ItineraryViewModel @Inject constructor(
     fun delete(item: ItineraryItem) {
         val tripId = uiState.value.trip?.id ?: return
         viewModelScope.launch {
-            reservationRepository.observeReservations(tripId).first()
-                .filter { it.linkedItineraryId == item.id }
-                .forEach { reservationRepository.update(tripId, it.copy(linkedItineraryId = null)) }
-            itineraryRepository.delete(tripId, item.id)
+            actionError.runReporting("일정을 삭제하지 못했습니다. 완료된 여행은 수정할 수 없습니다.") {
+                reservationRepository.observeReservations(tripId).first()
+                    .filter { it.linkedItineraryId == item.id }
+                    .forEach { reservationRepository.update(tripId, it.copy(linkedItineraryId = null)) }
+                itineraryRepository.delete(tripId, item.id)
+            }
         }
     }
 

@@ -53,11 +53,13 @@ class MoreViewModel @Inject constructor(
     val deleteAccountState: StateFlow<DeleteAccountUiState> = _deleteAccountState
 
     fun resetDemoData() {
-        viewModelScope.launch { demoDataResetter.resetAll() }
+        viewModelScope.launch { runCatching { demoDataResetter.resetAll() } }
     }
 
     fun logout() {
-        viewModelScope.launch { authRepository.signOut() }
+        // 로그아웃 실패(예: Credential Manager 상태 정리 실패)로 앱이 죽지 않게 감싼다.
+        // 로그아웃은 되돌릴 필요가 없는 동작이라 별도 오류 표시 없이 조용히 넘긴다.
+        viewModelScope.launch { runCatching { authRepository.signOut() } }
     }
 
     fun deleteAccount() {

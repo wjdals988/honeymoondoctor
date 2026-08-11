@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jeongmin.honeymoondoctor.core.error.toUserMessage
 import com.jeongmin.honeymoondoctor.data.local.db.VoucherMetadataEntity
 import com.jeongmin.honeymoondoctor.data.voucher.VoucherStore
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryItem
@@ -74,6 +75,10 @@ class ReservationDetailViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReservationDetailUiState())
 
+    fun clearActionError() {
+        voucherError.value = null
+    }
+
     fun attachVoucher(uri: Uri) {
         viewModelScope.launch {
             voucherStore.attach(reservationId, uri)
@@ -83,7 +88,11 @@ class ReservationDetailViewModel @Inject constructor(
     }
 
     fun removeVoucher(entity: VoucherMetadataEntity) {
-        viewModelScope.launch { voucherStore.remove(entity) }
+        viewModelScope.launch {
+            runCatching { voucherStore.remove(entity) }
+                .onSuccess { voucherError.value = null }
+                .onFailure { voucherError.value = it.toUserMessage("바우처를 삭제하지 못했습니다.") }
+        }
     }
 
     fun buildOpenIntent(entity: VoucherMetadataEntity): Intent = voucherStore.buildOpenIntent(entity)
@@ -94,15 +103,22 @@ class ReservationDetailViewModel @Inject constructor(
      */
     fun delete(deleteVouchers: Boolean, onDeleted: () -> Unit) {
         val tripId = uiState.value.tripId ?: return
+        // 삭제가 서버에서 거부되면(완료된 여행 등) 화면을 닫지 않고 이유를 띄운다 —
+        // 예전에는 예외가 그대로 앱을 죽였다. voucherError 자리를 오류 표시로 함께 쓴다.
         viewModelScope.launch {
-            val linkedItems = itineraryRepository.observeItinerary(tripId).first()
-                .filter { it.reservationId == reservationId }
-            linkedItems.forEach { itineraryRepository.update(tripId, it.copy(reservationId = null)) }
-            if (deleteVouchers) {
-                voucherStore.removeAllForReservation(reservationId)
+            runCatching {
+                val linkedItems = itineraryRepository.observeItinerary(tripId).first()
+                    .filter { it.reservationId == reservationId }
+                linkedItems.forEach { itineraryRepository.update(tripId, it.copy(reservationId = null)) }
+                if (deleteVouchers) {
+                    voucherStore.removeAllForReservation(reservationId)
+                }
+                reservationRepository.delete(tripId, reservationId)
             }
-            reservationRepository.delete(tripId, reservationId)
-            onDeleted()
+                .onSuccess { onDeleted() }
+                .onFailure {
+                    voucherError.value = it.toUserMessage("예약을 삭제하지 못했습니다. 완료된 여행은 수정할 수 없습니다.")
+                }
         }
     }
 }

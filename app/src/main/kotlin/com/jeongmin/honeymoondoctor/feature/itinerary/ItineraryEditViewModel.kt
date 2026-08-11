@@ -3,6 +3,7 @@ package com.jeongmin.honeymoondoctor.feature.itinerary
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jeongmin.honeymoondoctor.core.error.toUserMessage
 import com.jeongmin.honeymoondoctor.core.time.LocalTimes
 import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryItem
@@ -106,7 +107,11 @@ class ItineraryEditViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ItineraryEditUiState())
 
     init {
-        viewModelScope.launch { initializeForm() }
+        // 초기 데이터 읽기가 실패해도(권한·네트워크) 크래시가 아니라 오류 표시로 끝낸다.
+        viewModelScope.launch {
+            runCatching { initializeForm() }
+                .onFailure { validationError.value = it.toUserMessage("내용을 불러오지 못했습니다.") }
+        }
     }
 
     private suspend fun initializeForm() {
@@ -183,7 +188,10 @@ class ItineraryEditViewModel @Inject constructor(
 
     fun createCity(city: City) {
         val tripId = uiState.value.tripId ?: return
-        viewModelScope.launch { cityRepository.create(tripId, city) }
+        viewModelScope.launch {
+            runCatching { cityRepository.create(tripId, city) }
+                .onFailure { validationError.value = it.toUserMessage("도시를 추가하지 못했습니다. 완료된 여행은 수정할 수 없습니다.") }
+        }
     }
 
     fun save(onSaved: () -> Unit) {
@@ -240,13 +248,17 @@ class ItineraryEditViewModel @Inject constructor(
             estimatedKrw = estimatedKrw,
             notes = form.notes.trim().ifEmpty { null },
         )
+        // 저장이 실패하면 화면을 닫지 않고 그 자리에 이유를 띄운다(예전에는 예외가 앱을 죽였다).
         viewModelScope.launch {
-            if (form.itemId == null) {
-                itineraryRepository.create(tripId, item)
-            } else {
-                itineraryRepository.update(tripId, item)
+            runCatching {
+                if (form.itemId == null) {
+                    itineraryRepository.create(tripId, item)
+                } else {
+                    itineraryRepository.update(tripId, item)
+                }
             }
-            onSaved()
+                .onSuccess { onSaved() }
+                .onFailure { validationError.value = it.toUserMessage("저장에 실패했습니다. 완료된 여행은 수정할 수 없습니다.") }
         }
     }
 }

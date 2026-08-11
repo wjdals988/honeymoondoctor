@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jeongmin.honeymoondoctor.core.error.toUserMessage
 import com.jeongmin.honeymoondoctor.data.place.PlaceImportParser
 import com.jeongmin.honeymoondoctor.data.place.PlaceImportPreview
 import com.jeongmin.honeymoondoctor.domain.model.City
@@ -120,9 +121,14 @@ class PlaceImportViewModel @Inject constructor(
         val toImport = currentPreview.validRows.mapNotNull { it.place }
         if (toImport.isEmpty()) return
         viewModelScope.launch {
-            placeRepository.createAll(tripId, toImport)
-            importedCount.value = toImport.size
-            preview.value = null
+            runCatching { placeRepository.createAll(tripId, toImport) }
+                .onSuccess {
+                    importedCount.value = toImport.size
+                    preview.value = null
+                }
+                .onFailure {
+                    error.value = it.toUserMessage("장소를 저장하지 못했습니다. 완료된 여행은 수정할 수 없습니다.")
+                }
         }
     }
 

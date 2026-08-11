@@ -2,6 +2,8 @@ package com.jeongmin.honeymoondoctor.feature.expense
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jeongmin.honeymoondoctor.core.error.ActionErrorState
+import com.jeongmin.honeymoondoctor.core.error.runReporting
 import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.Expense
 import com.jeongmin.honeymoondoctor.domain.model.ExpenseCategory
@@ -54,6 +56,7 @@ data class ExpenseUiState(
     val settlementPerPersonKrw: Long = 0,
     /** 예약의 예상 비용 합계 — 실제 지출과 구분해 표시(스펙 7-6) */
     val reservationEstimateKrw: Long = 0,
+    val actionError: String? = null,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -68,6 +71,7 @@ class ExpenseViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val filter = MutableStateFlow(ShoppingFilter.ALL)
+    private val actionError = ActionErrorState()
 
     val uiState: StateFlow<ExpenseUiState> = observeCurrentTrip()
         .flatMapLatest { trip ->
@@ -83,6 +87,9 @@ class ExpenseViewModel @Inject constructor(
                 ) { expenses, budgets, members, cities, reservations ->
                     Triple(expenses, budgets, Triple(members, cities, reservations))
                 }.combine(filter) { (expenses, budgets, rest), filterValue ->
+                    Pair(Triple(expenses, budgets, rest), filterValue)
+                }.combine(actionError.message) { (data, filterValue), error ->
+                    val (expenses, budgets, rest) = data
                     val (members, cities, reservations) = rest
                     val filtered = when (filterValue) {
                         ShoppingFilter.ALL -> expenses
@@ -106,6 +113,7 @@ class ExpenseViewModel @Inject constructor(
                         sharedTotalKrw = sharedTotal,
                         settlementPerPersonKrw = sharedTotal / 2,
                         reservationEstimateKrw = reservations.sumOf { it.estimatedKrw ?: 0L },
+                        actionError = error,
                     )
                 }
             }
@@ -116,8 +124,14 @@ class ExpenseViewModel @Inject constructor(
         filter.value = value
     }
 
+    fun clearActionError() = actionError.clear()
+
     fun delete(expense: Expense) {
         val tripId = uiState.value.tripId ?: return
-        viewModelScope.launch { expenseRepository.delete(tripId, expense.id) }
+        viewModelScope.launch {
+            actionError.runReporting("지출을 삭제하지 못했습니다. 완료된 여행은 수정할 수 없습니다.") {
+                expenseRepository.delete(tripId, expense.id)
+            }
+        }
     }
 }

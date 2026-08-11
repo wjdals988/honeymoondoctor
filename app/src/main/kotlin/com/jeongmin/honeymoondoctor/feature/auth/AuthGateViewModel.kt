@@ -65,7 +65,7 @@ class AuthGateViewModel @Inject constructor(
 
     init {
         if (demoModeManager.isDemoMode) {
-            viewModelScope.launch { authRepository.signInAsDemoUser() }
+            viewModelScope.launch { runCatching { authRepository.signInAsDemoUser() } }
         }
     }
 

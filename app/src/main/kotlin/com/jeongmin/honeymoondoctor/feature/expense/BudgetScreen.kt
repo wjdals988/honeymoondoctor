@@ -23,6 +23,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -38,12 +39,15 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jeongmin.honeymoondoctor.core.error.ActionErrorState
+import com.jeongmin.honeymoondoctor.core.error.runReporting
 import com.jeongmin.honeymoondoctor.core.ui.AppCard
 import com.jeongmin.honeymoondoctor.core.ui.CardTone
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
+import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.domain.model.Budget
 import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.ExpenseCategory
@@ -73,6 +77,7 @@ data class BudgetUiState(
     val tripId: String? = null,
     val rows: List<BudgetRow> = emptyList(),
     val cities: List<City> = emptyList(),
+    val actionError: String? = null,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -84,6 +89,8 @@ class BudgetViewModel @Inject constructor(
     private val budgetRepository: BudgetRepository,
 ) : ViewModel() {
 
+    private val actionError = ActionErrorState()
+
     val uiState: StateFlow<BudgetUiState> = observeCurrentTrip()
         .flatMapLatest { trip ->
             if (trip == null) {
@@ -93,7 +100,8 @@ class BudgetViewModel @Inject constructor(
                     budgetRepository.observeBudgets(trip.id),
                     expenseRepository.observeExpenses(trip.id),
                     cityRepository.observeCities(trip.id),
-                ) { budgets, expenses, cities ->
+                    actionError.message,
+                ) { budgets, expenses, cities, error ->
                     BudgetUiState(
                         loading = false,
                         tripId = trip.id,
@@ -106,25 +114,34 @@ class BudgetViewModel @Inject constructor(
                             BudgetRow(budget, spent)
                         },
                         cities = cities,
+                        actionError = error,
                     )
                 }
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BudgetUiState())
 
+    fun clearActionError() = actionError.clear()
+
     fun upsert(budget: Budget) {
         val tripId = uiState.value.tripId ?: return
         viewModelScope.launch {
-            budgetRepository.upsert(
-                tripId,
-                if (budget.id.isEmpty()) budget.copy(id = "budget-${UUID.randomUUID()}") else budget,
-            )
+            actionError.runReporting("예산을 저장하지 못했습니다. 완료된 여행은 수정할 수 없습니다.") {
+                budgetRepository.upsert(
+                    tripId,
+                    if (budget.id.isEmpty()) budget.copy(id = "budget-${UUID.randomUUID()}") else budget,
+                )
+            }
         }
     }
 
     fun delete(budget: Budget) {
         val tripId = uiState.value.tripId ?: return
-        viewModelScope.launch { budgetRepository.delete(tripId, budget.id) }
+        viewModelScope.launch {
+            actionError.runReporting("예산을 삭제하지 못했습니다. 완료된 여행은 수정할 수 없습니다.") {
+                budgetRepository.delete(tripId, budget.id)
+            }
+        }
     }
 }
 
@@ -137,8 +154,10 @@ fun BudgetScreen(
     val uiState by viewModel.uiState.collectAsState()
     var editorTarget by remember { mutableStateOf<Budget?>(null) }
     var showEditor by remember { mutableStateOf(false) }
+    val snackbarHostState = rememberActionErrorSnackbar(uiState.actionError, viewModel::clearActionError)
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("예산 관리") },

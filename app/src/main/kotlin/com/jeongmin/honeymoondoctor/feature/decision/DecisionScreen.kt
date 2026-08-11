@@ -25,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -40,11 +41,14 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jeongmin.honeymoondoctor.core.error.ActionErrorState
+import com.jeongmin.honeymoondoctor.core.error.runReporting
 import com.jeongmin.honeymoondoctor.core.ui.AppCard
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
+import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.domain.model.Decision
 import com.jeongmin.honeymoondoctor.domain.model.DecisionCategory
 import com.jeongmin.honeymoondoctor.domain.model.DecisionOption
@@ -57,6 +61,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -67,6 +72,7 @@ data class DecisionUiState(
     val loading: Boolean = true,
     val tripId: String? = null,
     val decisions: List<Decision> = emptyList(),
+    val actionError: String? = null,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -76,60 +82,78 @@ class DecisionViewModel @Inject constructor(
     private val decisionRepository: DecisionRepository,
 ) : ViewModel() {
 
+    private val actionError = ActionErrorState()
+
     val uiState: StateFlow<DecisionUiState> = observeCurrentTrip()
         .flatMapLatest { trip ->
             if (trip == null) {
                 flowOf(DecisionUiState(loading = false))
             } else {
-                decisionRepository.observeDecisions(trip.id).map { decisions ->
+                combine(
+                    decisionRepository.observeDecisions(trip.id),
+                    actionError.message,
+                ) { decisions, error ->
                     DecisionUiState(
                         loading = false,
                         tripId = trip.id,
                         decisions = decisions.sortedBy { it.status == DecisionStatus.DECIDED },
+                        actionError = error,
                     )
                 }
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DecisionUiState())
 
+    fun clearActionError() = actionError.clear()
+
     fun selectOption(decision: Decision, option: DecisionOption) {
         val tripId = uiState.value.tripId ?: return
         viewModelScope.launch {
-            decisionRepository.update(
-                tripId,
-                decision.copy(selectedOptionId = option.id, status = DecisionStatus.DECIDED),
-            )
+            actionError.runReporting("결정을 저장하지 못했습니다. 완료된 여행은 수정할 수 없습니다.") {
+                decisionRepository.update(
+                    tripId,
+                    decision.copy(selectedOptionId = option.id, status = DecisionStatus.DECIDED),
+                )
+            }
         }
     }
 
     fun setStatus(decision: Decision, status: DecisionStatus) {
         val tripId = uiState.value.tripId ?: return
         viewModelScope.launch {
-            decisionRepository.update(
-                tripId,
-                decision.copy(
-                    status = status,
-                    // 결정 취소 시 선택 옵션도 함께 해제한다
-                    selectedOptionId = if (status == DecisionStatus.DECIDED) decision.selectedOptionId else null,
-                ),
-            )
+            actionError.runReporting("결정 상태를 바꾸지 못했습니다. 완료된 여행은 수정할 수 없습니다.") {
+                decisionRepository.update(
+                    tripId,
+                    decision.copy(
+                        status = status,
+                        // 결정 취소 시 선택 옵션도 함께 해제한다
+                        selectedOptionId = if (status == DecisionStatus.DECIDED) decision.selectedOptionId else null,
+                    ),
+                )
+            }
         }
     }
 
     fun save(decision: Decision) {
         val tripId = uiState.value.tripId ?: return
         viewModelScope.launch {
-            if (decision.id.isEmpty()) {
-                decisionRepository.create(tripId, decision.copy(id = "decision-${UUID.randomUUID()}"))
-            } else {
-                decisionRepository.update(tripId, decision)
+            actionError.runReporting("결정 항목을 저장하지 못했습니다. 완료된 여행은 수정할 수 없습니다.") {
+                if (decision.id.isEmpty()) {
+                    decisionRepository.create(tripId, decision.copy(id = "decision-${UUID.randomUUID()}"))
+                } else {
+                    decisionRepository.update(tripId, decision)
+                }
             }
         }
     }
 
     fun delete(decision: Decision) {
         val tripId = uiState.value.tripId ?: return
-        viewModelScope.launch { decisionRepository.delete(tripId, decision.id) }
+        viewModelScope.launch {
+            actionError.runReporting("결정 항목을 삭제하지 못했습니다. 완료된 여행은 수정할 수 없습니다.") {
+                decisionRepository.delete(tripId, decision.id)
+            }
+        }
     }
 }
 
@@ -143,8 +167,10 @@ fun DecisionScreen(
     var editorTarget by remember { mutableStateOf<Decision?>(null) }
     var showEditor by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<Decision?>(null) }
+    val snackbarHostState = rememberActionErrorSnackbar(uiState.actionError, viewModel::clearActionError)
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("결정함") },

@@ -26,6 +26,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -42,7 +43,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.ui.AppCard
 import com.jeongmin.honeymoondoctor.core.ui.CardTone
+import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.copyToClipboard
+import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.data.local.db.VoucherMetadataEntity
 import com.jeongmin.honeymoondoctor.domain.model.maskSecret
 import java.text.NumberFormat
@@ -59,12 +62,14 @@ fun ReservationDetailScreen(
     val context = LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showVoucherDeleteChoice by remember { mutableStateOf(false) }
+    val snackbarHostState = rememberActionErrorSnackbar(uiState.voucherError, viewModel::clearActionError)
 
     val voucherPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri -> uri?.let(viewModel::attachVoucher) }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("예약 상세") },
@@ -74,12 +79,15 @@ fun ReservationDetailScreen(
                     }
                 },
                 actions = {
-                    uiState.reservation?.let { reservation ->
-                        IconButton(onClick = { onEdit(reservation.id) }) {
-                            Icon(Icons.Filled.Edit, contentDescription = "예약 수정")
-                        }
-                        IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(Icons.Filled.Delete, contentDescription = "예약 삭제")
+                    // 완료된 여행에서는 수정·삭제를 내린다(서버가 거부해 크래시로 이어졌던 경로).
+                    if (!LocalTripReadOnly.current) {
+                        uiState.reservation?.let { reservation ->
+                            IconButton(onClick = { onEdit(reservation.id) }) {
+                                Icon(Icons.Filled.Edit, contentDescription = "예약 수정")
+                            }
+                            IconButton(onClick = { showDeleteDialog = true }) {
+                                Icon(Icons.Filled.Delete, contentDescription = "예약 삭제")
+                            }
                         }
                     }
                 },
@@ -155,9 +163,6 @@ fun ReservationDetailScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            uiState.voucherError?.let { error ->
-                Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-            }
             if (uiState.vouchers.isEmpty()) {
                 Text(
                     text = "이 기기에 저장된 바우처 없음",

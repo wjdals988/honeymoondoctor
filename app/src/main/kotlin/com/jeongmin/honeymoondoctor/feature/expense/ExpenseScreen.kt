@@ -24,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -44,6 +45,7 @@ import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
+import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.domain.model.Expense
 import com.jeongmin.honeymoondoctor.domain.model.TravelCurrency
 import com.jeongmin.honeymoondoctor.domain.usecase.KrwConverter
@@ -64,9 +66,11 @@ fun ExpenseScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var deleteTarget by remember { mutableStateOf<Expense?>(null) }
+    val snackbarHostState = rememberActionErrorSnackbar(uiState.actionError, viewModel::clearActionError)
 
     Scaffold(
         modifier = modifier,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             if (!LocalTripReadOnly.current) {
                 FloatingActionButton(onClick = onAddExpense) {
@@ -264,8 +268,11 @@ private fun ExpenseRow(
                     )
                 }
             }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Filled.Delete, contentDescription = "지출 삭제")
+            // 완료된 여행에서는 삭제 버튼 자체를 내린다(서버가 거부해 크래시로 이어졌던 경로).
+            if (!LocalTripReadOnly.current) {
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Filled.Delete, contentDescription = "지출 삭제")
+                }
             }
         }
     }

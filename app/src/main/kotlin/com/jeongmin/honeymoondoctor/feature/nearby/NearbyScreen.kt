@@ -29,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -53,6 +54,7 @@ import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
 import com.jeongmin.honeymoondoctor.core.ui.openGoogleMapsDirections
 import com.jeongmin.honeymoondoctor.core.ui.openUrl
+import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.domain.model.Place
 import com.jeongmin.honeymoondoctor.domain.model.PlaceCategory
 import com.jeongmin.honeymoondoctor.domain.usecase.PlaceScore
@@ -67,6 +69,7 @@ fun NearbyScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var deleteTarget by remember { mutableStateOf<Place?>(null) }
+    val snackbarHostState = rememberActionErrorSnackbar(uiState.actionError, viewModel::clearActionError)
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -77,6 +80,7 @@ fun NearbyScreen(
 
     Scaffold(
         modifier = modifier,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             if (!LocalTripReadOnly.current) {
                 FloatingActionButton(onClick = { onOpenEditor(null) }) {
@@ -449,6 +453,9 @@ private fun PlaceMenu(
     onDelete: () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    // 완료된 여행에서는 쓰기 항목을 내린다. 메뉴가 비면 점 세 개 버튼 자체를 감춘다.
+    val readOnly = LocalTripReadOnly.current
+    if (readOnly) return
     Box {
         IconButton(onClick = { expanded = true }) {
             Icon(Icons.Filled.MoreVert, contentDescription = "${place.name} 메뉴")

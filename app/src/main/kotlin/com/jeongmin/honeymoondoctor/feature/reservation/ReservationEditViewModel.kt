@@ -3,6 +3,7 @@ package com.jeongmin.honeymoondoctor.feature.reservation
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jeongmin.honeymoondoctor.core.error.toUserMessage
 import com.jeongmin.honeymoondoctor.core.time.LocalTimes
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryItem
 import com.jeongmin.honeymoondoctor.domain.model.Reservation
@@ -101,7 +102,11 @@ class ReservationEditViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReservationEditUiState())
 
     init {
-        viewModelScope.launch { initializeForm() }
+        // 초기 데이터 읽기가 실패해도(권한·네트워크) 크래시가 아니라 오류 표시로 끝낸다.
+        viewModelScope.launch {
+            runCatching { initializeForm() }
+                .onFailure { validationError.value = it.toUserMessage("내용을 불러오지 못했습니다.") }
+        }
     }
 
     private suspend fun initializeForm() {
@@ -202,12 +207,15 @@ class ReservationEditViewModel @Inject constructor(
             assigneeUid = form.assigneeUid,
         )
         viewModelScope.launch {
-            if (form.reservationId == null) {
-                reservationRepository.create(tripId, reservation)
-            } else {
-                reservationRepository.update(tripId, reservation)
+            runCatching {
+                if (form.reservationId == null) {
+                    reservationRepository.create(tripId, reservation)
+                } else {
+                    reservationRepository.update(tripId, reservation)
+                }
             }
-            onSaved()
+                .onSuccess { onSaved() }
+                .onFailure { validationError.value = it.toUserMessage("저장에 실패했습니다. 완료된 여행은 수정할 수 없습니다.") }
         }
     }
 }

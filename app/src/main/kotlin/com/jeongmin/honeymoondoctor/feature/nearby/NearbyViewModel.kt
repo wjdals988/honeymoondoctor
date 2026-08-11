@@ -2,6 +2,8 @@ package com.jeongmin.honeymoondoctor.feature.nearby
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jeongmin.honeymoondoctor.core.error.ActionErrorState
+import com.jeongmin.honeymoondoctor.core.error.runReporting
 import com.jeongmin.honeymoondoctor.core.location.LocationProvider
 import com.jeongmin.honeymoondoctor.data.local.prefs.AppPreferences
 import com.jeongmin.honeymoondoctor.data.local.prefs.LastKnownLocation
@@ -58,6 +60,7 @@ data class NearbyUiState(
     val others: List<ScoredPlace> = emptyList(),
     val noCoordinates: List<Place> = emptyList(),
     val totalPlaceCount: Int = 0,
+    val actionError: String? = null,
 )
 
 private data class NearbyFilters(
@@ -83,6 +86,7 @@ class NearbyViewModel @Inject constructor(
     private val sort = MutableStateFlow(NearbySort.RECOMMENDED)
     private val refreshing = MutableStateFlow(false)
     private val permissionState = MutableStateFlow(locationProvider.hasLocationPermission())
+    private val actionError = ActionErrorState()
 
     private val filtersFlow = combine(
         categoryFilter, unvisitedOnly, sort, refreshing, permissionState,
@@ -100,8 +104,10 @@ class NearbyViewModel @Inject constructor(
                     cityRepository.observeCities(trip.id),
                     appPreferences.snapshot,
                     filtersFlow,
-                ) { places, cities, prefs, filters ->
+                    actionError.message,
+                ) { places, cities, prefs, filters, error ->
                     buildState(trip.id, places, cities, prefs.selectedCityId, prefs.lastKnownLocation, filters)
+                        .copy(actionError = error)
                 }
             }
         }
@@ -113,8 +119,15 @@ class NearbyViewModel @Inject constructor(
         if (!permissionState.value) return
         viewModelScope.launch {
             refreshing.value = true
-            locationProvider.refreshCurrentLocation()
-            refreshing.value = false
+            // 권한이 중간에 회수되면 SecurityException이 날 수 있다. try/finally로 감싸
+            // 새로고침 표시가 영구히 도는 상태를 막는다.
+            try {
+                locationProvider.refreshCurrentLocation()
+            } catch (e: Exception) {
+                actionError.report(e, "현재 위치를 가져오지 못했습니다.")
+            } finally {
+                refreshing.value = false
+            }
         }
     }
 
@@ -139,15 +152,25 @@ class NearbyViewModel @Inject constructor(
         viewModelScope.launch { appPreferences.setSelectedCity(cityId) }
     }
 
+    fun clearActionError() = actionError.clear()
+
     fun toggleVisited(place: Place) {
         val tripId = uiState.value.tripId ?: return
         val updated = if (place.visited) place.copy(visitedAt = null) else place.copy(visitedAt = Instant.now())
-        viewModelScope.launch { placeRepository.update(tripId, updated) }
+        viewModelScope.launch {
+            actionError.runReporting("방문 여부를 바꾸지 못했습니다. 완료된 여행은 수정할 수 없습니다.") {
+                placeRepository.update(tripId, updated)
+            }
+        }
     }
 
     fun delete(place: Place) {
         val tripId = uiState.value.tripId ?: return
-        viewModelScope.launch { placeRepository.delete(tripId, place.id) }
+        viewModelScope.launch {
+            actionError.runReporting("장소를 삭제하지 못했습니다. 완료된 여행은 수정할 수 없습니다.") {
+                placeRepository.delete(tripId, place.id)
+            }
+        }
     }
 
     private fun buildState(

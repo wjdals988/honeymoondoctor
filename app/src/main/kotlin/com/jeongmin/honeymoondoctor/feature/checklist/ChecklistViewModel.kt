@@ -2,6 +2,8 @@ package com.jeongmin.honeymoondoctor.feature.checklist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jeongmin.honeymoondoctor.core.error.ActionErrorState
+import com.jeongmin.honeymoondoctor.core.error.runReporting
 import com.jeongmin.honeymoondoctor.domain.model.ChecklistItem
 import com.jeongmin.honeymoondoctor.domain.model.TripMember
 import com.jeongmin.honeymoondoctor.domain.repository.ChecklistRepository
@@ -38,6 +40,7 @@ data class ChecklistUiState(
     val requiredIncompleteCount: Int = 0,
     val requiredOnly: Boolean = false,
     val ownerFilter: OwnerFilter = OwnerFilter.All,
+    val actionError: String? = null,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -50,6 +53,7 @@ class ChecklistViewModel @Inject constructor(
 
     private val requiredOnly = MutableStateFlow(false)
     private val ownerFilter = MutableStateFlow<OwnerFilter>(OwnerFilter.All)
+    private val actionError = ActionErrorState()
 
     val uiState: StateFlow<ChecklistUiState> = observeCurrentTrip()
         .flatMapLatest { trip ->
@@ -61,7 +65,8 @@ class ChecklistViewModel @Inject constructor(
                     tripRepository.observeMembers(trip.id),
                     requiredOnly,
                     ownerFilter,
-                ) { items, members, requiredOnlyValue, ownerFilterValue ->
+                    actionError.message,
+                ) { items, members, requiredOnlyValue, ownerFilterValue, error ->
                     val filtered = items
                         .filter { if (requiredOnlyValue) it.required else true }
                         .filter { item ->
@@ -82,6 +87,7 @@ class ChecklistViewModel @Inject constructor(
                         requiredIncompleteCount = items.count { it.required && !it.completed },
                         requiredOnly = requiredOnlyValue,
                         ownerFilter = ownerFilterValue,
+                        actionError = error,
                     )
                 }
             }
@@ -96,6 +102,8 @@ class ChecklistViewModel @Inject constructor(
         ownerFilter.value = filter
     }
 
+    fun clearActionError() = actionError.clear()
+
     fun toggleCompleted(item: ChecklistItem) {
         val tripId = uiState.value.tripId ?: return
         val toggled = if (item.completed) {
@@ -103,22 +111,32 @@ class ChecklistViewModel @Inject constructor(
         } else {
             item.copy(completed = true, completedAt = Instant.now())
         }
-        viewModelScope.launch { checklistRepository.update(tripId, toggled) }
+        viewModelScope.launch {
+            actionError.runReporting("준비물 상태를 바꾸지 못했습니다. 완료된 여행은 수정할 수 없습니다.") {
+                checklistRepository.update(tripId, toggled)
+            }
+        }
     }
 
     fun save(item: ChecklistItem) {
         val tripId = uiState.value.tripId ?: return
         viewModelScope.launch {
-            if (item.id.isEmpty()) {
-                checklistRepository.create(tripId, item.copy(id = "check-${UUID.randomUUID()}"))
-            } else {
-                checklistRepository.update(tripId, item)
+            actionError.runReporting("준비물을 저장하지 못했습니다. 완료된 여행은 수정할 수 없습니다.") {
+                if (item.id.isEmpty()) {
+                    checklistRepository.create(tripId, item.copy(id = "check-${UUID.randomUUID()}"))
+                } else {
+                    checklistRepository.update(tripId, item)
+                }
             }
         }
     }
 
     fun delete(item: ChecklistItem) {
         val tripId = uiState.value.tripId ?: return
-        viewModelScope.launch { checklistRepository.delete(tripId, item.id) }
+        viewModelScope.launch {
+            actionError.runReporting("준비물을 삭제하지 못했습니다. 완료된 여행은 수정할 수 없습니다.") {
+                checklistRepository.delete(tripId, item.id)
+            }
+        }
     }
 }

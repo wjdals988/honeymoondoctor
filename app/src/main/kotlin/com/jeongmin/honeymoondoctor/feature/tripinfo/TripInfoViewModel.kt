@@ -2,7 +2,7 @@ package com.jeongmin.honeymoondoctor.feature.tripinfo
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.firestore.FirebaseFirestoreException
+import com.jeongmin.honeymoondoctor.core.error.toUserMessage
 import com.jeongmin.honeymoondoctor.domain.model.AuthUser
 import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.JoinRequest
@@ -75,11 +75,19 @@ class TripInfoViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TripInfoUiState())
 
     fun createCity(tripId: String, city: City) {
-        viewModelScope.launch { cityRepository.create(tripId, city) }
+        viewModelScope.launch {
+            runCatching { cityRepository.create(tripId, city) }
+                .onSuccess { actionError.value = null }
+                .onFailure { actionError.value = it.toUserMessage("도시를 추가하지 못했습니다.") }
+        }
     }
 
     fun updateCity(tripId: String, city: City) {
-        viewModelScope.launch { cityRepository.update(tripId, city) }
+        viewModelScope.launch {
+            runCatching { cityRepository.update(tripId, city) }
+                .onSuccess { actionError.value = null }
+                .onFailure { actionError.value = it.toUserMessage("도시를 수정하지 못했습니다.") }
+        }
     }
 
     fun regenerateInviteCode(tripId: String) {
@@ -169,6 +177,4 @@ class TripInfoViewModel @Inject constructor(
 
     // Firestore 예외 메시지는 영어·원인코드라 그대로 보여주면 안 되고, 우리 코드가 직접 던진
     // IllegalStateException(예: "여행 구성원은 최대 2명입니다.") 같은 한국어 메시지만 그대로 쓴다.
-    private fun Throwable.toUserMessage(fallback: String): String =
-        if (this is FirebaseFirestoreException) fallback else message ?: fallback
 }

@@ -3,13 +3,14 @@ package com.jeongmin.honeymoondoctor.feature.expense
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jeongmin.honeymoondoctor.core.error.toUserMessage
 import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.Expense
 import com.jeongmin.honeymoondoctor.domain.model.ExpenseCategory
-import com.jeongmin.honeymoondoctor.domain.model.TravelCurrency
-import com.jeongmin.honeymoondoctor.domain.model.TripMember
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryItem
 import com.jeongmin.honeymoondoctor.domain.model.Reservation
+import com.jeongmin.honeymoondoctor.domain.model.TravelCurrency
+import com.jeongmin.honeymoondoctor.domain.model.TripMember
 import com.jeongmin.honeymoondoctor.domain.repository.CityRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ExpenseRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ItineraryRepository
@@ -113,7 +114,11 @@ class ExpenseEditViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExpenseEditUiState())
 
     init {
-        viewModelScope.launch { initializeForm() }
+        // 초기 데이터 읽기가 실패해도(권한·네트워크) 크래시가 아니라 오류 표시로 끝낸다.
+        viewModelScope.launch {
+            runCatching { initializeForm() }
+                .onFailure { validationError.value = it.toUserMessage("내용을 불러오지 못했습니다.") }
+        }
     }
 
     private suspend fun initializeForm() {
@@ -143,7 +148,10 @@ class ExpenseEditViewModel @Inject constructor(
 
     fun createCity(city: City) {
         val tripId = uiState.value.tripId ?: return
-        viewModelScope.launch { cityRepository.create(tripId, city) }
+        viewModelScope.launch {
+            runCatching { cityRepository.create(tripId, city) }
+                .onFailure { validationError.value = it.toUserMessage("도시를 추가하지 못했습니다. 완료된 여행은 수정할 수 없습니다.") }
+        }
     }
 
     fun updateForm(transform: (ExpenseEditForm) -> ExpenseEditForm) {
@@ -187,13 +195,18 @@ class ExpenseEditViewModel @Inject constructor(
             linkedReservationId = form.linkedReservationId,
             memo = form.memo.trim().ifEmpty { null },
         )
+        // 저장이 실패하면 화면을 닫지 않고 그 자리에 이유를 띄운다. 예전에는 성공을 전제로
+        // onSaved()를 호출했고, 서버가 거부하면 예외가 그대로 앱을 죽였다.
         viewModelScope.launch {
-            if (form.expenseId == null) {
-                expenseRepository.create(tripId, expense)
-            } else {
-                expenseRepository.update(tripId, expense)
+            runCatching {
+                if (form.expenseId == null) {
+                    expenseRepository.create(tripId, expense)
+                } else {
+                    expenseRepository.update(tripId, expense)
+                }
             }
-            onSaved()
+                .onSuccess { onSaved() }
+                .onFailure { validationError.value = it.toUserMessage("저장에 실패했습니다. 완료된 여행은 수정할 수 없습니다.") }
         }
     }
 }
