@@ -24,7 +24,18 @@ suspend fun requestGoogleIdToken(context: Context): String {
     val response = try {
         credentialManager.getCredential(context, request)
     } catch (e: NoCredentialException) {
-        throw IllegalStateException("이 기기에 등록된 Google 계정이 없습니다. 설정에서 계정을 추가해주세요.", e)
+        // NoCredentialException은 "기기에 계정이 없다"만 뜻하지 않는다. 계정이 멀쩡히 있어도,
+        // 이 APK의 서명 인증서 SHA-1이 Firebase에 등록되지 않았으면 Google이 쓸 수 있는 자격
+        // 증명을 하나도 돌려주지 않아 같은 예외가 난다(실기기에서 release APK로 처음 겪음 —
+        // debug 키스토어 지문만 등록돼 있어서 발생). 계정 문제로만 안내하면 엉뚱한 곳을
+        // 보게 되므로 두 원인을 함께 알려준다.
+        throw IllegalStateException(
+            "사용할 수 있는 Google 계정을 받지 못했습니다.\n" +
+                "· 기기에 Google 계정이 추가돼 있는지 확인해주세요.\n" +
+                "· 계정이 있는데도 계속 실패하면, 이 앱 서명 키의 SHA-1이 Firebase에 " +
+                "등록되지 않은 경우입니다(debug/release 키가 서로 다릅니다).",
+            e,
+        )
     } catch (e: GetCredentialException) {
         throw IllegalStateException(e.message ?: "Credential Manager 오류", e)
     }

@@ -54,6 +54,23 @@ export JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home
 콜론으로 구분된 40자리 16진수 값이며, 키스토어마다 값이 다르므로 반드시 본인 환경에서
 직접 확인해야 합니다.)
 
+> **⚠️ release APK로 실기기 테스트할 때 반드시 읽을 것**
+>
+> debug와 release는 **서로 다른 키로 서명되므로 SHA-1도 다릅니다.** debug 지문만
+> 등록한 상태로 release APK를 실기기에 설치하면, 기기에 Google 계정이 정상적으로
+> 있어도 로그인이 실패합니다 — Google이 쓸 수 있는 자격 증명을 하나도 돌려주지
+> 않아 `NoCredentialException`이 발생합니다.
+>
+> release 빌드로 테스트하려면 **release 키스토어의 SHA-1도 같은 Android 앱에 추가**
+> 등록하고(한 앱에 여러 지문을 등록할 수 있습니다), `google-services.json`을 다시
+> 다운로드해 교체해야 합니다. release 키스토어 지문 확인:
+> ```bash
+> keytool -list -v -keystore <release-keystore.jks> -storepass <비밀번호> | grep SHA1
+> ```
+> 실제로 이 문제를 겪었으며(2026-08-11), 그때 앱이 "기기에 등록된 Google 계정이
+> 없습니다"라는 엉뚱한 안내를 띄워 원인 파악이 늦어졌습니다. 지금은 두 원인을 함께
+> 안내하도록 메시지를 고쳤습니다(`core/auth/GoogleCredentialRequester.kt`).
+
 ### 4. Google 로그인 활성화
 Firebase 콘솔 → Authentication → Sign-in method → **Google** 제공업체 사용 설정 →
 프로젝트 지원 이메일 지정.
