@@ -1,12 +1,19 @@
 # 서드파티 라이선스
 
-## Gaegu (손글씨체, `app/src/main/res/font/gaegu_regular.ttf` · `gaegu_bold.ttf`)
+현재 앱에 번들된 서드파티 **에셋**은 없습니다. 폰트는 전 구간 안드로이드 시스템 기본
+폰트를 사용합니다.
 
-- 출처: Google Fonts (https://fonts.google.com/specimen/Gaegu)
-- 라이선스: SIL Open Font License 1.1
-- Copyright 2018 The Gaegu Project Authors
+## 제거된 항목
 
-전체 라이선스 원문: https://scripts.sil.org/OFL
+### Gaegu (손글씨체) — 2026-08-11 제거
 
-OFL 1.1 요약: 폰트 파일 자체를 판매 목적으로 단독 재배포하는 것은 금지되지만, 앱에
-번들해 배포하는 것은 허용된다. 앱 사용자에게 폰트 파일에 대한 별도 고지 의무는 없다.
+`app/src/main/res/font/gaegu_regular.ttf` · `gaegu_bold.ttf`로 번들해 제목 계열
+(`display*`/`headline*`)에 쓰다가, 실기기에서 완성도가 떨어져 시스템 기본 폰트로
+되돌리고 파일도 지웠습니다(SIL Open Font License 1.1, Copyright 2018 The Gaegu
+Project Authors, https://fonts.google.com/specimen/Gaegu).
+
+## 라이브러리
+
+Kotlin·AndroidX·Jetpack Compose·Firebase·Hilt 등 Gradle 의존성은 각자의 라이선스
+(대부분 Apache License 2.0)를 따르며, `gradle/libs.versions.toml`에 버전이 명시되어
+있습니다.

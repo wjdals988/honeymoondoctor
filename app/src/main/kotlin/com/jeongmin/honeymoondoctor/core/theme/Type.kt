@@ -1,55 +1,48 @@
 package com.jeongmin.honeymoondoctor.core.theme
 
 import androidx.compose.material3.Typography
-import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.sp
-import com.jeongmin.honeymoondoctor.R
 
-// 손글씨체 Gaegu(OFL 1.1, docs/THIRD_PARTY_LICENSES.md 참고) — 앱 이름·헤드라인 같은
-// "순간"에만 쓴다. 일정 시각·경비 금액처럼 숫자가 중요한 title*/body*/label*는 계속
-// 시스템 기본 폰트를 써 가독성·숫자 정확도를 감성보다 우선한다.
-val DiaryFontFamily = FontFamily(
-    Font(R.font.gaegu_regular, FontWeight.Normal),
-    Font(R.font.gaegu_bold, FontWeight.Bold),
-)
+// 폰트는 전 구간 시스템 기본을 쓴다. 한때 손글씨체(Gaegu)를 display*/headline*에 넣었지만
+// 실기기에서 보니 완성도가 떨어져 되돌렸다(2026-08-11). 감성은 색·모서리·간격으로 낸다.
 
 // 긴 한국어 문구, 긴 예약명, 유럽식 긴 주소가 잘리거나 겹치지 않도록 줄바꿈 여유를 둔 타이포그래피.
 val HoneymoonTypography = Typography(
     displayLarge = TextStyle(
-        fontFamily = DiaryFontFamily,
+        fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Bold,
         fontSize = 48.sp,
         lineHeight = 58.sp,
     ),
     displayMedium = TextStyle(
-        fontFamily = DiaryFontFamily,
+        fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Bold,
         fontSize = 39.sp,
         lineHeight = 48.sp,
     ),
     displaySmall = TextStyle(
-        fontFamily = DiaryFontFamily,
+        fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Bold,
         fontSize = 32.sp,
         lineHeight = 40.sp,
     ),
     headlineLarge = TextStyle(
-        fontFamily = DiaryFontFamily,
+        fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Bold,
         fontSize = 30.sp,
         lineHeight = 38.sp,
     ),
     headlineMedium = TextStyle(
-        fontFamily = DiaryFontFamily,
+        fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Bold,
         fontSize = 24.sp,
         lineHeight = 32.sp,
     ),
     headlineSmall = TextStyle(
-        fontFamily = DiaryFontFamily,
+        fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Bold,
         fontSize = 22.sp,
         lineHeight = 30.sp,

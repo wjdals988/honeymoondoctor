@@ -150,7 +150,19 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
         items(state.cities) { city ->
             ListItem(
                 headlineContent = { Text(city.displayName) },
-                supportingContent = { Text(listOfNotNull(city.countryCode.ifBlank { null }, city.timeZoneId).joinToString(" · ")) },
+                supportingContent = {
+                    // 체류 기간을 넣은 도시는 그 기간도 함께 보여준다 — 홈의 현지 시각이
+                    // 이 기간에만 이 도시 시간대로 바뀌므로 확인할 수 있어야 한다.
+                    val stay = if (city.startDate != null && city.endDate != null) {
+                        "${city.startDate} ~ ${city.endDate}"
+                    } else {
+                        null
+                    }
+                    Text(
+                        listOfNotNull(city.countryCode.ifBlank { null }, city.timeZoneId, stay)
+                            .joinToString(" · "),
+                    )
+                },
                 trailingContent = {
                     if (!trip.isReadOnly) {
                         TextButton(onClick = { editingCity = city; showCityDialog = true }) { Text("수정") }

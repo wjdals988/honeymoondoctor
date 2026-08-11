@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.jeongmin.honeymoondoctor.BuildConfig
 import com.jeongmin.honeymoondoctor.core.auth.requestGoogleIdToken
 import kotlinx.coroutines.launch
 
@@ -38,6 +39,7 @@ fun MoreScreen(
     onNavigateToPlaceImport: () -> Unit,
     onNavigateToSyncStatus: () -> Unit,
     onNavigateToPublicTrips: () -> Unit,
+    onNavigateToAbout: () -> Unit,
     onResetDemoData: () -> Unit,
     onLogout: () -> Unit,
     onDeleteAccount: () -> Unit,
@@ -60,6 +62,7 @@ fun MoreScreen(
         MoreMenu("장소 가져오기·내보내기", "place_import"),
         MoreMenu("여행 둘러보기", "public_trips"),
         MoreMenu("동기화 상태", "sync_status"),
+        MoreMenu("버전 정보", "about"),
         MoreMenu("설정", null),
     )
     LazyColumn(modifier = modifier.padding(vertical = 8.dp)) {
@@ -72,14 +75,17 @@ fun MoreScreen(
                 "place_import" -> onNavigateToPlaceImport
                 "sync_status" -> onNavigateToSyncStatus
                 "public_trips" -> onNavigateToPublicTrips
+                "about" -> onNavigateToAbout
                 else -> null
             }
             ListItem(
                 headlineContent = { Text(menu.label) },
-                supportingContent = if (onClick == null) {
-                    { Text("추후 단계에서 제공") }
-                } else {
-                    null
+                supportingContent = when {
+                    // 목록에서 바로 버전을 읽을 수 있게 한다(들어가지 않아도 확인 가능).
+                    menu.onClickKey == "about" ->
+                        { { Text("v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})") } }
+                    onClick == null -> { { Text("추후 단계에서 제공") } }
+                    else -> null
                 },
                 trailingContent = if (menu.onClickKey == "trip_info" && pendingJoinRequestCount > 0) {
                     { Text("대기 중인 참여 요청 ${pendingJoinRequestCount}건", color = MaterialTheme.colorScheme.error) }
