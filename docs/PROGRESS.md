@@ -314,6 +314,19 @@ Phase 1(무드보드 Artifact로 팔레트·타이포·아이콘·대표 화면 
 
 빌드·유닛테스트·lint(0 에러)·Firestore 규칙 테스트(34/34) 통과.
 
+**실기기 재로그인 검증 중 발견한 빌드 버그**: 로그인 버튼을 눌렀는데 "GOOGLE_WEB_CLIENT_ID가
+설정되지 않았습니다" 오류가 실제 사용자 탭에서는 나고 스크립트 탭에서는 재현이 안 되는
+이상 현상 발생. 원인은 `app/build.gradle.kts`가 `google-services.json`을 Gradle
+Provider API가 아니라 `File.let { JsonSlurper().parse(it) }`로 직접 읽고 있었던 것 —
+`gradle.properties`의 `org.gradle.configuration-cache=true`가 이런 임시 파일 읽기를
+입력으로 추적하지 못해, Configuration Cache가 재사용될 때 `GOOGLE_WEB_CLIENT_ID` 값이
+빈 문자열로 굳어버리는 버그였다(같은 입력 파일로 6번 연속 재현, `--no-configuration-cache`
+플래그를 주면 항상 정상 동작하는 것으로 확진). `providers.fileContents(...)`로 교체해
+Configuration Cache가 파일을 올바르게 입력으로 추적하도록 근본 수정 — 이후 CC를 켠 채로
+6번 연속 빌드해도 항상 정상 값이 나오는 것으로 재확인. 이 함수(`requestGoogleIdToken`)는
+로그인 화면과 회원 탈퇴 재인증 다이얼로그가 공유하므로, 고치지 않았다면 재인증도 같은
+방식으로 실패할 뻔했다.
+
 ## 다음 세션에서 이어갈 때 프롬프트 예시
 
 ```

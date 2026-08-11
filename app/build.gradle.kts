@@ -22,9 +22,17 @@ if (hasFirebaseConfig) {
 // (client_type == 3)만 추출한다. 파일이 없으면 빈 문자열로 두어 데모 모드 빌드가 실패하지 않게 한다.
 // R.string 리소스가 아니라 BuildConfig로 노출하는 이유: google-services 플러그인이 생성하는
 // 리소스와 이름이 겹치면 리소스 병합 충돌이 날 수 있어, 아예 별도 경로로 우회한다.
+//
+// providers.fileContents(...)로 읽는 이유: file.readText()나 JsonSlurper().parse(File)처럼
+// 파일을 직접 읽으면 Configuration Cache(gradle.properties의 org.gradle.configuration-cache=true)가
+// 이 파일을 입력으로 추적하지 못해, 캐시가 재사용될 때 이 값이 빈 문자열로 굳어버리는 실제
+// 버그를 겪었다(실기기에서 "GOOGLE_WEB_CLIENT_ID가 설정되지 않았습니다" 오류로 발견).
+// Gradle의 Provider API를 통해 읽어야 Configuration Cache가 파일 변경/캐시 무효화를 올바르게 추적한다.
 @Suppress("UNCHECKED_CAST")
 fun extractGoogleWebClientId(): String {
-    val root = JsonSlurper().parse(firebaseConfigFile) as Map<String, Any?>
+    val content = providers.fileContents(layout.projectDirectory.file("google-services.json")).asText.orNull
+        ?: return ""
+    val root = JsonSlurper().parseText(content) as Map<String, Any?>
     val clients = root["client"] as? List<Map<String, Any?>> ?: emptyList()
     val oauthClients = clients.firstOrNull()?.get("oauth_client") as? List<Map<String, Any?>> ?: emptyList()
     val webClient = oauthClients.firstOrNull { (it["client_type"] as? Number)?.toInt() == 3 }
