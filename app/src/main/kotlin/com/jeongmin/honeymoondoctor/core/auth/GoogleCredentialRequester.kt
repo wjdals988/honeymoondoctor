@@ -6,20 +6,25 @@ import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.jeongmin.honeymoondoctor.BuildConfig
 
-/** 로그인 화면과 회원 탈퇴 재인증 다이얼로그가 공유하는 Credential Manager 호출. */
+/**
+ * 로그인 화면과 회원 탈퇴 재인증 다이얼로그가 공유하는 Credential Manager 호출.
+ *
+ * `GetGoogleIdOption`이 아니라 `GetSignInWithGoogleOption`을 쓰는 이유: 전자는 자동
+ * 로그인용 바텀시트를 띄우는데, 실기기(Galaxy S948N/One UI)에서 이 바텀시트가 투명한
+ * 빈 화면으로 떠 `getCredential`이 영구히 반환되지 않는 문제를 겪었다(호출 14회·완료 0회,
+ * `CredentialSelectorActivity`가 resumed인데 아무것도 렌더링되지 않음). 후자는 사용자가
+ * 버튼을 명시적으로 눌렀을 때 쓰도록 만들어진 옵션이고 표준 계정 선택 화면을 띄운다.
+ */
 suspend fun requestGoogleIdToken(context: Context): String {
     check(BuildConfig.GOOGLE_WEB_CLIENT_ID.isNotBlank()) {
         "GOOGLE_WEB_CLIENT_ID가 설정되지 않았습니다. google-services.json을 app/ 폴더에 넣어주세요."
     }
-    val googleIdOption = GetGoogleIdOption.Builder()
-        .setFilterByAuthorizedAccounts(false)
-        .setServerClientId(BuildConfig.GOOGLE_WEB_CLIENT_ID)
-        .build()
-    val request = GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
+    val signInOption = GetSignInWithGoogleOption.Builder(BuildConfig.GOOGLE_WEB_CLIENT_ID).build()
+    val request = GetCredentialRequest.Builder().addCredentialOption(signInOption).build()
     val credentialManager = CredentialManager.create(context)
     val response = try {
         credentialManager.getCredential(context, request)

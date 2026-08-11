@@ -2,7 +2,10 @@ package com.jeongmin.honeymoondoctor.feature.auth
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -19,6 +22,12 @@ import com.jeongmin.honeymoondoctor.core.ui.DemoModeBanner
 /**
  * 로그인 → 여행 생성/참여 → 5탭 메인 화면 순서로 진입을 제어하는 최상위 게이트.
  * 데모 모드 배너는 여기서 한 번만 그려 모든 단계(로그인 전 포함)에서 일관되게 보이게 한다.
+ *
+ * 인셋 처리 주의: `MainActivity`가 `enableEdgeToEdge()`를 쓰고 targetSdk 35+에서는 어차피
+ * 강제되므로, 시스템 바 뒤까지 그려진다. 5탭 화면(`HoneymoonDoctorAppRoot`)은 `Scaffold`가
+ * 인셋을 자동으로 처리하지만 로그인·여행생성 화면은 Scaffold 밖에 있어 아무도 처리하지
+ * 않았고, 실기기에서 제목이 상태표시줄과 겹쳤다. 그래서 Scaffold가 없는 화면에만
+ * [safeDrawingInsets]를 적용한다 — 전체에 걸면 Scaffold와 이중으로 적용된다.
  */
 @Composable
 fun AuthGate(viewModel: AuthGateViewModel = hiltViewModel()) {
@@ -32,9 +41,19 @@ fun AuthGate(viewModel: AuthGateViewModel = hiltViewModel()) {
                 if (viewModel.demoModeManager.isDemoMode) {
                     LoadingIndicator() // 데모 모드는 자동으로 로그인되므로 잠깐만 보인다.
                 } else {
-                    LoginScreen(onGoogleIdToken = { token ->
-                        viewModel.signInWithGoogleIdToken(token) {}
-                    })
+                    // 오류 콜백을 빈 람다로 두면 Firebase 인증 실패가 조용히 사라져
+                    // "계정을 골랐는데 아무 일도 안 일어난다"로만 보인다(실기기에서 겪은 문제).
+                    var signInError by remember { mutableStateOf<String?>(null) }
+                    LoginScreen(
+                        onGoogleIdToken = { token ->
+                            signInError = null
+                            viewModel.signInWithGoogleIdToken(token) {
+                                signInError = "Firebase 인증에 실패했습니다: ${it.message}"
+                            }
+                        },
+                        modifier = safeDrawingInsets(),
+                        signInError = signInError,
+                    )
                 }
             }
             is AuthGateState.NeedsTripSetup -> {
@@ -50,12 +69,17 @@ fun AuthGate(viewModel: AuthGateViewModel = hiltViewModel()) {
                     },
                     onRequestToJoin = { code, onResult -> viewModel.requestToJoin(state.user, code, onResult) },
                     onCancelPendingJoin = viewModel::cancelPendingJoin,
+                    modifier = safeDrawingInsets(),
                 )
             }
             is AuthGateState.Ready -> HoneymoonDoctorAppRoot()
         }
     }
 }
+
+/** Scaffold가 없는 화면이 시스템 바(상태표시줄·내비게이션 바)·컷아웃을 침범하지 않게 하는 여백. */
+@Composable
+private fun safeDrawingInsets(): Modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing)
 
 @Composable
 private fun LoadingIndicator() {
