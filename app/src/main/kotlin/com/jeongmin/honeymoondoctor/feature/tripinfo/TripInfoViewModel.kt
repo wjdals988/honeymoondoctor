@@ -120,6 +120,14 @@ class TripInfoViewModel @Inject constructor(
         }
     }
 
+    fun updateTripInfo(tripId: String, name: String, startDate: String, endDate: String, defaultCurrency: String) {
+        viewModelScope.launch {
+            runCatching { tripRepository.updateTripInfo(tripId, name, startDate, endDate, defaultCurrency) }
+                .onSuccess { actionError.value = null }
+                .onFailure { actionError.value = it.toUserMessage("여행 정보 수정에 실패했습니다.") }
+        }
+    }
+
     fun setStatus(tripId: String, status: TripStatus) {
         viewModelScope.launch {
             runCatching { tripRepository.setStatus(tripId, status) }

@@ -53,4 +53,7 @@ interface TripRepository {
 
     /** 회원 탈퇴(소유자, 동반자 있음): 남은 동반자에게 소유권을 넘기며 본인만 탈퇴한다. */
     suspend fun transferOwnershipAndLeaveTrip(tripId: String, departingOwnerUid: String, newOwnerUid: String)
+
+    /** 여행 이름·기간·기본 통화를 수정한다. 소유자만 호출 가능(규칙에서 강제), 완료된 여행은 UI에서 막는다. */
+    suspend fun updateTripInfo(tripId: String, name: String, startDate: String, endDate: String, defaultCurrency: String)
 }

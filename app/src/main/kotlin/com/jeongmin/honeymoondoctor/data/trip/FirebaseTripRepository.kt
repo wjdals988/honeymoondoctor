@@ -279,6 +279,20 @@ class FirebaseTripRepository @Inject constructor(
         }.commit().await()
     }
 
+    override suspend fun updateTripInfo(tripId: String, name: String, startDate: String, endDate: String, defaultCurrency: String) {
+        firestore.collection(TRIPS).document(tripId)
+            .update(
+                mapOf(
+                    "name" to name,
+                    "startDate" to startDate,
+                    "endDate" to endDate,
+                    "defaultCurrency" to defaultCurrency,
+                    "updatedAt" to FieldValue.serverTimestamp(),
+                ),
+            )
+            .await()
+    }
+
     private fun DocumentSnapshot.toTrip(): Trip? {
         val ownerId = getString("ownerId") ?: return null
         @Suppress("UNCHECKED_CAST")

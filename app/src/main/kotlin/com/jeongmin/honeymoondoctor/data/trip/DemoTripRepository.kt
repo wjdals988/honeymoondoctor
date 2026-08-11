@@ -179,6 +179,11 @@ class DemoTripRepository @Inject constructor(
         )
     }
 
+    override suspend fun updateTripInfo(tripId: String, name: String, startDate: String, endDate: String, defaultCurrency: String) {
+        val state = requireCurrentState(tripId)
+        saveState(state.copy(name = name, startDate = startDate, endDate = endDate, defaultCurrency = defaultCurrency))
+    }
+
     override suspend fun deleteTripCompletely(tripId: String) {
         requireCurrentState(tripId)
         dataStore.edit { it.remove(DEMO_TRIP_STATE_KEY) }

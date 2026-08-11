@@ -403,3 +403,20 @@ test("회원 탈퇴: 일반 구성원은 소유권 이전을 시도할 수 없�
     updateDoc(doc(partnerDb, "trips", TRIP_ID), { ownerId: PARTNER_UID, memberIds: [PARTNER_UID] }),
   );
 });
+
+test("소유자는 여행 이름·기간·기본 통화를 수정할 수 있다", async () => {
+  const ownerDb = testEnv.authenticatedContext(OWNER_UID).firestore();
+  await assertSucceeds(
+    updateDoc(doc(ownerDb, "trips", TRIP_ID), {
+      name: "수정된 여행 이름",
+      startDate: "2026-09-01",
+      endDate: "2026-09-07",
+      defaultCurrency: "EUR",
+    }),
+  );
+});
+
+test("소유자가 아닌 구성원은 여행 이름을 수정할 수 없다", async () => {
+  const partnerDb = testEnv.authenticatedContext(PARTNER_UID).firestore();
+  await assertFails(updateDoc(doc(partnerDb, "trips", TRIP_ID), { name: "몰래 바꾼 이름" }));
+});

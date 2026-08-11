@@ -4,11 +4,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -24,14 +27,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.ui.CityFormDialog
+import com.jeongmin.honeymoondoctor.core.ui.DateField
+import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
 import com.jeongmin.honeymoondoctor.core.ui.copyToClipboard
 import com.jeongmin.honeymoondoctor.core.ui.shareText
 import com.jeongmin.honeymoondoctor.domain.model.City
+import com.jeongmin.honeymoondoctor.domain.model.TravelCurrency
+import com.jeongmin.honeymoondoctor.domain.model.Trip
 import com.jeongmin.honeymoondoctor.domain.model.TripRole
 import com.jeongmin.honeymoondoctor.domain.model.TripStatus
 import com.jeongmin.honeymoondoctor.domain.model.isReadOnly
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel = hiltViewModel()) {
@@ -42,10 +51,16 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
     var showCityDialog by remember { mutableStateOf(false) }
     var editingCity by remember { mutableStateOf<City?>(null) }
     var showPublishDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
 
     LazyColumn(modifier = modifier.padding(16.dp)) {
         item {
-            Text(trip.name, style = MaterialTheme.typography.headlineMedium)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(trip.name, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
+                if (isOwner && !trip.isReadOnly) {
+                    TextButton(onClick = { showEditDialog = true }) { Text("수정") }
+                }
+            }
             Text(
                 "${trip.startDate} ~ ${trip.endDate} · ${trip.defaultCurrency}",
                 style = MaterialTheme.typography.bodyMedium,
@@ -227,6 +242,23 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
         )
     }
 
+    if (showEditDialog) {
+        TripInfoEditDialog(
+            trip = trip,
+            onDismiss = { showEditDialog = false },
+            onConfirm = { name, startDate, endDate, currency ->
+                viewModel.updateTripInfo(
+                    trip.id,
+                    name,
+                    startDate.format(DateTimeFormatter.ISO_LOCAL_DATE),
+                    endDate.format(DateTimeFormatter.ISO_LOCAL_DATE),
+                    currency.code,
+                )
+                showEditDialog = false
+            },
+        )
+    }
+
     if (showPublishDialog) {
         AlertDialog(
             onDismissRequest = { showPublishDialog = false },
@@ -244,4 +276,64 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
             dismissButton = { TextButton(onClick = { showPublishDialog = false }) { Text("취소") } },
         )
     }
+}
+
+@Composable
+private fun TripInfoEditDialog(
+    trip: Trip,
+    onDismiss: () -> Unit,
+    onConfirm: (name: String, startDate: LocalDate, endDate: LocalDate, currency: TravelCurrency) -> Unit,
+) {
+    var name by remember { mutableStateOf(trip.name) }
+    var startDate by remember { mutableStateOf(LocalDate.parse(trip.startDate)) }
+    var endDate by remember { mutableStateOf(LocalDate.parse(trip.endDate)) }
+    var currency by remember {
+        mutableStateOf(TravelCurrency.entries.firstOrNull { it.code == trip.defaultCurrency } ?: TravelCurrency.KRW)
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("여행 정보 수정") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("여행 이름 *") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                DateField(
+                    label = "시작일",
+                    date = startDate,
+                    onDateChange = { date ->
+                        startDate = date
+                        if (endDate.isBefore(date)) endDate = date
+                    },
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+                DateField(
+                    label = "종료일",
+                    date = endDate,
+                    onDateChange = { date -> endDate = date },
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+                DropdownSelector(
+                    label = "기본 통화",
+                    selectedLabel = "${currency.code} (${currency.symbol})",
+                    options = TravelCurrency.entries,
+                    optionLabel = { "${it.code} (${it.symbol})" },
+                    onSelect = { currency = it },
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = name.isNotBlank() && !endDate.isBefore(startDate),
+                onClick = { onConfirm(name.trim(), startDate, endDate, currency) },
+            ) { Text("저장") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } },
+    )
 }
