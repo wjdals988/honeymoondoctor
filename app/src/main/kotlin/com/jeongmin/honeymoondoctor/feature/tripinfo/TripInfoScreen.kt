@@ -57,6 +57,14 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
+            state.actionError?.let {
+                Text(
+                    it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
             if (isOwner) {
                 TextButton(
                     onClick = {
@@ -171,14 +179,6 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
                             }
                         }
                     }
-                }
-                state.inviteError?.let {
-                    Text(
-                        it,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
                 Text("참여 요청", style = MaterialTheme.typography.titleMedium)

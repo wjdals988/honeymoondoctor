@@ -33,7 +33,7 @@ data class TripInfoUiState(
     val pendingJoinRequests: List<JoinRequest> = emptyList(),
     val lastGeneratedInviteCode: String? = null,
     val cities: List<City> = emptyList(),
-    val inviteError: String? = null,
+    val actionError: String? = null,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -47,7 +47,7 @@ class TripInfoViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val lastGeneratedInviteCode = MutableStateFlow<String?>(null)
-    private val inviteError = MutableStateFlow<String?>(null)
+    private val actionError = MutableStateFlow<String?>(null)
 
     val uiState: StateFlow<TripInfoUiState> = authRepository.currentUser
         .flatMapLatest { user ->
@@ -63,7 +63,7 @@ class TripInfoViewModel @Inject constructor(
                             tripRepository.observePendingJoinRequests(trip.id),
                             lastGeneratedInviteCode,
                             cityRepository.observeCities(trip.id),
-                            inviteError,
+                            actionError,
                         ) { members, joinRequests, generatedCode, cities, error ->
                             TripInfoUiState(user, trip, members, joinRequests, generatedCode, cities, error)
                         }
@@ -86,9 +86,9 @@ class TripInfoViewModel @Inject constructor(
             runCatching { tripRepository.regenerateInviteCode(tripId) }
                 .onSuccess {
                     lastGeneratedInviteCode.value = it
-                    inviteError.value = null
+                    actionError.value = null
                 }
-                .onFailure { inviteError.value = it.message ?: "초대코드 생성에 실패했습니다." }
+                .onFailure { actionError.value = it.message ?: "초대코드 생성에 실패했습니다." }
         }
     }
 
@@ -97,22 +97,34 @@ class TripInfoViewModel @Inject constructor(
             runCatching { tripRepository.expireInviteCode(tripId) }
                 .onSuccess {
                     lastGeneratedInviteCode.value = null
-                    inviteError.value = null
+                    actionError.value = null
                 }
-                .onFailure { inviteError.value = it.message ?: "초대코드 만료에 실패했습니다." }
+                .onFailure { actionError.value = it.message ?: "초대코드 만료에 실패했습니다." }
         }
     }
 
     fun approve(tripId: String, requestId: String) {
-        viewModelScope.launch { tripRepository.approveJoinRequest(tripId, requestId) }
+        viewModelScope.launch {
+            runCatching { tripRepository.approveJoinRequest(tripId, requestId) }
+                .onSuccess { actionError.value = null }
+                .onFailure { actionError.value = it.message ?: "참여 요청 승인에 실패했습니다." }
+        }
     }
 
     fun reject(tripId: String, requestId: String) {
-        viewModelScope.launch { tripRepository.rejectJoinRequest(tripId, requestId) }
+        viewModelScope.launch {
+            runCatching { tripRepository.rejectJoinRequest(tripId, requestId) }
+                .onSuccess { actionError.value = null }
+                .onFailure { actionError.value = it.message ?: "참여 요청 거절에 실패했습니다." }
+        }
     }
 
     fun setStatus(tripId: String, status: TripStatus) {
-        viewModelScope.launch { tripRepository.setStatus(tripId, status) }
+        viewModelScope.launch {
+            runCatching { tripRepository.setStatus(tripId, status) }
+                .onSuccess { actionError.value = null }
+                .onFailure { actionError.value = it.message ?: "여행 상태 변경에 실패했습니다." }
+        }
     }
 
     /**
@@ -123,18 +135,26 @@ class TripInfoViewModel @Inject constructor(
      */
     fun publish(trip: Trip) {
         viewModelScope.launch {
-            val cities = cityRepository.observeCities(trip.id).first()
-            val itinerary = itineraryRepository.observeItinerary(trip.id).first()
-            tripRepository.setPublic(trip.id, true)
-            publicTripRepository.publish(trip, cities, itinerary)
+            runCatching {
+                val cities = cityRepository.observeCities(trip.id).first()
+                val itinerary = itineraryRepository.observeItinerary(trip.id).first()
+                tripRepository.setPublic(trip.id, true)
+                publicTripRepository.publish(trip, cities, itinerary)
+            }
+                .onSuccess { actionError.value = null }
+                .onFailure { actionError.value = it.message ?: "공개에 실패했습니다." }
         }
     }
 
     fun unpublish(tripId: String) {
         // 공개 사본을 먼저 지워 둘러보기 목록에서 즉시 사라지게 한 뒤, 원본의 공개 플래그를 내린다.
         viewModelScope.launch {
-            publicTripRepository.unpublish(tripId)
-            tripRepository.setPublic(tripId, false)
+            runCatching {
+                publicTripRepository.unpublish(tripId)
+                tripRepository.setPublic(tripId, false)
+            }
+                .onSuccess { actionError.value = null }
+                .onFailure { actionError.value = it.message ?: "공개 중단에 실패했습니다." }
         }
     }
 }
