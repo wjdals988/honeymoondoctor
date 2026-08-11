@@ -20,6 +20,17 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.1.5",
+            versionCode = 6,
+            date = "2026-08-11",
+            changes = listOf(
+                "새 버전이 나왔는지 앱에서 바로 확인합니다. 전체 → 버전 정보 화면에서 확인하고 다운로드 페이지로 이동할 수 있습니다.",
+                "여행을 완료 처리하기 전에 확인 창이 뜹니다. 완료하면 모든 탭이 읽기 전용이 된다는 안내를 함께 보여줍니다.",
+                "완료된 여행에서는 모든 탭 상단에 \"완료된 여행 · 읽기 전용\" 띠와 되돌리는 방법을 표시합니다. 이전에는 버튼만 사라져 이유를 알 수 없었습니다.",
+                "여행 삭제·나가기를 추가했습니다. 혼자인 여행은 완전히 삭제되고, 동반자가 있으면 나만 빠지며 남은 사람의 기록은 유지됩니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.1.4",
             versionCode = 5,
             date = "2026-08-11",

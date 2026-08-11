@@ -52,6 +52,8 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
     var editingCity by remember { mutableStateOf<City?>(null) }
     var showPublishDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
+    var showCompleteConfirm by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     LazyColumn(modifier = modifier.padding(16.dp)) {
         item {
@@ -93,10 +95,13 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
                 } else {
                     TextButton(
                         onClick = {
-                            viewModel.setStatus(
-                                trip.id,
-                                if (trip.isReadOnly) TripStatus.ACTIVE else TripStatus.COMPLETED,
-                            )
+                            // 완료 처리는 모든 탭이 읽기전용으로 바뀌는 큰 변화라 확인을 받는다.
+                            // 다시 활성화는 되돌리는 방향이라 바로 실행한다.
+                            if (trip.isReadOnly) {
+                                viewModel.setStatus(trip.id, TripStatus.ACTIVE)
+                            } else {
+                                showCompleteConfirm = true
+                            }
                         },
                         modifier = Modifier.padding(top = 4.dp),
                     ) {
@@ -241,6 +246,86 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
                 )
             }
         }
+
+        item {
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+            val partnerExists = trip.memberIds.size > 1
+            SectionHeader(title = if (partnerExists) "여행에서 나가기" else "여행 삭제")
+            Text(
+                text = if (partnerExists) {
+                    "나만 이 여행에서 빠집니다. 남은 구성원의 여행과 기록은 그대로 유지됩니다." +
+                        if (isOwner) " 소유자 권한은 남은 구성원에게 넘어갑니다." else ""
+                } else {
+                    "이 여행과 모든 기록(일정·예약·준비물·경비·장소)이 영구히 삭제됩니다. 되돌릴 수 없습니다."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            TextButton(
+                onClick = { showDeleteConfirm = true },
+                modifier = Modifier.padding(top = 4.dp),
+            ) {
+                Text(
+                    text = if (partnerExists) "여행에서 나가기" else "여행 삭제",
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+    }
+
+    if (showCompleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showCompleteConfirm = false },
+            title = { Text("여행을 완료 처리할까요?") },
+            text = {
+                Text(
+                    "완료하면 모든 탭이 읽기 전용이 되어 일정·경비·준비물을 더 이상 고칠 수 없습니다.\n" +
+                        "전체 → 여행 정보에서 언제든 다시 활성화할 수 있습니다.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.setStatus(trip.id, TripStatus.COMPLETED)
+                    showCompleteConfirm = false
+                }) { Text("완료 처리") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCompleteConfirm = false }) { Text("취소") }
+            },
+        )
+    }
+
+    if (showDeleteConfirm) {
+        val partnerExists = trip.memberIds.size > 1
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text(if (partnerExists) "이 여행에서 나갈까요?" else "여행을 삭제할까요?") },
+            text = {
+                Text(
+                    if (partnerExists) {
+                        "\"${trip.name}\"에서 나갑니다. 남은 구성원의 기록은 그대로 유지됩니다."
+                    } else {
+                        "\"${trip.name}\"과 모든 기록이 영구히 삭제됩니다. 되돌릴 수 없습니다."
+                    },
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    // 성공하면 여행이 사라지므로 AuthGate가 여행 만들기 화면으로 알아서 돌아간다.
+                    viewModel.deleteOrLeaveTrip(trip) { }
+                    showDeleteConfirm = false
+                }) {
+                    Text(
+                        text = if (partnerExists) "나가기" else "삭제",
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("취소") }
+            },
+        )
     }
 
     if (showCityDialog) {

@@ -1,5 +1,6 @@
 package com.jeongmin.honeymoondoctor.feature.home
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -37,6 +37,7 @@ import com.jeongmin.honeymoondoctor.core.time.LocalTimes
 import com.jeongmin.honeymoondoctor.core.time.koreanZoneLabel
 import com.jeongmin.honeymoondoctor.core.ui.AppCard
 import com.jeongmin.honeymoondoctor.core.ui.CardTone
+import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryItem
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryStatus
@@ -410,16 +411,20 @@ private fun QuickActions(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.horizontalScroll(rememberScrollState()),
         ) {
-            FilledTonalButton(
-                onClick = onAddExpense,
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                ),
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = null)
-                Spacer(Modifier.width(4.dp))
-                Text("지출 추가")
+            // 완료된 여행에서는 "추가" 계열만 내린다. 예약함·준비물·주변·일정 전체는
+            // 화면 이동(읽기)이라 그대로 둔다 — 완료된 여행도 열람은 계속 해야 한다.
+            if (!LocalTripReadOnly.current) {
+                FilledTonalButton(
+                    onClick = onAddExpense,
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Spacer(Modifier.width(4.dp))
+                    Text("지출 추가")
+                }
             }
             FilledTonalButton(onClick = onOpenReservations) { Text("예약함") }
             FilledTonalButton(onClick = onOpenChecklist) { Text("준비물") }
@@ -428,7 +433,9 @@ private fun QuickActions(
                 Spacer(Modifier.width(4.dp))
                 Text("주변")
             }
-            FilledTonalButton(onClick = onAddItinerary) { Text("일정 추가") }
+            if (!LocalTripReadOnly.current) {
+                FilledTonalButton(onClick = onAddItinerary) { Text("일정 추가") }
+            }
             FilledTonalButton(onClick = onOpenItineraryTab) { Text("일정 전체") }
         }
     }

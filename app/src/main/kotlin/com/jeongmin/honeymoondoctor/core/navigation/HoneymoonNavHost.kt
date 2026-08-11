@@ -1,5 +1,6 @@
 package com.jeongmin.honeymoondoctor.core.navigation
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
@@ -24,6 +25,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
+import com.jeongmin.honeymoondoctor.core.ui.ReadOnlyBanner
 import com.jeongmin.honeymoondoctor.core.ui.ReadOnlyEditorPanel
 import com.jeongmin.honeymoondoctor.feature.about.AboutScreen
 import com.jeongmin.honeymoondoctor.feature.checklist.ChecklistScreen
@@ -86,15 +88,17 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
     Scaffold(
         bottomBar = { HoneymoonBottomBar(navController) },
     ) { innerPadding ->
+        // 읽기전용 띠는 NavHost 밖에 한 번만 두어 5개 탭과 모든 하위 화면에 함께 적용한다
+        // (화면마다 넣으면 20곳을 손대야 하고 새 화면에서 빠뜨리기 쉽다).
+        Column(modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding)) {
+        if (isReadOnly) {
+            ReadOnlyBanner()
+        }
         NavHost(
             navController = navController,
             startDestination = BottomTab.HOME.route,
-            // consumeWindowInsets가 필요한 이유: 이 Scaffold가 이미 상태표시줄 여백을
-            // innerPadding으로 반영했는데, 하위 화면(준비물·예약함·예산·결정함 등)은 각자
-            // Scaffold + TopAppBar를 갖고 있고 TopAppBar가 같은 여백을 한 번 더 적용해
-            // 제목 위 빈 공간이 두 배로 벌어졌다. 여기서 인셋을 소비했다고 알려주면
-            // 하위 TopAppBar들은 남은 인셋(0)만 적용한다.
-            modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding),
+            // 인셋은 위 Column이 처리한다. 여기서 다시 적용하면 하위 화면의 TopAppBar와
+            // 이중으로 겹쳐 제목 위 여백이 두 배가 된다(v0.1.2에서 고친 문제).
         ) {
             composable(BottomTab.HOME.route) {
                 HomeScreen(
@@ -254,6 +258,7 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                     ReservationEditScreen(onNavigateBack = { navController.popBackStack() })
                 }
             }
+        }
         }
     }
     }

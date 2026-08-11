@@ -9,6 +9,7 @@ import com.jeongmin.honeymoondoctor.domain.model.JoinRequest
 import com.jeongmin.honeymoondoctor.domain.model.Trip
 import com.jeongmin.honeymoondoctor.domain.model.TripMember
 import com.jeongmin.honeymoondoctor.domain.model.TripStatus
+import com.jeongmin.honeymoondoctor.domain.model.isReadOnly
 import com.jeongmin.honeymoondoctor.domain.repository.AuthRepository
 import com.jeongmin.honeymoondoctor.domain.repository.CityRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ItineraryRepository
@@ -133,6 +134,43 @@ class TripInfoViewModel @Inject constructor(
             runCatching { tripRepository.updateTripInfo(tripId, name, startDate, endDate, defaultCurrency) }
                 .onSuccess { actionError.value = null }
                 .onFailure { actionError.value = it.toUserMessage("여행 정보 수정에 실패했습니다.") }
+        }
+    }
+
+    /**
+     * 여행 삭제 또는 나가기. 회원 탈퇴(DeleteAccountUseCase)와 같은 3분기 정책을 쓴다 —
+     * 공동 데이터를 한쪽이 일방적으로 없애지 않는다는 원칙이 같기 때문이다.
+     *
+     * - 나 혼자인 여행: 여행 문서와 하위 데이터를 전부 삭제(공개 중이면 공개 사본 먼저 내림).
+     * - 소유자 + 동반자: 소유권을 동반자에게 넘기고 나만 빠진다. 남은 사람의 여행은 유지된다.
+     * - 일반 구성원: `memberIds`에서 나만 빠진다.
+     *
+     * 완료된 여행은 서버 규칙이 하위 컬렉션 쓰기를 막으므로, 삭제 직전에 ACTIVE로 되돌린다.
+     * 어차피 문서 전체가 사라지므로 무해하고, "완료된 여행은 못 건드린다"는 규칙을 다른
+     * 경로에서 완화하지 않아도 된다(회원 탈퇴에서 쓰는 것과 같은 우회).
+     */
+    fun deleteOrLeaveTrip(trip: Trip, onDone: () -> Unit) {
+        val uid = uiState.value.currentUser?.uid ?: return
+        viewModelScope.launch {
+            runCatching {
+                val isOwner = trip.ownerId == uid
+                val partnerUid = trip.memberIds.firstOrNull { it != uid }
+                when {
+                    partnerUid == null && isOwner -> {
+                        if (trip.isReadOnly) tripRepository.setStatus(trip.id, TripStatus.ACTIVE)
+                        if (trip.isPublic) publicTripRepository.unpublish(trip.id)
+                        tripRepository.deleteTripCompletely(trip.id)
+                    }
+                    isOwner && partnerUid != null ->
+                        tripRepository.transferOwnershipAndLeaveTrip(trip.id, uid, partnerUid)
+                    else -> tripRepository.leaveTrip(trip.id, uid)
+                }
+            }
+                .onSuccess {
+                    actionError.value = null
+                    onDone()
+                }
+                .onFailure { actionError.value = it.toUserMessage("여행을 삭제하지 못했습니다.") }
         }
     }
 
