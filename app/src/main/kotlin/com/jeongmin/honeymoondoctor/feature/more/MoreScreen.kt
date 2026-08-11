@@ -4,13 +4,23 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.jeongmin.honeymoondoctor.core.auth.requestGoogleIdToken
+import kotlinx.coroutines.launch
 
 /**
  * 전체 탭 메뉴(스펙 6장). 예약함·준비물·결정함·여행 정보는 실제 화면으로 연결됐고,
@@ -29,9 +39,18 @@ fun MoreScreen(
     onNavigateToSyncStatus: () -> Unit,
     onNavigateToPublicTrips: () -> Unit,
     onResetDemoData: () -> Unit,
+    onLogout: () -> Unit,
+    onDeleteAccount: () -> Unit,
+    onRetryDeleteAfterReauth: (String) -> Unit,
+    onDismissDeleteAccountError: () -> Unit,
+    deleteAccountState: DeleteAccountUiState = DeleteAccountUiState.Idle,
     pendingJoinRequestCount: Int = 0,
     modifier: Modifier = Modifier,
 ) {
+    var showLogoutConfirm by remember { mutableStateOf(false) }
+    var showDeleteAccountConfirm by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val menuItems = listOf(
         MoreMenu("예약함", "reservations"),
         MoreMenu("준비물", "checklist"),
@@ -78,6 +97,90 @@ fun MoreScreen(
                     modifier = Modifier.clickable(onClick = onResetDemoData),
                 )
             }
+        } else {
+            item {
+                ListItem(
+                    headlineContent = { Text("로그아웃") },
+                    modifier = Modifier.clickable { showLogoutConfirm = true },
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text("회원 탈퇴", color = MaterialTheme.colorScheme.error) },
+                    modifier = Modifier.clickable { showDeleteAccountConfirm = true },
+                )
+            }
         }
+    }
+
+    if (showLogoutConfirm) {
+        AlertDialog(
+            onDismissRequest = { showLogoutConfirm = false },
+            title = { Text("로그아웃") },
+            text = { Text("로그아웃하시겠어요?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onLogout()
+                        showLogoutConfirm = false
+                    },
+                ) { Text("로그아웃") }
+            },
+            dismissButton = { TextButton(onClick = { showLogoutConfirm = false }) { Text("취소") } },
+        )
+    }
+
+    if (showDeleteAccountConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteAccountConfirm = false },
+            title = { Text("회원 탈퇴") },
+            text = {
+                Text(
+                    "회원 탈퇴하시겠어요? 되돌릴 수 없습니다.\n" +
+                        "혼자인 여행은 모든 데이터가 삭제되고, 동반자가 있는 여행은 소유권이 " +
+                        "동반자에게 넘어갑니다.",
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeleteAccount()
+                        showDeleteAccountConfirm = false
+                    },
+                ) { Text("탈퇴", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { showDeleteAccountConfirm = false }) { Text("취소") } },
+        )
+    }
+
+    when (deleteAccountState) {
+        DeleteAccountUiState.NeedsReauth -> {
+            AlertDialog(
+                onDismissRequest = onDismissDeleteAccountError,
+                title = { Text("다시 로그인해주세요") },
+                text = { Text("보안을 위해 회원 탈퇴 전 다시 로그인해야 합니다.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            scope.launch {
+                                runCatching { requestGoogleIdToken(context) }
+                                    .onSuccess { onRetryDeleteAfterReauth(it) }
+                                    .onFailure { onDismissDeleteAccountError() }
+                            }
+                        },
+                    ) { Text("다시 로그인") }
+                },
+                dismissButton = { TextButton(onClick = onDismissDeleteAccountError) { Text("취소") } },
+            )
+        }
+        is DeleteAccountUiState.Failed -> {
+            AlertDialog(
+                onDismissRequest = onDismissDeleteAccountError,
+                title = { Text("회원 탈퇴 실패") },
+                text = { Text(deleteAccountState.message) },
+                confirmButton = { TextButton(onClick = onDismissDeleteAccountError) { Text("확인") } },
+            )
+        }
+        DeleteAccountUiState.Idle, DeleteAccountUiState.InProgress -> Unit
     }
 }

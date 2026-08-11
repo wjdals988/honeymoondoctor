@@ -13,4 +13,10 @@ interface AuthRepository {
     suspend fun signInAsDemoUser(): AuthUser
 
     suspend fun signOut()
+
+    /** 계정 자체를 삭제한다(로그아웃과 별개). Firestore 쪽 정리는 호출 전에 끝나 있어야 한다. */
+    suspend fun deleteAccount()
+
+    /** 최근 로그인 요구 오류(회원 탈퇴 등 민감한 작업 전)를 해소하기 위한 재인증. */
+    suspend fun reauthenticate(idToken: String): Result<Unit>
 }

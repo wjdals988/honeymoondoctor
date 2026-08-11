@@ -179,6 +179,34 @@ class DemoTripRepository @Inject constructor(
         )
     }
 
+    override suspend fun deleteTripCompletely(tripId: String) {
+        requireCurrentState(tripId)
+        dataStore.edit { it.remove(DEMO_TRIP_STATE_KEY) }
+    }
+
+    override suspend fun leaveTrip(tripId: String, uid: String) {
+        val state = requireCurrentState(tripId)
+        saveState(
+            state.copy(
+                memberIds = state.memberIds.filterNot { it == uid },
+                members = state.members.filterNot { it.uid == uid },
+            ),
+        )
+    }
+
+    override suspend fun transferOwnershipAndLeaveTrip(tripId: String, departingOwnerUid: String, newOwnerUid: String) {
+        val state = requireCurrentState(tripId)
+        saveState(
+            state.copy(
+                ownerId = newOwnerUid,
+                memberIds = state.memberIds.filterNot { it == departingOwnerUid },
+                members = state.members
+                    .filterNot { it.uid == departingOwnerUid }
+                    .map { if (it.uid == newOwnerUid) it.copy(role = TripRole.OWNER.name) else it },
+            ),
+        )
+    }
+
     private suspend fun requireCurrentState(tripId: String): DemoTripStateDto {
         val state = stateFlow.first()
         check(state != null && state.id == tripId) { "여행을 찾을 수 없습니다: $tripId" }

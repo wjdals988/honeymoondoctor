@@ -1,9 +1,13 @@
 package com.jeongmin.honeymoondoctor.data.auth
 
+import android.content.Context
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.CredentialManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.jeongmin.honeymoondoctor.domain.model.AuthUser
 import com.jeongmin.honeymoondoctor.domain.repository.AuthRepository
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +17,7 @@ import kotlinx.coroutines.tasks.await
 @Singleton
 class FirebaseAuthRepository @Inject constructor(
     private val firebaseAuth: FirebaseAuth,
+    @ApplicationContext private val context: Context,
 ) : AuthRepository {
 
     private val _currentUser = MutableStateFlow(firebaseAuth.currentUser?.toAuthUser())
@@ -35,6 +40,24 @@ class FirebaseAuthRepository @Inject constructor(
 
     override suspend fun signOut() {
         firebaseAuth.signOut()
+        // Credential Manager에 "직접 로그아웃했다"고 알려, 다음 로그인 때 마지막 계정이 자동으로
+        // 다시 뜨지 않게 한다. 실패해도 로그아웃 자체(위 signOut)는 이미 끝났으니 무시한다.
+        runCatching {
+            CredentialManager.create(context).clearCredentialState(ClearCredentialStateRequest())
+        }
+    }
+
+    override suspend fun deleteAccount() {
+        val user = firebaseAuth.currentUser ?: throw IllegalStateException("로그인된 사용자가 없습니다.")
+        user.delete().await()
+        runCatching {
+            CredentialManager.create(context).clearCredentialState(ClearCredentialStateRequest())
+        }
+    }
+
+    override suspend fun reauthenticate(idToken: String): Result<Unit> = runCatching {
+        val user = firebaseAuth.currentUser ?: throw IllegalStateException("로그인된 사용자가 없습니다.")
+        user.reauthenticate(GoogleAuthProvider.getCredential(idToken, null)).await()
     }
 
     private fun com.google.firebase.auth.FirebaseUser.toAuthUser() = AuthUser(

@@ -283,6 +283,37 @@ Phase 1(무드보드 Artifact로 팔레트·타이포·아이콘·대표 화면 
 남은 것: Part 2(로그아웃, 회원 탈퇴, 개인정보처리방침·이용약관 초안, release 서명
 키스토어)는 별도 커밋으로 진행.
 
+## 브랜드 리뉴얼 + UI/UX 리디자인 Part 2 — 배포 준비 (2026-08-11)
+
+사용자가 "당분간 Google Play는 올리지 않고 coldbrewventi.vercel.app 같은 본인 소유
+사이트에 배포할 계획"이라고 알려줘서, Play 스토어 제출 자체는 뒤로 미루되 직접
+구현 가능한 배포 준비 항목은 계속 진행했다.
+
+- **로그아웃**(Phase 7): 전체 탭에 메뉴 추가. `AuthRepository.signOut()`은 이미
+  있었으나 `FirebaseAuthRepository`에 `CredentialManager.clearCredentialState()`
+  호출을 추가해 다음 로그인 때 마지막 계정이 자동으로 다시 뜨지 않게 함. 데모 모드는
+  `AuthGateViewModel.init{}`이 Activity당 한 번만 `signInAsDemoUser()`를 호출하는
+  구조라 로그아웃하면 무한 로딩 데드엔드가 생기는 걸 발견해, 데모 모드에서는 메뉴
+  자체를 숨김. 실기기에서 로그아웃 → 로그인 화면 정상 복귀 확인(재로그인은 Google
+  계정 선택 UI가 스크립트 탭으로는 뜨지 않아 실제 사용자 확인이 필요한 채로 남음).
+- **회원 탈퇴**(Phase 8): 소유자·단독(여행 전체+공개 사본 삭제)/소유자·동반자 있음
+  (동반자에게 소유권 자동 이전 후 본인만 탈퇴)/일반 구성원(본인만 제거) 3가지 정책.
+  `firestore.rules`에 `isSelfLeave`/`isOwnerLeaveWithTransfer` 규칙 추가 — 지금까지는
+  소유자만 `trips` 문서와 `members` 서브문서를 건드릴 수 있어 일반 구성원의 자진
+  탈퇴 자체가 막혀 있었음. 솔로 소유자 삭제는 규칙을 더 풀지 않고 기존
+  `setStatus(ACTIVE)`로 완료 잠금을 잠깐 우회하는 방식 채택(완료된 여행은 못 건드린다는
+  기존 설계 의도를 다른 경로에서 깨지 않기 위함). `FirebaseAuthRecentLoginRequiredException`
+  발생 시 재인증 다이얼로그로 자동 재시도. 회귀 테스트 6건 추가(최종 34/34 통과).
+  **주의**: 실제 계정으로 탈퇴 자체를 완료하는 최종 실기기 검증은 되돌릴 수 없는
+  데이터 삭제라 사용자 확인 후 별도로 진행.
+- **개인정보처리방침·이용약관 초안**(Phase 9): `docs/PRIVACY_POLICY.md`,
+  `docs/TERMS_OF_SERVICE.md` 작성. 실제 데이터 처리 현황(Google 로그인 정보, Firestore
+  콘텐츠, 위치 권한(저장 안 함), 로컬 알림, `publicTrips` 공개 범위, 회원 탈퇴 절차)에
+  맞춰 작성. 운영자 연락처·시행일·관할 법원 등은 게시 전 채워야 하는 자리표시자로
+  남겨둠. 문서 작성만 하고 실제 공개 URL 게시는 하지 않음.
+
+빌드·유닛테스트·lint(0 에러)·Firestore 규칙 테스트(34/34) 통과.
+
 ## 다음 세션에서 이어갈 때 프롬프트 예시
 
 ```

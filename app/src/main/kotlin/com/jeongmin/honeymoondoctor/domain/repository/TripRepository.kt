@@ -44,4 +44,13 @@ interface TripRepository {
      * 남아있지 않을 것을 함께 강제한다 — 공개 사본을 본 사람이 참여 요청을 위조하지 못하게.
      */
     suspend fun setPublic(tripId: String, isPublic: Boolean)
+
+    /** 회원 탈퇴(소유자, 동반자 없음): 여행 문서와 모든 하위 컬렉션을 완전히 삭제한다. */
+    suspend fun deleteTripCompletely(tripId: String)
+
+    /** 회원 탈퇴(소유자 아님): 본인만 memberIds/members에서 제거한다. 소유자의 여행은 그대로 유지된다. */
+    suspend fun leaveTrip(tripId: String, uid: String)
+
+    /** 회원 탈퇴(소유자, 동반자 있음): 남은 동반자에게 소유권을 넘기며 본인만 탈퇴한다. */
+    suspend fun transferOwnershipAndLeaveTrip(tripId: String, departingOwnerUid: String, newOwnerUid: String)
 }

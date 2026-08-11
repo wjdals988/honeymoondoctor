@@ -26,6 +26,10 @@ import kotlinx.coroutines.tasks.await
 private const val TRIPS = "trips"
 private const val MEMBERS = "members"
 private const val JOIN_REQUESTS = "joinRequests"
+private val OPERATIONAL_COLLECTIONS = listOf(
+    "cities", "itinerary", "reservations", "checklistItems",
+    "expenses", "budgets", "places", "decisions",
+)
 
 @Singleton
 class FirebaseTripRepository @Inject constructor(
@@ -217,6 +221,62 @@ class FirebaseTripRepository @Inject constructor(
             updates["publishedAt"] = FieldValue.serverTimestamp()
         }
         firestore.collection(TRIPS).document(tripId).update(updates).await()
+    }
+
+    override suspend fun deleteTripCompletely(tripId: String) {
+        val tripRef = firestore.collection(TRIPS).document(tripId)
+        // 완료된 여행의 하위 컬렉션은 isTripActive(tripId) 규칙에 의해 쓰기(삭제 포함)가 막혀
+        // 있다. 문서 전체가 곧 사라지므로 completedAt이 잠깐 비는 것은 무해하다 — 삭제만을
+        // 위해 잠깐 ACTIVE로 되돌린다.
+        setStatus(tripId, TripStatus.ACTIVE)
+
+        val allDocs = buildList {
+            OPERATIONAL_COLLECTIONS.forEach { name ->
+                addAll(tripRef.collection(name).get().await().documents.map { it.reference })
+            }
+            addAll(tripRef.collection(MEMBERS).get().await().documents.map { it.reference })
+            addAll(tripRef.collection(JOIN_REQUESTS).get().await().documents.map { it.reference })
+        }
+        // Firestore 배치는 500건 한도 — 2인 여행의 데이터량을 감안해 여유 있게 나눈다.
+        allDocs.chunked(450).forEach { chunk ->
+            val batch = firestore.batch()
+            chunk.forEach { batch.delete(it) }
+            batch.commit().await()
+        }
+        // 트립 문서는 반드시 마지막에 지운다 — 먼저 지우면 하위 컬렉션 삭제 시 규칙의
+        // isTripMember()/isTripOwner()가 존재하지 않는 부모 문서를 get()하게 되어 이후 삭제가
+        // 전부 거부되는 고아 데이터가 남을 수 있다.
+        tripRef.delete().await()
+    }
+
+    override suspend fun leaveTrip(tripId: String, uid: String) {
+        val tripRef = firestore.collection(TRIPS).document(tripId)
+        firestore.batch().apply {
+            update(
+                tripRef,
+                mapOf(
+                    "memberIds" to FieldValue.arrayRemove(uid),
+                    "updatedAt" to FieldValue.serverTimestamp(),
+                ),
+            )
+            delete(tripRef.collection(MEMBERS).document(uid))
+        }.commit().await()
+    }
+
+    override suspend fun transferOwnershipAndLeaveTrip(tripId: String, departingOwnerUid: String, newOwnerUid: String) {
+        val tripRef = firestore.collection(TRIPS).document(tripId)
+        firestore.batch().apply {
+            update(
+                tripRef,
+                mapOf(
+                    "ownerId" to newOwnerUid,
+                    "memberIds" to FieldValue.arrayRemove(departingOwnerUid),
+                    "updatedAt" to FieldValue.serverTimestamp(),
+                ),
+            )
+            delete(tripRef.collection(MEMBERS).document(departingOwnerUid))
+            update(tripRef.collection(MEMBERS).document(newOwnerUid), mapOf("role" to TripRole.OWNER.name))
+        }.commit().await()
     }
 
     private fun DocumentSnapshot.toTrip(): Trip? {

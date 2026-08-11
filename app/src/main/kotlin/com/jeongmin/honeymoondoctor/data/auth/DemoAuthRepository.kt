@@ -27,4 +27,11 @@ class DemoAuthRepository @Inject constructor() : AuthRepository {
     override suspend fun signOut() {
         _currentUser.value = null
     }
+
+    override suspend fun deleteAccount() {
+        _currentUser.value = null
+    }
+
+    override suspend fun reauthenticate(idToken: String): Result<Unit> =
+        Result.failure(UnsupportedOperationException("데모 모드에서는 재인증이 필요하지 않습니다."))
 }

@@ -56,13 +56,38 @@ service cloud.firestore {
       // getAfter()로 갱신 직후 상태까지 함께 검증해, 소유자 유지·최대 2인을 서버에서 강제한다.
       // 공개(isPublic=true)는 완료된 여행에서만, 그리고 초대코드 해시가 남아있지 않을 때만 켤 수
       // 있다 — 공개 사본을 본 사람이 그 해시로 참여 요청을 위조하지 못하게 하기 위함이다.
-      allow update: if isTripOwner(tripId) &&
-        request.resource.data.ownerId == resource.data.ownerId &&
-        request.resource.data.memberIds.size() <= 2 &&
-        request.resource.data.ownerId in request.resource.data.memberIds &&
-        (request.resource.data.get('isPublic', false) == false ||
-         (request.resource.data.get('status', 'ACTIVE') == 'COMPLETED' &&
-          request.resource.data.get('inviteCodeHash', null) == null));
+      function isOwnerRegularUpdate(tripId) {
+        return isTripOwner(tripId) &&
+          request.resource.data.ownerId == resource.data.ownerId &&
+          request.resource.data.memberIds.size() <= 2 &&
+          request.resource.data.ownerId in request.resource.data.memberIds &&
+          (request.resource.data.get('isPublic', false) == false ||
+           (request.resource.data.get('status', 'ACTIVE') == 'COMPLETED' &&
+            request.resource.data.get('inviteCodeHash', null) == null));
+      }
+
+      // 회원 탈퇴(일반 구성원): 본인 uid를 memberIds에서 제거하는 것 외에는 아무 것도 바꾸지
+      // 않을 때만 허용한다 — 소유자가 아닌 사람이 다른 필드를 건드리거나 남을 제거하지 못하게.
+      function isSelfLeave(tripId) {
+        return isTripMember(tripId) &&
+          request.auth.uid != resource.data.ownerId &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds', 'updatedAt']) &&
+          request.resource.data.memberIds == resource.data.memberIds.removeAll([request.auth.uid]);
+      }
+
+      // 회원 탈퇴(소유자, 동반자 있음): 유일한 남은 동반자에게 소유권을 넘기며 본인만 탈퇴한다.
+      // "구성원이 정확히 2명일 때, 그 중 나를 빼고 남은 한 명이 새 소유자가 된다"로 범위를
+      // 좁혀 일반적인 소유권 이전 백도어가 되지 않게 한다.
+      function isOwnerLeaveWithTransfer(tripId) {
+        return isTripOwner(tripId) &&
+          resource.data.memberIds.size() == 2 &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ownerId', 'memberIds', 'updatedAt']) &&
+          request.resource.data.memberIds == resource.data.memberIds.removeAll([request.auth.uid]) &&
+          request.resource.data.ownerId == request.resource.data.memberIds[0] &&
+          request.resource.data.ownerId != resource.data.ownerId;
+      }
+
+      allow update: if isOwnerRegularUpdate(tripId) || isOwnerLeaveWithTransfer(tripId) || isSelfLeave(tripId);
 
       // 여행 삭제는 소유자만 가능하고, 공개 중인 여행은 먼저 공개를 내려야 삭제할 수 있다
       // (원본이 없어진 채로 공개 사본만 남는 상황을 막는다).
@@ -72,7 +97,9 @@ service cloud.firestore {
       // 구성원 문서는 승인 트랜잭션의 일부로 소유자만 생성·수정한다.
       match /members/{memberUid} {
         allow read: if isTripMember(tripId);
-        allow create, update, delete: if isTripOwner(tripId);
+        allow create, update: if isTripOwner(tripId);
+        // 본인 탈퇴 시 자기 구성원 문서는 스스로 지울 수 있다(소유자는 여전히 아무 구성원이나 지울 수 있음).
+        allow delete: if isTripOwner(tripId) || (isSignedIn() && request.auth.uid == memberUid);
       }
 
       // ── trips/{tripId}/joinRequests/{requestId} ─────────────────

@@ -365,3 +365,41 @@ test("소유자가 아닌 구성원은 여행 상태를 바꿀 수 없다", asyn
   const partnerDb = testEnv.authenticatedContext(PARTNER_UID).firestore();
   await assertFails(updateDoc(doc(partnerDb, "trips", TRIP_ID), { status: "COMPLETED" }));
 });
+
+test("회원 탈퇴: 본인은 memberIds에서 자기 uid만 제거할 수 있다", async () => {
+  const partnerDb = testEnv.authenticatedContext(PARTNER_UID).firestore();
+  await assertSucceeds(updateDoc(doc(partnerDb, "trips", TRIP_ID), { memberIds: [OWNER_UID] }));
+  await assertSucceeds(deleteDoc(doc(partnerDb, "trips", TRIP_ID, "members", PARTNER_UID)));
+});
+
+test("회원 탈퇴: 본인이 아닌 다른 사람의 uid를 제거하려 하면 거부된다", async () => {
+  const partnerDb = testEnv.authenticatedContext(PARTNER_UID).firestore();
+  await assertFails(updateDoc(doc(partnerDb, "trips", TRIP_ID), { memberIds: [PARTNER_UID] }));
+});
+
+test("회원 탈퇴: 본인 제거와 동시에 다른 필드를 바꾸면 거부된다", async () => {
+  const partnerDb = testEnv.authenticatedContext(PARTNER_UID).firestore();
+  await assertFails(
+    updateDoc(doc(partnerDb, "trips", TRIP_ID), { memberIds: [OWNER_UID], name: "몰래 바꾼 이름" }),
+  );
+});
+
+test("회원 탈퇴: 구성원은 다른 사람의 members 문서를 삭제할 수 없다", async () => {
+  const partnerDb = testEnv.authenticatedContext(PARTNER_UID).firestore();
+  await assertFails(deleteDoc(doc(partnerDb, "trips", TRIP_ID, "members", OWNER_UID)));
+});
+
+test("회원 탈퇴: 소유자는 유일한 남은 구성원에게 소유권을 넘기고 탈퇴할 수 있다", async () => {
+  const ownerDb = testEnv.authenticatedContext(OWNER_UID).firestore();
+  await assertSucceeds(
+    updateDoc(doc(ownerDb, "trips", TRIP_ID), { ownerId: PARTNER_UID, memberIds: [PARTNER_UID] }),
+  );
+  await assertSucceeds(deleteDoc(doc(ownerDb, "trips", TRIP_ID, "members", OWNER_UID)));
+});
+
+test("회원 탈퇴: 일반 구성원은 소유권 이전을 시도할 수 없다", async () => {
+  const partnerDb = testEnv.authenticatedContext(PARTNER_UID).firestore();
+  await assertFails(
+    updateDoc(doc(partnerDb, "trips", TRIP_ID), { ownerId: PARTNER_UID, memberIds: [PARTNER_UID] }),
+  );
+});
