@@ -364,8 +364,8 @@ private fun TopPlaceCard(
         }
         Text(
             text = scoreBreakdownText(scored),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.72f),
             modifier = Modifier.padding(top = 4.dp),
         )
         scored.place.notes?.let {
@@ -415,8 +415,8 @@ private fun PlaceRow(
                 if (showScore) {
                     Text(
                         text = scoreBreakdownText(scored),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
                     )
                 }
                 place.notes?.let {
