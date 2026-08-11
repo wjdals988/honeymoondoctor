@@ -327,6 +327,16 @@ Configuration Cache가 파일을 올바르게 입력으로 추적하도록 근�
 로그인 화면과 회원 탈퇴 재인증 다이얼로그가 공유하므로, 고치지 않았다면 재인증도 같은
 방식으로 실패할 뻔했다.
 
+**release 서명 키스토어(Phase 10)**: `release-donghaeng-ilgi.jks`(PKCS12, RSA 2048,
+10000일 유효) 생성 + `keystore.properties` 작성(둘 다 `.gitignore`에 이미 포함되어
+있어 커밋되지 않음 — `git check-ignore -v`로 확인). PKCS12는 storePassword와
+keyPassword가 같아야 한다는 걸 `keytool` 경고로 발견해 반영. `:app:assembleRelease`로
+실제 release APK를 빌드하고 `apksigner verify --print-certs`로 서명 인증서
+SHA-256이 키스토어 자체와 정확히 일치하는 것까지 확인. 나중에 참고할 수 있도록
+`keystore.properties.example` 템플릿도 추가(커밋 대상, 실제 비밀번호는 없음).
+**비밀번호는 사용자에게 채팅으로 전달했고, 이 세션 종료 전에 반드시 직접
+백업해야 한다** — 잃어버리면 이 키로 이후 앱을 절대 업데이트할 수 없다.
+
 ## 다음 세션에서 이어갈 때 프롬프트 예시
 
 ```
