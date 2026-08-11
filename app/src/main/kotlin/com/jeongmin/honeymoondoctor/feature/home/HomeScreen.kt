@@ -124,6 +124,16 @@ private fun HomeHeader(uiState: HomeUiState) {
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
+                // 이동일처럼 체류 기간이 겹치면 시계가 어느 도시 기준인지 알려준다.
+                // 알려주지 않으면 시각이 갑자기 바뀐 이유를 알 수 없어 시계를 못 믿는다.
+                if (uiState.overlappingCityCount > 1) {
+                    Text(
+                        text = "체류 기간이 겹치는 도시 ${uiState.overlappingCityCount}곳 중 " +
+                            "${city.displayName} 기준입니다.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             Text(
                 text = "${LocalTimes.formatDate(uiState.now, uiState.displayZoneId)} · " +

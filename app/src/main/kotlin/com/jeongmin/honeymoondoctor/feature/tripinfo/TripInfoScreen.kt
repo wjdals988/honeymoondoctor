@@ -251,6 +251,7 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
                 if (editingCity == null) viewModel.createCity(trip.id, city) else viewModel.updateCity(trip.id, city)
                 showCityDialog = false
             },
+            otherCities = state.cities,
         )
     }
 

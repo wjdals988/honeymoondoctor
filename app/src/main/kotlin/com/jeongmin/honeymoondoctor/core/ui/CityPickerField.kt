@@ -99,6 +99,7 @@ fun CityPickerField(
                 onSelect(newCity)
                 showCreateDialog = false
             },
+            otherCities = cities,
         )
     }
 }
@@ -115,6 +116,8 @@ fun CityFormDialog(
     onDismiss: () -> Unit,
     onConfirm: (City) -> Unit,
     initial: City? = null,
+    /** 겹침 경고용 다른 도시들. 비워 두면 경고만 생략되고 저장 동작은 같다. */
+    otherCities: List<City> = emptyList(),
 ) {
     var displayName by remember { mutableStateOf(initial?.displayName.orEmpty()) }
     var countryCode by remember { mutableStateOf(initial?.countryCode.orEmpty()) }
@@ -166,6 +169,27 @@ fun CityFormDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (hasStayPeriod) {
+                    val overlapping = otherCities
+                        .filter { it.id != initial?.id }
+                        .filter { other ->
+                            val otherStart = other.startDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+                            val otherEnd = other.endDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+                            otherStart != null && otherEnd != null &&
+                                !otherStart.isAfter(endDate) && !otherEnd.isBefore(startDate)
+                        }
+                    if (overlapping.isNotEmpty()) {
+                        // 막지는 않는다 — 이동일에 하루 겹치는 건 정상이다. 다만 그날 시계가
+                        // 어느 도시 기준이 되는지 미리 알려준다(홈과 같은 규칙).
+                        // 도시명은 사용자가 직접 입력하므로 조사("과/와")를 붙이면 어색해진다.
+                        // 이름을 콜론 뒤로 빼서 어떤 이름이 와도 문장이 자연스럽게 읽히게 한다.
+                        Text(
+                            text = "겹치는 도시: ${overlapping.joinToString { it.displayName }}. " +
+                                "겹치는 날에는 더 늦게 시작하는 도시를 기준으로 현지 시각을 표시합니다.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                    }
                     DateField(
                         label = "체류 시작일",
                         date = startDate,

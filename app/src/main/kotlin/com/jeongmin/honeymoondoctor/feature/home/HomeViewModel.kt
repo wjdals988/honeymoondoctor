@@ -7,8 +7,9 @@ import android.content.IntentFilter
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jeongmin.honeymoondoctor.domain.model.City
-import com.jeongmin.honeymoondoctor.domain.model.Trip
 import com.jeongmin.honeymoondoctor.domain.model.ReservationStatus
+import com.jeongmin.honeymoondoctor.domain.model.SyncStatus
+import com.jeongmin.honeymoondoctor.domain.model.Trip
 import com.jeongmin.honeymoondoctor.domain.repository.AuthRepository
 import com.jeongmin.honeymoondoctor.domain.repository.BudgetRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ChecklistRepository
@@ -18,7 +19,7 @@ import com.jeongmin.honeymoondoctor.domain.repository.ItineraryRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ReservationRepository
 import com.jeongmin.honeymoondoctor.domain.repository.SyncStatusRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
-import com.jeongmin.honeymoondoctor.domain.model.SyncStatus
+import com.jeongmin.honeymoondoctor.domain.usecase.CurrentCityResolver
 import com.jeongmin.honeymoondoctor.domain.usecase.ItineraryConflictDetector
 import com.jeongmin.honeymoondoctor.domain.usecase.NextItineraryCalculator
 import com.jeongmin.honeymoondoctor.domain.usecase.NextItinerarySnapshot
@@ -46,6 +47,8 @@ data class HomeUiState(
     val dDayToStart: Long? = null,
     val isDuringTrip: Boolean = false,
     val currentCity: City? = null,
+    /** 체류 기간이 오늘을 포함하는 도시 수. 2 이상이면 어느 도시를 기준으로 삼았는지 알려준다. */
+    val overlappingCityCount: Int = 0,
     /** 홈 표시 기준 시간대(현재 도시 → 다음 일정 → 한국 순으로 결정) */
     val displayZoneId: String = "Asia/Seoul",
     val now: Instant = Instant.EPOCH,
@@ -151,14 +154,10 @@ class HomeViewModel @Inject constructor(
         val tripStart = runCatching { LocalDate.parse(trip.startDate) }.getOrNull()
         val tripEnd = runCatching { LocalDate.parse(trip.endDate) }.getOrNull()
 
-        // 현재 도시: 그 도시 시간대 기준 오늘 날짜가 도시 체류 기간에 들어가는 첫 도시
-        val currentCity = cities.firstOrNull { city ->
-            val start = city.startDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
-            val end = city.endDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
-            if (start == null || end == null) return@firstOrNull false
-            val todayThere = now.atZone(ZoneId.of(city.timeZoneId)).toLocalDate()
-            !todayThere.isBefore(start) && !todayThere.isAfter(end)
-        }
+        // 현재 도시. 이동일에는 두 도시 기간이 하루 겹치는 게 정상이라 규칙이 필요하다
+        // (늦게 시작한 도시 → 기간 짧은 도시 → 도시명 순). CurrentCityResolver 참고.
+        val citySelection = CurrentCityResolver.resolve(cities, now)
+        val currentCity = citySelection.city
 
         // 표시 시간대: 현재 도시 → (여행 중이면) 다음/진행 중 일정의 시간대 → 한국
         val provisional = NextItineraryCalculator.compute(items, now, ZoneId.of("Asia/Seoul"))
@@ -182,6 +181,7 @@ class HomeViewModel @Inject constructor(
             dDayToStart = dDayToStart,
             isDuringTrip = isDuringTrip,
             currentCity = currentCity,
+            overlappingCityCount = citySelection.overlappingCount,
             displayZoneId = displayZoneId,
             now = now,
             next = snapshot,

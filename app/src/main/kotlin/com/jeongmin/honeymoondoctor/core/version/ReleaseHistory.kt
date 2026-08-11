@@ -20,6 +20,15 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.1.4",
+            versionCode = 5,
+            date = "2026-08-11",
+            changes = listOf(
+                "체류 기간이 겹치는 도시가 여러 곳일 때 어느 도시를 기준으로 현지 시각을 표시할지 규칙을 정했습니다. 이동일에는 더 늦게 시작하는 도시를 기준으로 삼고, 홈 화면에 그 사실을 표시합니다.",
+                "도시 체류 기간을 입력할 때 다른 도시와 겹치면 미리 알려줍니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.1.3",
             versionCode = 4,
             date = "2026-08-11",
