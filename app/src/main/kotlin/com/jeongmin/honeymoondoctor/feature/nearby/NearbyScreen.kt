@@ -157,12 +157,13 @@ fun NearbyScreen(
                             latitude = scored.place.latitude!!,
                             longitude = scored.place.longitude!!,
                             label = scored.place.name,
+                            emoji = scored.place.category.emoji,
                         )
                     }
                     val refLat = uiState.referenceLatitude
                     val refLng = uiState.referenceLongitude
                     val referencePin = if (refLat != null && refLng != null && uiState.referenceLabel == "현재 위치 기준") {
-                        listOf(MapPin(refLat, refLng, "내 위치"))
+                        listOf(MapPin(refLat, refLng, "내 위치", emoji = "⭐"))
                     } else {
                         emptyList()
                     }
@@ -350,7 +351,7 @@ private fun FilterRow(uiState: NearbyUiState, viewModel: NearbyViewModel) {
                 FilterChip(
                     selected = uiState.categoryFilter == category,
                     onClick = { viewModel.setCategoryFilter(category) },
-                    label = { Text(category.labelKo) },
+                    label = { Text(category.display) },
                 )
             }
             FilterChip(
@@ -396,7 +397,7 @@ private fun TopPlaceCard(
                 Text(
                     text = listOfNotNull(
                         scored.distanceMeters?.let { formatDistance(it) },
-                        scored.place.category.labelKo,
+                        scored.place.category.display,
                         scored.place.priority.labelKo,
                         if (scored.place.visited) "방문함" else null,
                     ).joinToString(" · "),
@@ -453,7 +454,7 @@ private fun PlaceRow(
                 Text(
                     text = listOfNotNull(
                         scored.distanceMeters?.let { formatDistance(it) },
-                        place.category.labelKo,
+                        place.category.display,
                         place.priority.labelKo,
                         if (place.visited) "방문함" else "미방문",
                     ).joinToString(" · "),

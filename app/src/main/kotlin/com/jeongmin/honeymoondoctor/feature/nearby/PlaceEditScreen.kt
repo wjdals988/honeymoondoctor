@@ -108,7 +108,7 @@ fun PlaceEditScreen(
                 label = "카테고리",
                 options = PlaceCategory.entries,
                 selected = currentForm.category,
-                optionLabel = { it.labelKo },
+                optionLabel = { it.display },
                 onSelect = { category -> viewModel.updateForm { it.copy(category = category) } },
             )
             ChipSelector(

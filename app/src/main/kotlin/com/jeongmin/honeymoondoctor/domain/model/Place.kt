@@ -3,13 +3,17 @@ package com.jeongmin.honeymoondoctor.domain.model
 import java.time.Instant
 
 /** 주변 탭 필터와 1:1로 대응하는 장소 카테고리(스펙 7-7: 맛집, 카페, 관광, 쇼핑, 숙소). */
-enum class PlaceCategory(val labelKo: String) {
-    RESTAURANT("맛집"),
-    CAFE("카페"),
-    SIGHTSEEING("관광"),
-    SHOPPING("쇼핑"),
-    LODGING("숙소"),
-    ETC("기타"),
+/** 이모지는 지도 핀·칩·목록에서 스캔 보조로 쓴다(경비 카테고리와 같은 이유). */
+enum class PlaceCategory(val labelKo: String, val emoji: String) {
+    RESTAURANT("맛집", "🍜"),
+    CAFE("카페", "☕"),
+    SIGHTSEEING("관광", "🗺️"),
+    SHOPPING("쇼핑", "🛍️"),
+    LODGING("숙소", "🏨"),
+    ETC("기타", "📌"),
+    ;
+
+    val display: String get() = "$emoji $labelKo"
 }
 
 /** 개인 우선순위(스펙 7-7): 꼭 가기 15점, 가고 싶음 9점, 여유 시 4점. */

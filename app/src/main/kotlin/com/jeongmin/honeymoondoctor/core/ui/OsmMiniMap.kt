@@ -1,6 +1,12 @@
 package com.jeongmin.honeymoondoctor.core.ui
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.drawable.BitmapDrawable
+import android.view.MotionEvent
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
@@ -18,11 +24,16 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.CopyrightOverlay
 import org.osmdroid.views.overlay.Marker
 
-/** 미니맵에 찍을 핀 하나. [label]은 마커를 탭했을 때 말풍선으로 보인다. */
+/**
+ * 미니맵에 찍을 핀 하나. [label]은 마커를 탭했을 때 말풍선으로 보인다.
+ * [emoji]가 있으면 기본 핀 대신 그 이모지가 마커가 된다 — 장소는 카테고리 이모지
+ * (🍚☕✈️…), 우리 위치는 나 ⭐ / 상대 ❤️로 한눈에 구분된다.
+ */
 data class MapPin(
     val latitude: Double,
     val longitude: Double,
     val label: String,
+    val emoji: String? = null,
 )
 
 /**
@@ -57,6 +68,10 @@ fun OsmMiniMap(
                 // 미니맵은 훑어보는 용도라 줌 버튼을 그리지 않는다(멀티터치로 충분).
                 zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
                 overlays.add(CopyrightOverlay(context))
+                // 지도가 세로 스크롤 화면 안에 있어, 핀치줌·드래그가 부모 스크롤에
+                // 먹히는 문제가 있었다. 지도에 손가락이 닿아 있는 동안만 부모의
+                // 터치 가로채기를 끈다 — 지도 밖에서는 화면 스크롤이 평소대로 된다.
+                blockParentScrollWhileTouched()
             }
         },
         update = { map ->
@@ -66,8 +81,14 @@ fun OsmMiniMap(
                 map.overlays.add(
                     Marker(map).apply {
                         position = GeoPoint(pin.latitude, pin.longitude)
-                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                         title = pin.label
+                        if (pin.emoji != null) {
+                            // 이모지는 핀 모양이 아니라서 좌표 위에 중앙 정렬로 얹는다.
+                            icon = emojiDrawable(map.context, pin.emoji)
+                            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                        } else {
+                            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                        }
                     },
                 )
             }
@@ -90,6 +111,34 @@ fun OsmMiniMap(
             map.invalidate()
         },
     )
+}
+
+@SuppressLint("ClickableViewAccessibility")
+private fun MapView.blockParentScrollWhileTouched() {
+    setOnTouchListener { view, event ->
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE ->
+                view.parent.requestDisallowInterceptTouchEvent(true)
+
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL ->
+                view.parent.requestDisallowInterceptTouchEvent(false)
+        }
+        false // 지도 자신의 팬·줌 처리는 그대로 진행한다
+    }
+}
+
+/** 이모지 한 글자를 마커 아이콘 비트맵으로 그린다. */
+private fun emojiDrawable(context: Context, emoji: String): BitmapDrawable {
+    val sizePx = (36 * context.resources.displayMetrics.density).toInt()
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = sizePx * 0.8f
+        textAlign = Paint.Align.CENTER
+    }
+    val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val baseline = sizePx / 2f - (paint.descent() + paint.ascent()) / 2f
+    canvas.drawText(emoji, sizePx / 2f, baseline, paint)
+    return BitmapDrawable(context.resources, bitmap)
 }
 
 private fun configureOsmdroid(context: Context) {

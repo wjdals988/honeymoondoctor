@@ -20,6 +20,15 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.5.2",
+            versionCode = 22,
+            date = "2026-08-12",
+            changes = listOf(
+                "지도 핀이 이모지가 됐습니다. 장소는 카테고리별(🍜 ☕ 🗺️ 🛍️ 🏨 📌)로, 우리 위치는 나 ⭐ / 상대 ❤️로 한눈에 구분됩니다.",
+                "지도를 확대·이동할 때 화면 전체가 따라 스크롤되던 문제를 고쳤습니다. 지도에 손가락이 닿아 있는 동안은 지도만 움직이고, 지도 밖에서는 평소처럼 스크롤됩니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.5.1",
             versionCode = 21,
             date = "2026-08-12",

@@ -125,6 +125,7 @@ fun TogetherScreen(
                             latitude = member.location.latitude,
                             longitude = member.location.longitude,
                             label = if (member.isMe) "나" else member.displayName,
+                            emoji = if (member.isMe) "⭐" else "❤️",
                         )
                     },
                 )
