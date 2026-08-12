@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.time.koreanZoneLabel
+import com.jeongmin.honeymoondoctor.core.ui.CollapsibleSection
 import com.jeongmin.honeymoondoctor.core.ui.DateField
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.core.ui.TimeField
@@ -112,20 +113,27 @@ fun ReservationEditScreen(
                 optionLabel = { it.labelKo },
                 onSelect = { status -> viewModel.updateForm { it.copy(status = status) } },
             )
-            OutlinedTextField(
-                value = currentForm.confirmationCode,
-                onValueChange = { value -> viewModel.updateForm { it.copy(confirmationCode = value) } },
-                label = { Text("예약번호") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = currentForm.pin,
-                onValueChange = { value -> viewModel.updateForm { it.copy(pin = value) } },
-                label = { Text("PIN") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            // 예약번호·PIN은 예약을 잡은 뒤에 받는 값이라 처음 만들 때는 대개 비어 있다.
+            CollapsibleSection(
+                title = "예약번호·PIN 입력",
+                initiallyExpanded = currentForm.confirmationCode.isNotBlank() || currentForm.pin.isNotBlank(),
+            ) {
+                OutlinedTextField(
+                    value = currentForm.confirmationCode,
+                    onValueChange = { value -> viewModel.updateForm { it.copy(confirmationCode = value) } },
+                    label = { Text("예약번호") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = currentForm.pin,
+                    onValueChange = { value -> viewModel.updateForm { it.copy(pin = value) } },
+                    label = { Text("PIN") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("일시 입력", modifier = Modifier.weight(1f))
@@ -205,20 +213,27 @@ fun ReservationEditScreen(
                 optionLabel = { it?.displayName ?: "없음" },
                 onSelect = { member -> viewModel.updateForm { it.copy(assigneeUid = member?.uid) } },
             )
-            OutlinedTextField(
-                value = currentForm.estimatedKrwText,
-                onValueChange = { value -> viewModel.updateForm { it.copy(estimatedKrwText = value) } },
-                label = { Text("예상 비용 (원)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = currentForm.notes,
-                onValueChange = { value -> viewModel.updateForm { it.copy(notes = value) } },
-                label = { Text("메모") },
-                minLines = 3,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            // 예상 비용과 메모도 대부분 비워 둔다.
+            CollapsibleSection(
+                title = "비용·메모 입력",
+                initiallyExpanded = currentForm.estimatedKrwText.isNotBlank() || currentForm.notes.isNotBlank(),
+            ) {
+                OutlinedTextField(
+                    value = currentForm.estimatedKrwText,
+                    onValueChange = { value -> viewModel.updateForm { it.copy(estimatedKrwText = value) } },
+                    label = { Text("예상 비용 (원)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = currentForm.notes,
+                    onValueChange = { value -> viewModel.updateForm { it.copy(notes = value) } },
+                    label = { Text("메모") },
+                    minLines = 3,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
 
             Button(
                 onClick = { viewModel.save(onSaved = onNavigateBack) },

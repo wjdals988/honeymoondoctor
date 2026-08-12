@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.time.LocalTimes
 import com.jeongmin.honeymoondoctor.core.ui.CityPickerField
+import com.jeongmin.honeymoondoctor.core.ui.CollapsibleSection
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.domain.model.PlaceCategory
 import com.jeongmin.honeymoondoctor.domain.model.PlacePriority
@@ -111,30 +112,6 @@ fun PlaceEditScreen(
                 onSelect = { priority -> viewModel.updateForm { it.copy(priority = priority) } },
             )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = currentForm.latitudeText,
-                    onValueChange = { value -> viewModel.updateForm { it.copy(latitudeText = value) } },
-                    label = { Text("위도") },
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
-                )
-                OutlinedTextField(
-                    value = currentForm.longitudeText,
-                    onValueChange = { value -> viewModel.updateForm { it.copy(longitudeText = value) } },
-                    label = { Text("경도") },
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            OutlinedTextField(
-                value = currentForm.mapsUrl,
-                onValueChange = { value -> viewModel.updateForm { it.copy(mapsUrl = value) } },
-                label = { Text("Google Maps URL") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
             Text("추천 시간대", style = MaterialTheme.typography.labelLarge)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -149,40 +126,76 @@ fun PlaceEditScreen(
                 }
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // 위도·경도·URL·평점·메모는 대부분 비워 두는 값이다. 접어 두면 새 장소를
+            // 넣을 때 채워야 할 것이 "장소명" 하나로 보인다. 값이 이미 있으면 펼친 채로 연다.
+            CollapsibleSection(
+                title = "자세히 입력",
+                initiallyExpanded = currentForm.latitudeText.isNotBlank() ||
+                    currentForm.longitudeText.isNotBlank() ||
+                    currentForm.mapsUrl.isNotBlank() ||
+                    currentForm.ratingText.isNotBlank() ||
+                    currentForm.reviewCountText.isNotBlank() ||
+                    currentForm.notes.isNotBlank(),
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = currentForm.latitudeText,
+                        onValueChange = { value -> viewModel.updateForm { it.copy(latitudeText = value) } },
+                        label = { Text("위도") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    OutlinedTextField(
+                        value = currentForm.longitudeText,
+                        onValueChange = { value -> viewModel.updateForm { it.copy(longitudeText = value) } },
+                        label = { Text("경도") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
                 OutlinedTextField(
-                    value = currentForm.ratingText,
-                    onValueChange = { value -> viewModel.updateForm { it.copy(ratingText = value) } },
-                    label = { Text("평점(0~5)") },
+                    value = currentForm.mapsUrl,
+                    onValueChange = { value -> viewModel.updateForm { it.copy(mapsUrl = value) } },
+                    label = { Text("Google Maps URL") },
                     singleLine = true,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                 )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = currentForm.ratingText,
+                        onValueChange = { value -> viewModel.updateForm { it.copy(ratingText = value) } },
+                        label = { Text("평점(0~5)") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    OutlinedTextField(
+                        value = currentForm.reviewCountText,
+                        onValueChange = { value -> viewModel.updateForm { it.copy(reviewCountText = value) } },
+                        label = { Text("리뷰 수") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Text(
+                    text = "평점·리뷰 수는 실시간 수집하지 않는 스냅샷입니다." +
+                        (
+                            currentForm.sourceUpdatedAt?.let {
+                                " 확인일: ${LocalTimes.formatDate(it, "Asia/Seoul")}"
+                            } ?: " 저장 시 오늘 날짜로 확인일이 기록됩니다."
+                            ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
                 OutlinedTextField(
-                    value = currentForm.reviewCountText,
-                    onValueChange = { value -> viewModel.updateForm { it.copy(reviewCountText = value) } },
-                    label = { Text("리뷰 수") },
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
+                    value = currentForm.notes,
+                    onValueChange = { value -> viewModel.updateForm { it.copy(notes = value) } },
+                    label = { Text("개인 메모") },
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
-            Text(
-                text = "평점·리뷰 수는 실시간 수집하지 않는 스냅샷입니다." +
-                    (
-                        currentForm.sourceUpdatedAt?.let {
-                            " 확인일: ${LocalTimes.formatDate(it, "Asia/Seoul")}"
-                        } ?: " 저장 시 오늘 날짜로 확인일이 기록됩니다."
-                        ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            OutlinedTextField(
-                value = currentForm.notes,
-                onValueChange = { value -> viewModel.updateForm { it.copy(notes = value) } },
-                label = { Text("개인 메모") },
-                minLines = 2,
-                modifier = Modifier.fillMaxWidth(),
-            )
 
             Button(
                 onClick = { viewModel.save(onSaved = onNavigateBack) },

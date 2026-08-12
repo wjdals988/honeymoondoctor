@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.time.koreanZoneLabel
 import com.jeongmin.honeymoondoctor.core.ui.CityPickerField
+import com.jeongmin.honeymoondoctor.core.ui.CollapsibleSection
 import com.jeongmin.honeymoondoctor.core.ui.DateField
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.core.ui.TimeField
@@ -185,44 +186,55 @@ fun ItineraryEditScreen(
                 )
             }
 
-            OutlinedTextField(
-                value = currentForm.location,
-                onValueChange = { value -> viewModel.updateForm { it.copy(location = value) } },
-                label = { Text("장소명") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            // 장소명·주소·담당자·경비·메모는 일정을 잡을 때 대개 나중에 채운다.
+            // 처음 만들 때 채워야 할 것은 이름·유형·시각뿐이다.
+            CollapsibleSection(
+                title = "장소·담당·경비 입력",
+                initiallyExpanded = currentForm.location.isNotBlank() ||
+                    currentForm.address.isNotBlank() ||
+                    currentForm.assigneeUid != null ||
+                    currentForm.estimatedKrwText.isNotBlank() ||
+                    currentForm.notes.isNotBlank(),
+            ) {
+                OutlinedTextField(
+                    value = currentForm.location,
+                    onValueChange = { value -> viewModel.updateForm { it.copy(location = value) } },
+                    label = { Text("장소명") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
 
-            OutlinedTextField(
-                value = currentForm.address,
-                onValueChange = { value -> viewModel.updateForm { it.copy(address = value) } },
-                label = { Text("주소") },
-                modifier = Modifier.fillMaxWidth(),
-            )
+                OutlinedTextField(
+                    value = currentForm.address,
+                    onValueChange = { value -> viewModel.updateForm { it.copy(address = value) } },
+                    label = { Text("주소") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
 
-            DropdownSelector(
-                label = "담당자",
-                selectedLabel = uiState.members.firstOrNull { it.uid == currentForm.assigneeUid }?.displayName ?: "없음",
-                options = listOf(null) + uiState.members,
-                optionLabel = { it?.displayName ?: "없음" },
-                onSelect = { member -> viewModel.updateForm { it.copy(assigneeUid = member?.uid) } },
-            )
+                DropdownSelector(
+                    label = "담당자",
+                    selectedLabel = uiState.members.firstOrNull { it.uid == currentForm.assigneeUid }?.displayName ?: "없음",
+                    options = listOf(null) + uiState.members,
+                    optionLabel = { it?.displayName ?: "없음" },
+                    onSelect = { member -> viewModel.updateForm { it.copy(assigneeUid = member?.uid) } },
+                )
 
-            OutlinedTextField(
-                value = currentForm.estimatedKrwText,
-                onValueChange = { value -> viewModel.updateForm { it.copy(estimatedKrwText = value) } },
-                label = { Text("예상 경비 (원)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
+                OutlinedTextField(
+                    value = currentForm.estimatedKrwText,
+                    onValueChange = { value -> viewModel.updateForm { it.copy(estimatedKrwText = value) } },
+                    label = { Text("예상 경비 (원)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
 
-            OutlinedTextField(
-                value = currentForm.notes,
-                onValueChange = { value -> viewModel.updateForm { it.copy(notes = value) } },
-                label = { Text("메모") },
-                minLines = 3,
-                modifier = Modifier.fillMaxWidth(),
-            )
+                OutlinedTextField(
+                    value = currentForm.notes,
+                    onValueChange = { value -> viewModel.updateForm { it.copy(notes = value) } },
+                    label = { Text("메모") },
+                    minLines = 3,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
 
             Button(
                 onClick = { viewModel.save(onSaved = onNavigateBack) },
