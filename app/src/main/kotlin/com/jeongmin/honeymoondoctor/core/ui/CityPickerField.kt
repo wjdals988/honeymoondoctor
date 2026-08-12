@@ -15,6 +15,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -29,7 +30,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.jeongmin.honeymoondoctor.domain.model.City
+import com.jeongmin.honeymoondoctor.domain.model.CityPreset
+import com.jeongmin.honeymoondoctor.domain.model.CityPresets
 import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 
 /**
@@ -129,6 +133,13 @@ fun CityFormDialog(
     var startDate by remember { mutableStateOf(initialStart ?: LocalDate.now()) }
     var endDate by remember { mutableStateOf(initialEnd ?: initialStart ?: LocalDate.now()) }
 
+    // 프리셋을 골랐는지 여부. 직접 입력으로 넣은 값과 구분해 안내 문구를 다르게 준다.
+    var pickedPreset by remember { mutableStateOf<CityPreset?>(null) }
+    val suggestions = remember(displayName, pickedPreset) {
+        if (pickedPreset?.displayName == displayName) emptyList() else CityPresets.search(displayName)
+    }
+    val zoneValid = remember(timeZoneId) { runCatching { ZoneId.of(timeZoneId.trim()) }.isSuccess }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (initial == null) "새 도시 추가" else "도시 수정") },
@@ -137,25 +148,70 @@ fun CityFormDialog(
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 OutlinedTextField(
                     value = displayName,
-                    onValueChange = { displayName = it },
+                    onValueChange = {
+                        displayName = it
+                        pickedPreset = null
+                    },
                     label = { Text("도시명 *") },
+                    supportingText = { Text("도시명을 입력하면 국가·시간대가 자동으로 채워집니다") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                OutlinedTextField(
-                    value = countryCode,
-                    onValueChange = { countryCode = it.uppercase().take(2) },
-                    label = { Text("국가코드 (예: KR, FR)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                // 도시를 고르면 국가코드·시간대가 따라온다. 예전에는 "Asia/Seoul" 같은
+                // 문자열을 직접 쳐야 했고, 오타가 나면 그 도시가 현지 시각 판정에서
+                // 조용히 제외됐다(사용자는 시계가 왜 안 바뀌는지 알 수 없었다).
+                suggestions.forEach { preset ->
+                    ListItem(
+                        headlineContent = { Text(preset.displayName) },
+                        supportingContent = { Text("${preset.countryName} · ${preset.timeZoneId}") },
+                        modifier = Modifier.clickable {
+                            displayName = preset.displayName
+                            countryCode = preset.countryCode
+                            timeZoneId = preset.timeZoneId
+                            pickedPreset = preset
+                        },
+                    )
+                }
+                Text(
+                    text = if (countryCode.isBlank() && !zoneValid) {
+                        "국가·시간대가 아직 정해지지 않았습니다."
+                    } else {
+                        "국가 $countryCode · 시간대 $timeZoneId"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (zoneValid) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.error
+                    },
+                    modifier = Modifier.padding(top = 8.dp),
                 )
-                OutlinedTextField(
-                    value = timeZoneId,
-                    onValueChange = { timeZoneId = it },
-                    label = { Text("시간대 (예: Asia/Seoul)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                )
+                // 목록에 없는 도시를 위해 직접 입력 경로를 남긴다. 평소에는 접혀 있다.
+                CollapsibleSection(
+                    title = "국가·시간대 직접 입력",
+                    initiallyExpanded = initial != null && pickedPreset == null && !zoneValid,
+                ) {
+                    OutlinedTextField(
+                        value = countryCode,
+                        onValueChange = { countryCode = it.uppercase().take(2) },
+                        label = { Text("국가코드 (예: KR, FR)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = timeZoneId,
+                        onValueChange = { timeZoneId = it },
+                        label = { Text("시간대 (예: Asia/Seoul)") },
+                        isError = !zoneValid,
+                        supportingText = if (!zoneValid) {
+                            { Text("존재하지 않는 시간대입니다. 이대로 저장하면 현지 시각에 반영되지 않습니다.") }
+                        } else {
+                            null
+                        },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
@@ -213,7 +269,9 @@ fun CityFormDialog(
         },
         confirmButton = {
             TextButton(
-                enabled = displayName.isNotBlank(),
+                // 시간대가 깨진 채로는 저장을 막는다. 저장돼 봐야 현지 시각 판정에서
+                // 제외돼 사용자가 이유를 알 수 없는 상태가 된다.
+                enabled = displayName.isNotBlank() && zoneValid,
                 onClick = {
                     onConfirm(
                         City(
