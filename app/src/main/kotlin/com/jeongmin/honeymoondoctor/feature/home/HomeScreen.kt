@@ -45,6 +45,7 @@ import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryItem
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryStatus
+import com.jeongmin.honeymoondoctor.domain.model.isReadOnly
 import com.jeongmin.honeymoondoctor.domain.usecase.NextItineraryUrgency
 import com.jeongmin.honeymoondoctor.domain.usecase.TripDaySummary
 import java.time.Duration
@@ -85,7 +86,11 @@ fun HomeScreen(
             // 출발 전에는 화면의 중심이 다르다. "다음 일정"은 대개 비어 있거나 몇 주 뒤라
             // 계획에 도움이 안 되고, 그때 필요한 건 "어느 날이 아직 비었나"다.
             // 여행 중·완료 후 배치는 종전 그대로 둔다(한 번에 다 바꾸면 어디가 어색한지 못 가린다).
-            val isBeforeTrip = uiState.dDayToStart != null
+            // 완료 여부를 먼저 본다. 출발일이 아직 미래인 여행을 완료 처리하면(계획을 접은
+            // 경우) 출발 전 분기로 빠져 "출발 D-28"과 "비어 있습니다" 경고가 그대로 떴다.
+            // 완료는 더 강한 상태다.
+            val isCompleted = uiState.trip?.isReadOnly == true
+            val isBeforeTrip = !isCompleted && uiState.dDayToStart != null
             if (isBeforeTrip) {
                 PreparationSummaryCard(
                     uiState = uiState,
@@ -102,6 +107,18 @@ fun HomeScreen(
                 if (hasUpcoming) {
                     NextItineraryCard(uiState)
                 }
+            } else if (isCompleted) {
+                // 완료 후에는 기록 열람이 목적이다. "다음 일정"은 없는 개념이라 숨기고
+                // 전체 일정을 맨 위로 올린다.
+                TripOverviewSection(
+                    uiState = uiState,
+                    onOpenItineraryTab = onOpenItineraryTab,
+                )
+                PreparationSummaryCard(
+                    uiState = uiState,
+                    onOpenReservations = onOpenReservations,
+                    onOpenChecklist = onOpenChecklist,
+                )
             } else {
                 NextItineraryCard(uiState)
                 if (uiState.conflictCount > 0) {
@@ -116,6 +133,12 @@ fun HomeScreen(
                     SyncStatusFooter(uiState = uiState, onOpenSyncStatus = onOpenSyncStatus)
                 }
                 TodayTimelineSection(uiState)
+                // 여행 중 오버뷰는 오늘 타임라인 아래에 둔다 — 지금 당장은 오늘이 중요하고,
+                // 그 다음 궁금한 게 "남은 날엔 뭐가 있나"다.
+                TripOverviewSection(
+                    uiState = uiState,
+                    onOpenItineraryTab = onOpenItineraryTab,
+                )
             }
             QuickActions(
                 onAddItinerary = onAddItinerary,
@@ -133,6 +156,7 @@ fun HomeScreen(
 @Composable
 private fun HomeHeader(uiState: HomeUiState, onSwitchTrip: () -> Unit) {
     val trip = uiState.trip ?: return
+    val isCompleted = trip.isReadOnly
     Column {
         // 여행 이름을 누르면 여행 목록으로. 전환은 자주 하는 동작이 아니라 별도 버튼 대신
         // 이미 보고 있는 이름 자체를 진입점으로 쓴다("지금 이 여행" → "다른 여행").
@@ -147,7 +171,8 @@ private fun HomeHeader(uiState: HomeUiState, onSwitchTrip: () -> Unit) {
                 color = MaterialTheme.colorScheme.primary,
             )
         }
-        val dDay = uiState.dDayToStart
+        // 완료된 여행에 "출발 D-28"은 맞지 않다. 끝난 계획이므로 기간만 보여준다.
+        val dDay = uiState.dDayToStart.takeIf { !isCompleted }
         if (dDay != null) {
             Text(
                 text = if (dDay == 0L) "오늘 출발!" else "출발 D-$dDay",
@@ -512,40 +537,61 @@ private fun TripOverviewSection(uiState: HomeUiState, onOpenItineraryTab: () -> 
     val days = uiState.tripDays
     if (days.isEmpty()) return
     var expanded by remember { mutableStateOf(false) }
-    val shown = if (expanded || days.size <= PREVIEW_DAYS) days else days.take(PREVIEW_DAYS)
+
+    val isCompleted = uiState.trip?.isReadOnly == true
+    val today = remember(uiState.now, uiState.displayZoneId) {
+        uiState.now.atZone(java.time.ZoneId.of(uiState.displayZoneId)).toLocalDate()
+    }
+    // 여행 중에는 오늘부터 펼친다. 이미 지나간 날을 위에 쌓아 두면 정작 남은 일정이
+    // 화면 밖으로 밀려난다(출발 전·완료 후에는 처음부터가 맞다).
+    val startIndex = if (uiState.isDuringTrip) {
+        days.indexOfFirst { !it.date.isBefore(today) }.coerceAtLeast(0)
+    } else {
+        0
+    }
+    val shown = if (expanded) days else days.drop(startIndex).take(PREVIEW_DAYS)
+    val hiddenCount = days.size - shown.size
     val emptyDayCount = days.count { it.itemCount == 0 }
+    val totalItems = days.sumOf { it.itemCount }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader(
             title = "전체 일정",
-            trailing = { TextButton(onClick = onOpenItineraryTab) { Text("일정 탭에서 편집") } },
+            trailing = {
+                TextButton(onClick = onOpenItineraryTab) {
+                    Text(if (isCompleted) "일정 탭에서 보기" else "일정 탭에서 편집")
+                }
+            },
         )
         Text(
-            text = if (emptyDayCount == 0) {
-                "${days.size}일 모두 일정이 있습니다."
-            } else {
-                "${days.size}일 중 ${emptyDayCount}일이 비어 있습니다."
+            text = when {
+                // 완료된 여행에 "비어 있다"는 지적은 의미가 없다. 남은 건 기록이다.
+                isCompleted -> "${days.size}일 동안 일정 ${totalItems}건을 기록했습니다."
+                emptyDayCount == 0 -> "${days.size}일 모두 일정이 있습니다."
+                else -> "${days.size}일 중 ${emptyDayCount}일이 비어 있습니다."
             },
             style = MaterialTheme.typography.bodyMedium,
-            color = if (emptyDayCount == 0) {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            } else {
+            color = if (!isCompleted && emptyDayCount > 0) {
                 MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
             },
         )
         AppCard(modifier = Modifier.fillMaxWidth()) {
-            shown.forEach { day -> TripOverviewRow(day) }
+            shown.forEach { day ->
+                TripOverviewRow(day = day, isToday = uiState.isDuringTrip && day.date == today)
+            }
         }
-        if (days.size > PREVIEW_DAYS) {
+        if (hiddenCount > 0 || expanded) {
             TextButton(onClick = { expanded = !expanded }) {
-                Text(if (expanded) "접기" else "${days.size - PREVIEW_DAYS}일 더 보기")
+                Text(if (expanded) "접기" else "전체 ${days.size}일 보기")
             }
         }
     }
 }
 
 @Composable
-private fun TripOverviewRow(day: TripDaySummary) {
+private fun TripOverviewRow(day: TripDaySummary, isToday: Boolean) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
@@ -553,7 +599,13 @@ private fun TripOverviewRow(day: TripDaySummary) {
         Text(
             text = day.dayNumber?.let { "D$it" }.orEmpty(),
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            // 여행 중에는 오늘 줄을 강조한다. 목록에서 "지금 어디쯤"을 못 찾으면
+            // 날짜를 세어 가며 읽어야 한다.
+            color = if (isToday) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
             modifier = Modifier.width(36.dp),
         )
         Text(
