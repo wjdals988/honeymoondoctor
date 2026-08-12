@@ -17,12 +17,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.PersonPinCircle
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -54,6 +56,7 @@ import java.time.Duration
 @Composable
 fun HomeScreen(
     onSwitchTrip: () -> Unit,
+    onOpenTogether: () -> Unit,
     onAddItinerary: () -> Unit,
     onOpenItineraryTab: () -> Unit,
     onOpenItineraryDate: (java.time.LocalDate) -> Unit,
@@ -83,7 +86,7 @@ fun HomeScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            HomeHeader(uiState, onSwitchTrip = onSwitchTrip)
+            HomeHeader(uiState, onSwitchTrip = onSwitchTrip, onOpenTogether = onOpenTogether)
 
             // 출발 전에는 화면의 중심이 다르다. "다음 일정"은 대개 비어 있거나 몇 주 뒤라
             // 계획에 도움이 안 되고, 그때 필요한 건 "어느 날이 아직 비었나"다.
@@ -162,22 +165,35 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeHeader(uiState: HomeUiState, onSwitchTrip: () -> Unit) {
+private fun HomeHeader(uiState: HomeUiState, onSwitchTrip: () -> Unit, onOpenTogether: () -> Unit) {
     val trip = uiState.trip ?: return
     val isCompleted = trip.isReadOnly
     Column {
         // 여행 이름을 누르면 여행 목록으로. 전환은 자주 하는 동작이 아니라 별도 버튼 대신
         // 이미 보고 있는 이름 자체를 진입점으로 쓴다("지금 이 여행" → "다른 여행").
-        TextButton(
-            onClick = onSwitchTrip,
-            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-        ) {
-            Text(text = trip.name, style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = "  여행 바꾸기 ›",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextButton(
+                onClick = onSwitchTrip,
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                modifier = Modifier.weight(1f, fill = false),
+            ) {
+                Text(text = trip.name, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = "  여행 바꾸기 ›",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            // 우리 위치 바로가기. 홈 어디서든 한 탭 — 서로를 급히 찾아야 하는 상황
+            // (일행 놓침·비상)에 전체 탭 → 우리 위치 두 단계는 길다.
+            IconButton(onClick = onOpenTogether) {
+                Icon(
+                    Icons.Filled.PersonPinCircle,
+                    contentDescription = "우리 위치",
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
         // 완료된 여행에 "출발 D-28"은 맞지 않다. 끝난 계획이므로 기간만 보여준다.
         val dDay = uiState.dDayToStart.takeIf { !isCompleted }

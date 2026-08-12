@@ -106,6 +106,7 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
         ) {
             composable(BottomTab.HOME.route) {
                 HomeScreen(
+                    onOpenTogether = { navController.navigate(ROUTE_TOGETHER) },
                     onSwitchTrip = viewModel::backToTripList,
                     onAddItinerary = { navController.navigate(itineraryEditRoute(null)) },
                     onOpenItineraryTab = { navController.navigateToTab(BottomTab.ITINERARY) },
