@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.jeongmin.honeymoondoctor.core.error.ActionErrorState
 import com.jeongmin.honeymoondoctor.core.error.runReporting
 import com.jeongmin.honeymoondoctor.core.location.LocationProvider
+import com.jeongmin.honeymoondoctor.data.local.prefs.AppPreferences
+import com.jeongmin.honeymoondoctor.data.local.prefs.LocationShareMode
 import com.jeongmin.honeymoondoctor.domain.model.MemberLocation
 import com.jeongmin.honeymoondoctor.domain.model.TripMember
 import com.jeongmin.honeymoondoctor.domain.repository.AuthRepository
@@ -45,6 +47,7 @@ data class TogetherUiState(
     val actionError: String? = null,
     /** 위치 권한이 없어 공유 버튼 대신 안내를 보여줘야 하는 상태. */
     val needsPermission: Boolean = false,
+    val shareMode: LocationShareMode = LocationShareMode.MANUAL,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -55,6 +58,7 @@ class TogetherViewModel @Inject constructor(
     private val memberLocationRepository: MemberLocationRepository,
     private val authRepository: AuthRepository,
     private val locationProvider: LocationProvider,
+    private val appPreferences: AppPreferences,
 ) : ViewModel() {
 
     private val actionError = ActionErrorState()
@@ -70,8 +74,9 @@ class TogetherViewModel @Inject constructor(
                     tripRepository.observeMembers(trip.id),
                     memberLocationRepository.observeMemberLocations(trip.id),
                     authRepository.currentUser,
+                    appPreferences.snapshot,
                     combine(sharing, needsPermission, actionError.message) { s, p, e -> Triple(s, p, e) },
-                ) { members, locations, user, (sharingNow, permission, error) ->
+                ) { members, locations, user, prefs, (sharingNow, permission, error) ->
                     val myUid = user?.uid
                     val mine = locations.firstOrNull { it.uid == myUid }
                     TogetherUiState(
@@ -100,6 +105,7 @@ class TogetherViewModel @Inject constructor(
                         sharing = sharingNow,
                         actionError = error,
                         needsPermission = permission,
+                        shareMode = prefs.locationShareMode,
                     )
                 }
             }
@@ -107,6 +113,11 @@ class TogetherViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TogetherUiState())
 
     fun clearActionError() = actionError.clear()
+
+    /** 자동 공유 모드 변경. 다음 앱 포그라운드 진입부터 적용된다(코디네이터 주석 참고). */
+    fun setShareMode(mode: LocationShareMode) {
+        viewModelScope.launch { appPreferences.setLocationShareMode(mode) }
+    }
 
     /** 화면 복귀 시 권한 상태 재확인(설정에서 바꾸고 돌아올 수 있다). */
     fun refreshPermission() {

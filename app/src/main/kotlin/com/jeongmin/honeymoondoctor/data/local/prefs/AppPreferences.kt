@@ -23,6 +23,22 @@ val Context.appDataStore: DataStore<Preferences> by preferencesDataStore(name = 
  */
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
+/**
+ * "우리 위치" 자동 공유 모드. 셋 다 **앱이 화면에 떠 있는 동안만** 동작한다 —
+ * 백그라운드 추적은 지속 알림(포그라운드 서비스)과 백그라운드 위치 권한이 필요해
+ * 배터리·심사 부담이 크고, 방침의 "명시적 사용 중에만 전송" 원칙과도 멀어진다.
+ */
+enum class LocationShareMode {
+    /** 버튼을 누를 때만(기본). */
+    MANUAL,
+
+    /** 앱을 열 때(포그라운드 진입)마다 1회 자동 공유. */
+    ON_APP_OPEN,
+
+    /** 앱을 쓰는 동안 5분마다 갱신. 화면을 끄거나 나가면 멈춘다. */
+    EVERY_5_MIN_WHILE_USING,
+}
+
 data class LastKnownLocation(
     val latitude: Double,
     val longitude: Double,
@@ -49,6 +65,7 @@ data class AppPrefsSnapshot(
      * 지도 이동시간 데이터가 없어 계산이 아니라 사용자가 정하는 값이다. 기본 60분.
      */
     val transportLeadMinutes: Int,
+    val locationShareMode: LocationShareMode,
 )
 
 /** 앱 설정, 선택 도시, 최근 위치 메타데이터를 담는 DataStore 래퍼. 위치는 화면 진입/새로고침 때만 갱신된다. */
@@ -76,6 +93,7 @@ class AppPreferences @Inject constructor(
         val LAST_EXCHANGE_RATES = stringSetPreferencesKey("last_exchange_rates")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val TRANSPORT_LEAD_MINUTES = longPreferencesKey("transport_lead_minutes")
+        val LOCATION_SHARE_MODE = stringPreferencesKey("location_share_mode")
     }
 
     private companion object {
@@ -104,6 +122,9 @@ class AppPreferences @Inject constructor(
             transportLeadMinutes = prefs[Keys.TRANSPORT_LEAD_MINUTES]?.toInt()
                 ?.takeIf { it in 1..24 * 60 }
                 ?: DEFAULT_TRANSPORT_LEAD_MINUTES,
+            locationShareMode = prefs[Keys.LOCATION_SHARE_MODE]
+                ?.let { raw -> LocationShareMode.entries.firstOrNull { it.name == raw } }
+                ?: LocationShareMode.MANUAL,
         )
     }
 
@@ -144,6 +165,10 @@ class AppPreferences @Inject constructor(
 
     suspend fun setThemeMode(mode: ThemeMode) {
         dataStore.edit { it[Keys.THEME_MODE] = mode.name }
+    }
+
+    suspend fun setLocationShareMode(mode: LocationShareMode) {
+        dataStore.edit { it[Keys.LOCATION_SHARE_MODE] = mode.name }
     }
 
     suspend fun setTransportLeadMinutes(minutes: Int) {

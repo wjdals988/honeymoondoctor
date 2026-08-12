@@ -43,8 +43,10 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.time.LocalTimes
 import com.jeongmin.honeymoondoctor.core.ui.AppCard
 import com.jeongmin.honeymoondoctor.core.ui.CardTone
+import com.jeongmin.honeymoondoctor.core.ui.ChipSelector
 import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
+import com.jeongmin.honeymoondoctor.data.local.prefs.LocationShareMode
 import java.time.Duration
 import java.time.Instant
 
@@ -119,6 +121,30 @@ fun TogetherScreen(
             }
 
             Spacer(Modifier.height(4.dp))
+
+            // 자동 공유 모드. 셋 다 앱을 보고 있는 동안만 동작한다 — 백그라운드 추적
+            // 코드 경로 자체가 없다. 5분 모드도 화면을 끄면 멈춘다.
+            ChipSelector(
+                label = "자동 공유",
+                options = LocationShareMode.entries,
+                selected = uiState.shareMode,
+                optionLabel = {
+                    when (it) {
+                        LocationShareMode.MANUAL -> "끔 (버튼으로만)"
+                        LocationShareMode.ON_APP_OPEN -> "앱 열 때"
+                        LocationShareMode.EVERY_5_MIN_WHILE_USING -> "앱 사용 중 5분마다"
+                    }
+                },
+                onSelect = viewModel::setShareMode,
+            )
+            if (uiState.shareMode != LocationShareMode.MANUAL) {
+                Text(
+                    text = "자동 공유도 앱이 화면에 떠 있는 동안만 동작합니다. 화면을 끄거나 다른 앱으로 " +
+                        "가면 멈추고, 다음에 열 때 다시 시작됩니다.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             if (uiState.needsPermission) {
                 AppCard(modifier = Modifier.fillMaxWidth(), tone = CardTone.Warn) {

@@ -20,6 +20,14 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.4.1",
+            versionCode = 18,
+            date = "2026-08-12",
+            changes = listOf(
+                "우리 위치에 자동 공유를 추가했습니다: 끔(버튼으로만) · 앱 열 때 1회 · 앱 사용 중 5분마다. 어떤 모드든 앱이 화면에 떠 있는 동안만 동작하고, 화면을 끄면 멈춥니다. 백그라운드 추적은 없습니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.4.0",
             versionCode = 17,
             date = "2026-08-12",
