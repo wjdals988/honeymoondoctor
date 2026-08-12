@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jeongmin.honeymoondoctor.core.error.toUserMessage
 import com.jeongmin.honeymoondoctor.core.location.LocationProvider
+import com.jeongmin.honeymoondoctor.data.maps.MapsLinkResolver
+import com.jeongmin.honeymoondoctor.data.maps.MapsShortLink
 import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.Place
 import com.jeongmin.honeymoondoctor.domain.model.PlaceCategory
@@ -12,6 +14,7 @@ import com.jeongmin.honeymoondoctor.domain.model.PlacePriority
 import com.jeongmin.honeymoondoctor.domain.model.PreferredTime
 import com.jeongmin.honeymoondoctor.domain.repository.CityRepository
 import com.jeongmin.honeymoondoctor.domain.repository.PlaceRepository
+import com.jeongmin.honeymoondoctor.domain.usecase.Coordinates
 import com.jeongmin.honeymoondoctor.domain.usecase.MapsUrlCoordinates
 import com.jeongmin.honeymoondoctor.domain.usecase.ObserveCurrentTrip
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -52,11 +55,14 @@ data class PlaceEditUiState(
     val tripId: String? = null,
     val cities: List<City> = emptyList(),
     val validationError: String? = null,
+    /** 단축 링크를 펼치는 중. 네트워크를 타므로 버튼을 잠그고 진행 표시를 준다. */
+    val resolvingLink: Boolean = false,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class PlaceEditViewModel @Inject constructor(
+    private val mapsLinkResolver: MapsLinkResolver,
     private val locationProvider: LocationProvider,
     savedStateHandle: SavedStateHandle,
     observeCurrentTrip: ObserveCurrentTrip,
@@ -67,6 +73,7 @@ class PlaceEditViewModel @Inject constructor(
     private val editingId: String? = savedStateHandle["placeId"]
 
     private val validationError = MutableStateFlow<String?>(null)
+    private val resolvingLink = MutableStateFlow(false)
     private val _form = MutableStateFlow<PlaceEditForm?>(null)
     val form: StateFlow<PlaceEditForm?> = _form
 
@@ -77,8 +84,18 @@ class PlaceEditViewModel @Inject constructor(
             if (trip == null) {
                 flowOf(PlaceEditUiState(loading = false))
             } else {
-                combine(cityRepository.observeCities(trip.id), validationError) { cities, error ->
-                    PlaceEditUiState(loading = false, tripId = trip.id, cities = cities, validationError = error)
+                combine(
+                    cityRepository.observeCities(trip.id),
+                    validationError,
+                    resolvingLink,
+                ) { cities, error, resolving ->
+                    PlaceEditUiState(
+                        loading = false,
+                        tripId = trip.id,
+                        cities = cities,
+                        validationError = error,
+                        resolvingLink = resolving,
+                    )
                 }
             }
         }
@@ -151,11 +168,36 @@ class PlaceEditViewModel @Inject constructor(
      */
     fun fillFromMapsUrl() {
         val url = _form.value?.mapsUrl.orEmpty()
-        val coordinates = MapsUrlCoordinates.parse(url)
-        if (coordinates == null) {
+        if (url.isBlank()) return
+
+        // 좌표가 이미 주소에 들어 있으면 네트워크를 쓰지 않는다.
+        MapsUrlCoordinates.parse(url)?.let { applyCoordinates(it) ; return }
+
+        // 구글 지도 앱이 공유하는 단축 링크에는 좌표가 없다. 펼쳐야 나온다.
+        if (!MapsShortLink.isShortLink(url)) {
             validationError.value = "링크에서 좌표를 찾지 못했습니다. 구글 지도에서 \"공유 → 링크 복사\"한 주소를 넣어 주세요."
             return
         }
+        resolvingLink.value = true
+        validationError.value = null
+        viewModelScope.launch {
+            mapsLinkResolver.resolve(url)
+                .onSuccess { expanded ->
+                    val coordinates = MapsUrlCoordinates.parse(expanded)
+                    if (coordinates == null) {
+                        validationError.value = "링크를 펼쳤지만 좌표가 없었습니다. 위도·경도를 직접 넣어 주세요."
+                    } else {
+                        applyCoordinates(coordinates)
+                    }
+                }
+                .onFailure {
+                    validationError.value = it.toUserMessage("링크를 펼치지 못했습니다. 연결을 확인해 주세요.")
+                }
+            resolvingLink.value = false
+        }
+    }
+
+    private fun applyCoordinates(coordinates: Coordinates) {
         validationError.value = null
         updateForm {
             it.copy(

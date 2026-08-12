@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -151,11 +152,18 @@ fun PlaceEditScreen(
                     }
                     FilledTonalButton(
                         onClick = viewModel::fillFromMapsUrl,
-                        enabled = currentForm.mapsUrl.isNotBlank(),
-                    ) { Text("링크에서 좌표 채우기") }
+                        enabled = currentForm.mapsUrl.isNotBlank() && !uiState.resolvingLink,
+                    ) {
+                        if (uiState.resolvingLink) {
+                            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.width(6.dp))
+                        }
+                        Text("링크에서 좌표 채우기")
+                    }
                 }
                 Text(
-                    text = "구글 지도에서 \"공유 → 링크 복사\"한 주소를 아래 Google Maps URL 칸에 넣고 누르세요.",
+                    text = "구글 지도에서 \"공유 → 링크 복사\"한 주소를 아래 Google Maps URL 칸에 넣고 누르세요. " +
+                        "앱이 만드는 짧은 주소(maps.app.goo.gl)도 됩니다.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
