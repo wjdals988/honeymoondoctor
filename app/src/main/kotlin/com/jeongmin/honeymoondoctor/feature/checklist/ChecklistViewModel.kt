@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.jeongmin.honeymoondoctor.core.error.ActionErrorState
 import com.jeongmin.honeymoondoctor.core.error.UndoDeleteState
 import com.jeongmin.honeymoondoctor.core.error.runReporting
+import com.jeongmin.honeymoondoctor.core.ui.matchesQuery
 import com.jeongmin.honeymoondoctor.domain.model.ChecklistItem
 import com.jeongmin.honeymoondoctor.domain.model.TripMember
 import com.jeongmin.honeymoondoctor.domain.repository.ChecklistRepository
@@ -43,6 +44,7 @@ data class ChecklistUiState(
     val requiredIncompleteCount: Int = 0,
     val requiredOnly: Boolean = false,
     val ownerFilter: OwnerFilter = OwnerFilter.All,
+    val query: String = "",
     val actionError: String? = null,
 )
 
@@ -55,6 +57,7 @@ class ChecklistViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val requiredOnly = MutableStateFlow(false)
+    private val query = MutableStateFlow("")
     private val ownerFilter = MutableStateFlow<OwnerFilter>(OwnerFilter.All)
     private val actionError = ActionErrorState()
 
@@ -69,12 +72,12 @@ class ChecklistViewModel @Inject constructor(
                 combine(
                     checklistRepository.observeChecklist(trip.id),
                     tripRepository.observeMembers(trip.id),
-                    requiredOnly,
-                    ownerFilter,
+                    combine(requiredOnly, ownerFilter, query) { r, o, q -> Triple(r, o, q) },
                     actionError.message,
-                ) { items, members, requiredOnlyValue, ownerFilterValue, error ->
+                ) { items, members, (requiredOnlyValue, ownerFilterValue, queryValue), error ->
                     val filtered = items
                         .filter { if (requiredOnlyValue) it.required else true }
+                        .filter { matchesQuery(queryValue, it.title) }
                         .filter { item ->
                             when (ownerFilterValue) {
                                 OwnerFilter.All -> true
@@ -94,6 +97,7 @@ class ChecklistViewModel @Inject constructor(
                         requiredIncompleteCount = items.count { it.required && !it.completed },
                         requiredOnly = requiredOnlyValue,
                         ownerFilter = ownerFilterValue,
+                        query = queryValue,
                         actionError = error,
                     )
                 }
@@ -136,6 +140,10 @@ class ChecklistViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun setQuery(value: String) {
+        query.value = value
     }
 
     fun delete(item: ChecklistItem) {

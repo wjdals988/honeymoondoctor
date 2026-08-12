@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jeongmin.honeymoondoctor.core.error.ActionErrorState
 import com.jeongmin.honeymoondoctor.core.error.UndoDeleteState
+import com.jeongmin.honeymoondoctor.core.ui.matchesQuery
 import com.jeongmin.honeymoondoctor.core.error.runReporting
 import com.jeongmin.honeymoondoctor.core.location.LocationProvider
 import com.jeongmin.honeymoondoctor.data.local.prefs.AppPreferences
@@ -44,6 +45,7 @@ data class ScoredPlace(
 )
 
 data class NearbyUiState(
+    val query: String = "",
     val loading: Boolean = true,
     val tripId: String? = null,
     val hasLocationPermission: Boolean = false,
@@ -70,6 +72,7 @@ private data class NearbyFilters(
     val sort: NearbySort,
     val refreshing: Boolean,
     val permission: Boolean,
+    val query: String,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -83,6 +86,7 @@ class NearbyViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val categoryFilter = MutableStateFlow<PlaceCategory?>(null)
+    private val query = MutableStateFlow("")
     private val unvisitedOnly = MutableStateFlow(false)
     private val sort = MutableStateFlow(NearbySort.RECOMMENDED)
     private val refreshing = MutableStateFlow(false)
@@ -92,10 +96,17 @@ class NearbyViewModel @Inject constructor(
     /** 삭제 되돌리기. 화면이 pending을 구독해 스낵바를 띄운다. */
     val undoDelete = UndoDeleteState<Place>()
 
-    private val filtersFlow = combine(
-        categoryFilter, unvisitedOnly, sort, refreshing, permissionState,
-    ) { category, unvisited, sortValue, refreshingValue, permission ->
-        NearbyFilters(category, unvisited, sortValue, refreshingValue, permission)
+    private val filtersFlow = combine<Any?, NearbyFilters>(
+        categoryFilter, unvisitedOnly, sort, refreshing, permissionState, query,
+    ) { values ->
+        NearbyFilters(
+            category = values[0] as PlaceCategory?,
+            unvisitedOnly = values[1] as Boolean,
+            sort = values[2] as NearbySort,
+            refreshing = values[3] as Boolean,
+            permission = values[4] as Boolean,
+            query = values[5] as String,
+        )
     }
 
     val uiState: StateFlow<NearbyUiState> = observeCurrentTrip()
@@ -138,6 +149,10 @@ class NearbyViewModel @Inject constructor(
     fun onPermissionResult() {
         permissionState.value = locationProvider.hasLocationPermission()
         refreshLocation()
+    }
+
+    fun setQuery(value: String) {
+        query.value = value
     }
 
     fun setCategoryFilter(category: PlaceCategory?) {
@@ -197,6 +212,8 @@ class NearbyViewModel @Inject constructor(
         lastLocation: LastKnownLocation?,
         filters: NearbyFilters,
     ): NearbyUiState {
+        @Suppress("NAME_SHADOWING")
+        val searchQuery = filters.query
         val now = Instant.now()
         // 현재 도시: 도시 시간대 기준 오늘이 체류 기간에 포함되는 첫 도시(홈과 동일 규칙)
         val currentCity = cities.firstOrNull { city ->
@@ -230,6 +247,8 @@ class NearbyViewModel @Inject constructor(
         val filtered = places
             .filter { filters.category == null || it.category == filters.category }
             .filter { !filters.unvisitedOnly || !it.visited }
+            // 이름·메모로 검색. 좌표·URL은 사람이 기억하는 값이 아니라 대상에서 뺀다.
+            .filter { matchesQuery(filters.query, it.name, it.notes) }
 
         val (withCoords, withoutCoords) = filtered.partition { it.hasCoordinates }
         val scored = withCoords.map { place ->
@@ -260,6 +279,7 @@ class NearbyViewModel @Inject constructor(
         }
 
         return NearbyUiState(
+            query = searchQuery,
             loading = false,
             tripId = tripId,
             hasLocationPermission = filters.permission,

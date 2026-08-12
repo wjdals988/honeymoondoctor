@@ -52,6 +52,7 @@ import com.jeongmin.honeymoondoctor.core.ui.CardTone
 import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
+import com.jeongmin.honeymoondoctor.core.ui.SearchField
 import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
 import com.jeongmin.honeymoondoctor.core.ui.openGoogleMapsDirections
 import com.jeongmin.honeymoondoctor.core.ui.openUrl
@@ -133,6 +134,13 @@ fun NearbyScreen(
                             )
                         },
                         onSelectCity = viewModel::selectCity,
+                    )
+                }
+                item {
+                    SearchField(
+                        query = uiState.query,
+                        onQueryChange = viewModel::setQuery,
+                        placeholder = "장소 이름·메모 검색",
                     )
                 }
                 item {

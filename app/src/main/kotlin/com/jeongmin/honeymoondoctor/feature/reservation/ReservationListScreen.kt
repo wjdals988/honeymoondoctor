@@ -41,6 +41,7 @@ import com.jeongmin.honeymoondoctor.core.ui.CardTone
 import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
+import com.jeongmin.honeymoondoctor.core.ui.SearchField
 import com.jeongmin.honeymoondoctor.domain.model.Reservation
 import com.jeongmin.honeymoondoctor.domain.model.ReservationStatus
 import com.jeongmin.honeymoondoctor.domain.model.maskSecret
@@ -91,6 +92,11 @@ fun ReservationListScreen(
                     modifier = Modifier.padding(top = 8.dp),
                 )
             }
+            SearchField(
+                query = uiState.query,
+                onQueryChange = viewModel::setQuery,
+                placeholder = "예약명·업체·예약번호 검색",
+            )
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 8.dp),

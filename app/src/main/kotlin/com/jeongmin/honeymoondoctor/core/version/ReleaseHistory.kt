@@ -20,6 +20,14 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.4.2",
+            versionCode = 19,
+            date = "2026-08-12",
+            changes = listOf(
+                "장소·예약함·준비물 목록에 검색이 생겼습니다. 입력하는 즉시 걸러지고, X를 누르면 전체 목록으로 돌아갑니다. 예약은 예약번호로도 찾을 수 있습니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.4.1",
             versionCode = 18,
             date = "2026-08-12",

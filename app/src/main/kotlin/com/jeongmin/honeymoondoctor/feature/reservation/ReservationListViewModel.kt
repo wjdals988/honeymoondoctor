@@ -2,6 +2,7 @@ package com.jeongmin.honeymoondoctor.feature.reservation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jeongmin.honeymoondoctor.core.ui.matchesQuery
 import com.jeongmin.honeymoondoctor.domain.model.Reservation
 import com.jeongmin.honeymoondoctor.domain.model.ReservationStatus
 import com.jeongmin.honeymoondoctor.domain.repository.ReservationRepository
@@ -22,6 +23,7 @@ data class ReservationListUiState(
     val tripId: String? = null,
     val reservations: List<Reservation> = emptyList(),
     val statusFilter: ReservationStatus? = null, // null = 전체
+    val query: String = "",
     val needsAttentionCount: Int = 0, // 확인 필요 + 예약 필요 + 결제 필요
 )
 
@@ -33,6 +35,7 @@ class ReservationListViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val statusFilter = MutableStateFlow<ReservationStatus?>(null)
+    private val query = MutableStateFlow("")
 
     val uiState: StateFlow<ReservationListUiState> = observeCurrentTrip()
         .flatMapLatest { trip ->
@@ -42,7 +45,8 @@ class ReservationListViewModel @Inject constructor(
                 combine(
                     reservationRepository.observeReservations(trip.id),
                     statusFilter,
-                ) { reservations, filter ->
+                    query,
+                ) { reservations, filter, queryValue ->
                     val attention = setOf(
                         ReservationStatus.NEEDS_CHECK,
                         ReservationStatus.NEEDS_BOOKING,
@@ -53,14 +57,21 @@ class ReservationListViewModel @Inject constructor(
                         tripId = trip.id,
                         reservations = reservations
                             .filter { filter == null || it.status == filter }
+                            // 예약번호까지 검색 대상 — "체크인 데스크에서 번호로 찾기"가 실사용이다.
+                            .filter { matchesQuery(queryValue, it.title, it.vendor, it.confirmationCode) }
                             .sortedWith(compareBy(nullsLast()) { it.startAt }),
                         statusFilter = filter,
+                        query = queryValue,
                         needsAttentionCount = reservations.count { it.status in attention },
                     )
                 }
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReservationListUiState())
+
+    fun setQuery(value: String) {
+        query.value = value
+    }
 
     fun setStatusFilter(status: ReservationStatus?) {
         statusFilter.value = status

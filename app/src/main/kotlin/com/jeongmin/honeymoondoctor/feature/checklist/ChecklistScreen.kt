@@ -51,6 +51,7 @@ import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
+import com.jeongmin.honeymoondoctor.core.ui.SearchField
 import com.jeongmin.honeymoondoctor.core.ui.UndoDeleteSnackbarEffect
 import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.domain.model.ChecklistCategory
@@ -122,6 +123,11 @@ fun ChecklistScreen(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             )
 
+            SearchField(
+                query = uiState.query,
+                onQueryChange = viewModel::setQuery,
+                placeholder = "준비물 검색",
+            )
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
