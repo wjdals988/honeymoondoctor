@@ -57,8 +57,11 @@ class MapsLinkResolver @Inject constructor() {
             instanceFollowRedirects = false
             connectTimeout = TIMEOUT_MS
             readTimeout = TIMEOUT_MS
-            // 기본 User-Agent로는 모바일 페이지를 주며 좌표가 빠질 수 있다.
-            setRequestProperty("User-Agent", DESKTOP_USER_AGENT)
+            // User-Agent 선택이 결과를 가른다. 실제 링크로 확인해 보니 데스크톱 UA를 보내면
+            // 구글이 리다이렉트 대신 Firebase 딥링크 안내 페이지(HTML)를 주고, 그 안에는
+            // 좌표도 지도 주소도 없다. 안드로이드 UA로는 302 + Location에 좌표가 담긴
+            // 지도 주소가 그대로 온다. 이 앱은 안드로이드이므로 자기 자신으로 요청한다.
+            setRequestProperty("User-Agent", ANDROID_USER_AGENT)
         }
         try {
             val code = connection.responseCode
@@ -96,9 +99,9 @@ class MapsLinkResolver @Inject constructor() {
         const val MAX_HOPS = 5
         const val MAX_BODY_CHARS = 200_000
         const val TIMEOUT_MS = 8_000
-        const val DESKTOP_USER_AGENT =
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
-                "(KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+        const val ANDROID_USER_AGENT =
+            "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 " +
+                "(KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36"
     }
 }
 
