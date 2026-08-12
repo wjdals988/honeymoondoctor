@@ -20,6 +20,15 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.3.1",
+            versionCode = 16,
+            date = "2026-08-12",
+            changes = listOf(
+                "일정 알림이 실제로 오도록 고쳤습니다. 일정 탭에 처음 들어갈 때 알림 권한을 요청합니다. 이전에는 권한을 요청하는 곳이 사실상 없어, 알림이 정시에 만들어져도 조용히 버려졌습니다.",
+                "경비 목록이 날짜별로 묶입니다. 오늘 · 어제 · 날짜 머리글에 그날 쓴 합계가 함께 표시됩니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.3.0",
             versionCode = 15,
             date = "2026-08-12",

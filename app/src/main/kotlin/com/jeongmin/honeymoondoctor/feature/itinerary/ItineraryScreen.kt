@@ -1,5 +1,10 @@
 package com.jeongmin.honeymoondoctor.feature.itinerary
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.time.LocalTimes
 import com.jeongmin.honeymoondoctor.core.time.koreanZoneLabel
@@ -84,6 +90,24 @@ fun ItineraryScreen(
         }
     }
     val snackbarHostState = rememberActionErrorSnackbar(uiState.actionError, viewModel::clearActionError)
+
+    // 알림 권한(Android 13+)을 일정 탭 최초 진입에서 딱 한 번 요청한다. 일정 리마인더가
+    // 알림의 주 소비자인데, 종전에는 동기화 상태 화면에만 요청이 있어 그 화면을 열지 않은
+    // 사용자는 권한이 영영 없었다 — Worker가 정시에 돌아도 알림이 조용히 버려졌다
+    // (에뮬레이터 실측: importance=NONE으로 미게시). 거부하면 다시 조르지 않는다 —
+    // 동기화 상태 화면의 스위치가 재요청 경로로 남아 있다.
+    val context = LocalContext.current
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { /* 결과와 무관하게 알림 없이도 앱은 동작한다 */ }
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
     val pendingUndo by viewModel.undoDelete.pending.collectAsState()
     UndoDeleteSnackbarEffect(
         hostState = snackbarHostState,

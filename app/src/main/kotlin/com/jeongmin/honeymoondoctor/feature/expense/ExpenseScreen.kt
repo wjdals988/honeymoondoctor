@@ -53,6 +53,8 @@ import com.jeongmin.honeymoondoctor.domain.model.ExpenseCategory
 import com.jeongmin.honeymoondoctor.domain.model.TravelCurrency
 import com.jeongmin.honeymoondoctor.domain.usecase.KrwConverter
 import java.text.NumberFormat
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Locale
 
 private val krwFormat: NumberFormat = NumberFormat.getNumberInstance(Locale.KOREA)
@@ -164,13 +166,42 @@ fun ExpenseScreen(
                     )
                 }
             } else {
-                items(uiState.expenses, key = { it.id }) { expense ->
-                    ExpenseRow(
-                        expense = expense,
-                        uiState = uiState,
-                        onEdit = { onEditExpense(expense.id) },
-                        onDelete = { deleteTarget = expense },
-                    )
+                // 가계부 앱 표준 패턴: 날짜(오늘/어제/M월 d일) 헤더 + 그날 합계.
+                // 행마다 날짜를 반복해서 적는 것보다 "그날 얼마 썼는지"가 한 줄로 보인다.
+                // expenses는 이미 최신순 정렬이라 groupBy가 날짜 역순 그룹을 유지한다.
+                val zone = ZoneId.of("Asia/Seoul")
+                val today = LocalDate.now(zone)
+                val grouped = uiState.expenses.groupBy { it.spentAt.atZone(zone).toLocalDate() }
+                grouped.forEach { (date, dayExpenses) ->
+                    item(key = "day-$date") {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = when (date) {
+                                    today -> "오늘"
+                                    today.minusDays(1) -> "어제"
+                                    else -> "${date.monthValue}월 ${date.dayOfMonth}일 (${koreanDayOfWeek(date)})"
+                                },
+                                style = MaterialTheme.typography.labelLarge,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                text = formatKrw(dayExpenses.sumOf { it.amountKrw }),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    items(dayExpenses, key = { it.id }) { expense ->
+                        ExpenseRow(
+                            expense = expense,
+                            uiState = uiState,
+                            onEdit = { onEditExpense(expense.id) },
+                            onDelete = { deleteTarget = expense },
+                        )
+                    }
                 }
             }
         }
@@ -280,7 +311,6 @@ private fun ExpenseRow(
                         if (expense.shared) "공동" else "개인",
                         payer?.let { "결제 $it" },
                         city,
-                        LocalTimes.formatDate(expense.spentAt, "Asia/Seoul"),
                     ).joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -305,3 +335,7 @@ private fun ExpenseRow(
         }
     }
 }
+
+/** "8월 12일 (수)"의 요일. DayOfWeek.getDisplayName은 로케일 의존이라 직접 매핑한다. */
+private fun koreanDayOfWeek(date: LocalDate): String =
+    listOf("월", "화", "수", "목", "금", "토", "일")[date.dayOfWeek.value - 1]
