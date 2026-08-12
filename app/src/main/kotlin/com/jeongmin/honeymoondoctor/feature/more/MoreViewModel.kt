@@ -3,6 +3,7 @@ package com.jeongmin.honeymoondoctor.feature.more
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jeongmin.honeymoondoctor.core.demo.DemoDataResetter
+import com.jeongmin.honeymoondoctor.data.local.prefs.AppPreferences
 import com.jeongmin.honeymoondoctor.domain.model.Trip
 import com.jeongmin.honeymoondoctor.domain.repository.AuthRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
@@ -34,6 +35,7 @@ class MoreViewModel @Inject constructor(
     private val demoDataResetter: DemoDataResetter,
     private val authRepository: AuthRepository,
     private val deleteAccountUseCase: DeleteAccountUseCase,
+    private val appPreferences: AppPreferences,
     observeCurrentTrip: ObserveCurrentTrip,
     tripRepository: TripRepository,
 ) : ViewModel() {
@@ -59,7 +61,13 @@ class MoreViewModel @Inject constructor(
     fun logout() {
         // 로그아웃 실패(예: Credential Manager 상태 정리 실패)로 앱이 죽지 않게 감싼다.
         // 로그아웃은 되돌릴 필요가 없는 동작이라 별도 오류 표시 없이 조용히 넘긴다.
-        viewModelScope.launch { runCatching { authRepository.signOut() } }
+        viewModelScope.launch {
+            // 기기에 남는 설정(마지막 위치·환율·보던 여행)을 먼저 지운다. 다음 사람이
+            // 같은 기기로 로그인했을 때 남의 흔적이 보이면 안 된다. signOut보다 먼저
+            // 하는 이유: signOut이 실패해도 기기 흔적은 지워져 있어야 한다.
+            runCatching { appPreferences.clearAll() }
+            runCatching { authRepository.signOut() }
+        }
     }
 
     fun deleteAccount() {
@@ -88,7 +96,12 @@ class MoreViewModel @Inject constructor(
         val user = authRepository.currentUser.value ?: return
         _deleteAccountState.value = DeleteAccountUiState.InProgress
         when (val outcome = deleteAccountUseCase(user, currentTrip.value)) {
-            DeleteAccountOutcome.Success -> _deleteAccountState.value = DeleteAccountUiState.Idle
+            DeleteAccountOutcome.Success -> {
+                // 서버 데이터만 지우고 기기 설정을 남겨 두면 개인정보처리방침의
+                // "탈퇴 시 삭제"가 반만 사실이 된다.
+                runCatching { appPreferences.clearAll() }
+                _deleteAccountState.value = DeleteAccountUiState.Idle
+            }
             DeleteAccountOutcome.RequiresReauth -> _deleteAccountState.value = DeleteAccountUiState.NeedsReauth
             is DeleteAccountOutcome.Failure ->
                 _deleteAccountState.value =

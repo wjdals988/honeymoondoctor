@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jeongmin.honeymoondoctor.core.error.toUserMessage
 import com.jeongmin.honeymoondoctor.data.exchange.ExchangeRateFetcher
+import com.jeongmin.honeymoondoctor.data.local.prefs.AppPreferences
 import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.Expense
 import com.jeongmin.honeymoondoctor.domain.model.ExpenseCategory
@@ -17,6 +18,7 @@ import com.jeongmin.honeymoondoctor.domain.repository.ExpenseRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ItineraryRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ReservationRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
+import com.jeongmin.honeymoondoctor.domain.usecase.ExchangeRateDefaults
 import com.jeongmin.honeymoondoctor.domain.usecase.KrwConverter
 import com.jeongmin.honeymoondoctor.domain.usecase.ObserveCurrentTrip
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -39,6 +41,11 @@ data class ExpenseEditForm(
     val expenseId: String?, // null이면 새 지출
     val amountText: String = "",
     val currency: TravelCurrency = TravelCurrency.KRW,
+    /**
+     * 1 [currency] = ? KRW. KRW일 때만 "1"이 옳다. 외화로 바꾸면 **비워 둔다** —
+     * 예전에는 "1"이 그대로 남아 €50이 50원으로 조용히 저장됐다(환율 > 0 검증을 "1"이
+     * 통과해 버렸다). 비워 두면 저장이 막히고 이유가 표시된다.
+     */
     val fxRateText: String = "1",
     val category: ExpenseCategory = ExpenseCategory.FOOD,
     val paidByUid: String? = null,
@@ -75,6 +82,7 @@ data class ExpenseEditUiState(
 @HiltViewModel
 class ExpenseEditViewModel @Inject constructor(
     private val exchangeRateFetcher: ExchangeRateFetcher,
+    private val appPreferences: AppPreferences,
     savedStateHandle: SavedStateHandle,
     observeCurrentTrip: ObserveCurrentTrip,
     tripRepository: TripRepository,
@@ -175,13 +183,15 @@ class ExpenseEditViewModel @Inject constructor(
      */
     fun fetchTodayRate() {
         val currency = _form.value?.currency ?: return
-        if (currency == TravelCurrency.KRW || fxRateLoading.value) return
+        // autoFetchable이 아닌 통화는 호출해도 API가 모른다고 답한다. 화면이 버튼을
+        // 숨기지만, 여기서도 막아 두어야 호출 경로가 늘어도 안전하다.
+        if (currency == TravelCurrency.KRW || !currency.autoFetchable || fxRateLoading.value) return
         fxRateLoading.value = true
         fxRateNotice.value = null
         viewModelScope.launch {
             exchangeRateFetcher.fetch(currency)
                 .onSuccess { fetched ->
-                    updateForm { it.copy(fxRateText = formatRate(fetched.krwPerUnit)) }
+                    updateForm { it.copy(fxRateText = ExchangeRateDefaults.formatRate(fetched.krwPerUnit)) }
                     fxRateNotice.value = "${fetched.date} 유럽중앙은행 고시 기준입니다. 필요하면 직접 고치세요."
                 }
                 .onFailure {
@@ -191,16 +201,50 @@ class ExpenseEditViewModel @Inject constructor(
         }
     }
 
-    /** 소수 둘째 자리까지만 남긴다. 1629.6400000001 같은 값이 칸에 그대로 들어가면 읽기 나쁘다. */
-    private fun formatRate(rate: Double): String =
-        java.math.BigDecimal(rate).setScale(2, java.math.RoundingMode.HALF_UP).toPlainString()
-
     fun updateForm(transform: (ExpenseEditForm) -> ExpenseEditForm) {
         val before = _form.value
-        _form.value = before?.let(transform)
+        val after = before?.let(transform)
+        _form.value = after
         validationError.value = null
         // 사용자가 환율을 직접 고치면 "자동 조회" 안내는 더 이상 사실이 아니다.
-        if (before?.fxRateText != _form.value?.fxRateText) fxRateNotice.value = null
+        if (before?.fxRateText != after?.fxRateText) fxRateNotice.value = null
+        if (before != null && after != null && before.currency != after.currency) {
+            onCurrencyChanged(after.currency)
+        }
+    }
+
+    /**
+     * 통화를 바꾸면 환율도 그 통화의 것으로 바꿔야 한다. 예전에는 이전 통화의 환율이
+     * 그대로 남아, EUR로 1629.64를 받아 둔 뒤 JPY로 바꾸면 엔화가 1엔=1629원으로
+     * 저장됐다. 직전에 그 통화로 쓴 값이 있으면 그것을, 없으면 빈 칸을 둔다.
+     */
+    private fun onCurrencyChanged(currency: TravelCurrency) {
+        if (currency == TravelCurrency.KRW) {
+            _form.value = _form.value?.copy(
+                fxRateText = ExchangeRateDefaults.rateTextFor(currency, emptyMap()),
+            )
+            fxRateNotice.value = null
+            return
+        }
+        viewModelScope.launch {
+            val remembered = appPreferences.snapshot.first().lastExchangeRates
+            // 통화를 다시 바꿨으면 늦게 도착한 이 결과는 버린다.
+            if (_form.value?.currency != currency) return@launch
+            val rateText = ExchangeRateDefaults.rateTextFor(currency, remembered)
+            _form.value = _form.value?.copy(fxRateText = rateText)
+            // 자동 조회를 못 하는 통화에 "불러오기를 누르세요"라고 하면, 화면에 없는
+            // 버튼을 찾게 만든다(그 버튼은 autoFetchable일 때만 그려진다).
+            fxRateNotice.value = when {
+                rateText.isEmpty() && currency.autoFetchable ->
+                    "환율을 입력하거나 \"오늘 환율 불러오기\"를 누르세요."
+                rateText.isEmpty() ->
+                    "${currency.code}은 자동 조회를 지원하지 않습니다. 환율을 직접 입력해 주세요."
+                currency.autoFetchable ->
+                    "직전에 쓴 환율입니다. 필요하면 고치거나 다시 불러오세요."
+                else ->
+                    "직전에 쓴 환율입니다. 필요하면 직접 고쳐 주세요."
+            }
+        }
     }
 
     fun save(onSaved: () -> Unit) {
@@ -249,7 +293,14 @@ class ExpenseEditViewModel @Inject constructor(
                     expenseRepository.update(tripId, expense)
                 }
             }
-                .onSuccess { onSaved() }
+                .onSuccess {
+                    // 다음 지출 입력의 기본값으로 쓴다. 저장된 이 지출의 환율은 스냅샷으로
+                    // 굳었고 여기 값과 무관하다.
+                    if (form.currency != TravelCurrency.KRW) {
+                        runCatching { appPreferences.setLastExchangeRate(form.currency.code, fxRate) }
+                    }
+                    onSaved()
+                }
                 .onFailure { validationError.value = it.toUserMessage("저장에 실패했습니다. 완료된 여행은 수정할 수 없습니다.") }
         }
     }

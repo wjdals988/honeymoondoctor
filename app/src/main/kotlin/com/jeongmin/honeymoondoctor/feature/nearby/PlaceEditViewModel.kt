@@ -43,8 +43,14 @@ data class PlaceEditForm(
     val mapsUrl: String = "",
     val notes: String = "",
     val preferredTimes: Set<PreferredTime> = emptySet(),
-    val ratingText: String = "",
-    val reviewCountText: String = "",
+    /** 별 탭으로만 바뀐다. 가져오기로 들어온 4.7 같은 소수도 그대로 담는다. */
+    val rating: Double? = null,
+    /**
+     * 화면에 입력 칸이 없다. 사람이 앉아서 "리뷰 12만개"를 세어 넣을 값이 아니라서
+     * 뺐지만, TSV/JSON 가져오기가 채우고 추천 점수(PlaceRecommendationScorer)가
+     * 읽으므로 필드는 남긴다. 편집하다가 조용히 지워지면 안 되니 폼에 실어 나른다.
+     */
+    val reviewCount: Long? = null,
     // 편집으로 바꾸지 않고 보존하는 값
     val visitedAt: Instant? = null,
     val sourceUpdatedAt: Instant? = null,
@@ -128,8 +134,8 @@ class PlaceEditViewModel @Inject constructor(
                 mapsUrl = existing.mapsUrl.orEmpty(),
                 notes = existing.notes.orEmpty(),
                 preferredTimes = existing.preferredTimes.toSet(),
-                ratingText = existing.ratingSnapshot?.toString().orEmpty(),
-                reviewCountText = existing.reviewCountSnapshot?.toString().orEmpty(),
+                rating = existing.ratingSnapshot,
+                reviewCount = existing.reviewCountSnapshot,
                 visitedAt = existing.visitedAt,
                 sourceUpdatedAt = existing.sourceUpdatedAt,
             )
@@ -256,18 +262,9 @@ class PlaceEditViewModel @Inject constructor(
             validationError.value = "위도·경도는 함께 입력하거나 함께 비워야 합니다."
             return
         }
-        val rating = form.ratingText.trim().takeIf { it.isNotEmpty() }?.let {
-            it.toDoubleOrNull()?.takeIf { r -> r in 0.0..5.0 } ?: run {
-                validationError.value = "평점은 0~5 사이 숫자여야 합니다."
-                return
-            }
-        }
-        val reviewCount = form.reviewCountText.trim().takeIf { it.isNotEmpty() }?.let {
-            it.replace(",", "").toLongOrNull()?.takeIf { c -> c >= 0 } ?: run {
-                validationError.value = "리뷰 수는 0 이상 정수여야 합니다."
-                return
-            }
-        }
+        // 별 탭은 1~5만 만들고 가져오기 값도 파서가 이미 검증한다 — 여기서 다시 막을 것이 없다.
+        val rating = form.rating
+        val reviewCount = form.reviewCount
 
         // 평점·리뷰 스냅샷이 새로 입력·변경되면 스냅샷 확인일을 지금으로 기록한다(실시간 수집 아님)
         val sourceUpdatedAt = if (rating != null || reviewCount != null) {

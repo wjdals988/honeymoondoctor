@@ -39,6 +39,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.time.LocalTimes
 import com.jeongmin.honeymoondoctor.core.ui.CityPickerField
 import com.jeongmin.honeymoondoctor.core.ui.CollapsibleSection
+import com.jeongmin.honeymoondoctor.core.ui.RatingStars
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.domain.model.PlaceCategory
 import com.jeongmin.honeymoondoctor.domain.model.PlacePriority
@@ -138,8 +139,7 @@ fun PlaceEditScreen(
                 initiallyExpanded = currentForm.latitudeText.isNotBlank() ||
                     currentForm.longitudeText.isNotBlank() ||
                     currentForm.mapsUrl.isNotBlank() ||
-                    currentForm.ratingText.isNotBlank() ||
-                    currentForm.reviewCountText.isNotBlank() ||
+                    currentForm.rating != null ||
                     currentForm.notes.isNotBlank(),
             ) {
                 // 위도·경도는 사람이 손으로 넣을 값이 아니다. 버튼 두 개로 대신 채우고
@@ -192,29 +192,23 @@ fun PlaceEditScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = currentForm.ratingText,
-                        onValueChange = { value -> viewModel.updateForm { it.copy(ratingText = value) } },
-                        label = { Text("평점(0~5)") },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f),
-                    )
-                    OutlinedTextField(
-                        value = currentForm.reviewCountText,
-                        onValueChange = { value -> viewModel.updateForm { it.copy(reviewCountText = value) } },
-                        label = { Text("리뷰 수") },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+                Text("평점", style = MaterialTheme.typography.labelLarge)
+                RatingStars(
+                    rating = currentForm.rating,
+                    onRatingChange = { value -> viewModel.updateForm { it.copy(rating = value) } },
+                )
                 Text(
-                    text = "평점·리뷰 수는 실시간 수집하지 않는 스냅샷입니다." +
-                        (
+                    text = buildString {
+                        append("평점은 실시간 수집하지 않는 스냅샷입니다.")
+                        // 리뷰 수는 입력 칸이 없지만, 가져오기로 들어온 값이 있으면
+                        // 보이지 않게 저장돼 있다는 사실 자체는 알려 준다.
+                        currentForm.reviewCount?.let { append(" 가져온 리뷰 수: ${it}개.") }
+                        append(
                             currentForm.sourceUpdatedAt?.let {
                                 " 확인일: ${LocalTimes.formatDate(it, "Asia/Seoul")}"
-                            } ?: " 저장 시 오늘 날짜로 확인일이 기록됩니다."
-                            ),
+                            } ?: " 저장 시 오늘 날짜로 확인일이 기록됩니다.",
+                        )
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

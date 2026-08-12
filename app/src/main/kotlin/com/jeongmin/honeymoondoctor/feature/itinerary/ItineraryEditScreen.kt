@@ -1,5 +1,6 @@
 package com.jeongmin.honeymoondoctor.feature.itinerary
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +38,7 @@ import com.jeongmin.honeymoondoctor.core.ui.CollapsibleSection
 import com.jeongmin.honeymoondoctor.core.ui.DateField
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.core.ui.TimeField
+import com.jeongmin.honeymoondoctor.domain.model.ItineraryTitleSuggestions
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryType
 
 /** 이번 여행에서 고를 수 있는 시간대 후보. 도시를 고르면 자동으로 바뀌고, 직접 바꿀 수도 있다. */
@@ -107,6 +110,25 @@ fun ItineraryEditScreen(
                 optionLabel = { it.labelKo },
                 onSelect = { type -> viewModel.updateForm { it.copy(type = type) } },
             )
+
+            // 이름은 필수라 칸을 없앨 수 없지만, 유형을 고르면 그 유형에서 흔한 이름을
+            // 칩으로 내밀어 타이핑을 건너뛸 수 있게 한다. 누른 칩이 곧 현재 이름이면
+            // 선택 상태로 보여, 한 번 더 누르는 헛수고를 막는다.
+            val suggestions = ItineraryTitleSuggestions.forType(currentForm.type)
+            if (suggestions.isNotEmpty()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                ) {
+                    suggestions.forEach { suggestion ->
+                        FilterChip(
+                            selected = currentForm.title.trim() == suggestion,
+                            onClick = { viewModel.updateForm { it.copy(title = suggestion) } },
+                            label = { Text(suggestion) },
+                        )
+                    }
+                }
+            }
 
             CityPickerField(
                 selectedCityId = currentForm.cityId,

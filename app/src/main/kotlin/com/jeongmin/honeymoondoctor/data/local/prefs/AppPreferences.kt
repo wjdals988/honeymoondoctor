@@ -31,6 +31,12 @@ data class AppPrefsSnapshot(
     val selectedTripId: String?,
     val lastSyncAtEpochMillis: Long?,
     val scheduledReminderKeys: Set<String>,
+    /**
+     * 통화 코드 → 직전에 쓴 환율(1 외화 = ? KRW). 지출을 넣을 때마다 같은 값을 다시
+     * 타이핑하지 않게 하려고 남긴다. 기내·로밍처럼 환율을 못 불러오는 상황이 실제로
+     * 흔해서, 네트워크 조회의 대체 수단으로도 쓰인다.
+     */
+    val lastExchangeRates: Map<String, Double>,
 )
 
 /** 앱 설정, 선택 도시, 최근 위치 메타데이터를 담는 DataStore 래퍼. 위치는 화면 진입/새로고침 때만 갱신된다. */
@@ -49,6 +55,13 @@ class AppPreferences @Inject constructor(
         val SELECTED_TRIP_ID = stringPreferencesKey("selected_trip_id")
         val LAST_SYNC_AT = longPreferencesKey("last_sync_at_epoch_millis")
         val SCHEDULED_REMINDER_KEYS = stringSetPreferencesKey("scheduled_reminder_keys")
+
+        /**
+         * `"EUR=1629.64"` 형태의 문자열 집합. 통화별로 키를 따로 만들지 않는 이유:
+         * 통화가 늘어날 때마다 키가 늘어나면 스냅샷을 읽는 쪽에서 통화 목록을 미리
+         * 알아야 한다. 집합 하나면 앱이 모르는 통화가 들어와도 그대로 읽힌다.
+         */
+        val LAST_EXCHANGE_RATES = stringSetPreferencesKey("last_exchange_rates")
     }
 
     val snapshot: Flow<AppPrefsSnapshot> = dataStore.data.map { prefs ->
@@ -66,6 +79,7 @@ class AppPreferences @Inject constructor(
             selectedTripId = prefs[Keys.SELECTED_TRIP_ID],
             lastSyncAtEpochMillis = prefs[Keys.LAST_SYNC_AT],
             scheduledReminderKeys = prefs[Keys.SCHEDULED_REMINDER_KEYS].orEmpty(),
+            lastExchangeRates = decodeRates(prefs[Keys.LAST_EXCHANGE_RATES].orEmpty()),
         )
     }
 
@@ -103,4 +117,40 @@ class AppPreferences @Inject constructor(
     suspend fun setScheduledReminderKeys(keys: Set<String>) {
         dataStore.edit { it[Keys.SCHEDULED_REMINDER_KEYS] = keys }
     }
+
+    /**
+     * 그 통화로 마지막에 쓴 환율을 덮어쓴다. 저장된 지출의 환율은 건드리지 않는다 —
+     * 여기 값은 "다음 입력의 기본값"일 뿐이다.
+     */
+    suspend fun setLastExchangeRate(currencyCode: String, rate: Double) {
+        if (rate <= 0) return
+        dataStore.edit { prefs ->
+            val others = decodeRates(prefs[Keys.LAST_EXCHANGE_RATES].orEmpty())
+                .filterKeys { it != currencyCode }
+            prefs[Keys.LAST_EXCHANGE_RATES] = encodeRates(others + (currencyCode to rate))
+        }
+    }
+
+    /**
+     * 기기에 남은 이 앱의 설정 전부를 지운다. 로그아웃·회원 탈퇴에서 호출한다.
+     *
+     * 왜 필요한가: 여기에는 마지막으로 잡은 위치(위도·경도)와 통화별 환율, 보고 있던
+     * 여행 ID가 들어 있다. 탈퇴하면 서버 데이터는 지워지는데 기기에는 그대로 남아
+     * 있었다 — 다음 사람이 같은 기기로 로그인하면 남의 위치 기록이 깔린 상태로
+     * 시작하는 셈이었다. 개인정보처리방침에 적은 "탈퇴 시 삭제"와도 어긋났다.
+     */
+    suspend fun clearAll() {
+        dataStore.edit { it.clear() }
+    }
+
+    private fun decodeRates(raw: Set<String>): Map<String, Double> =
+        raw.mapNotNull { entry ->
+            val code = entry.substringBefore('=', missingDelimiterValue = "")
+            val rate = entry.substringAfter('=', missingDelimiterValue = "").toDoubleOrNull()
+            // 형식이 깨진 항목은 조용히 버린다. 환율 기본값 하나 때문에 앱이 멈출 일은 없어야 한다.
+            if (code.isBlank() || rate == null || rate <= 0) null else code to rate
+        }.toMap()
+
+    private fun encodeRates(rates: Map<String, Double>): Set<String> =
+        rates.map { (code, rate) -> "$code=$rate" }.toSet()
 }
