@@ -57,8 +57,8 @@ android {
         applicationId = "com.jeongmin.honeymoondoctor"
         minSdk = 26
         targetSdk = 37
-        versionCode = 19
-        versionName = "0.4.2"
+        versionCode = 20
+        versionName = "0.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -175,6 +175,7 @@ dependencies {
     implementation(libs.googleid)
 
     implementation(libs.play.services.location)
+    implementation(libs.osmdroid)
 
     testImplementation(libs.junit4)
     testImplementation(libs.truth)

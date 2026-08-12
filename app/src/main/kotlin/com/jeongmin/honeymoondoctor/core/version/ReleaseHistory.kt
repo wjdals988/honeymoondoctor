@@ -20,6 +20,14 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.5.0",
+            versionCode = 20,
+            date = "2026-08-12",
+            changes = listOf(
+                "우리 위치에 지도가 생겼습니다. 공유된 위치가 지도 위 마커로 표시되고, 두 사람 다 공유하면 둘 다 보이게 화면이 맞춰집니다. 지도는 오픈스트리트맵이며, 상세 탐색은 기존처럼 \"지도\" 버튼이 지도 앱을 엽니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.4.2",
             versionCode = 19,
             date = "2026-08-12",

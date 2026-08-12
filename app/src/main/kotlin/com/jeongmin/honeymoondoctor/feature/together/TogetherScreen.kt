@@ -114,6 +114,9 @@ fun TogetherScreen(
                     title = "아직 공유된 위치가 없습니다",
                     description = "아래 버튼으로 내 위치를 공유하면 상대의 화면에 표시됩니다.",
                 )
+            } else {
+                // 앱 내 미니맵(오픈스트리트맵). 상세 탐색은 카드의 "지도"가 지도 앱을 연다.
+                TogetherMiniMap(locations = uiState.locations)
             }
 
             uiState.locations.forEach { member ->
