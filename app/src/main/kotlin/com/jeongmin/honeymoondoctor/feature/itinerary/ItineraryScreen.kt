@@ -50,6 +50,7 @@ import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.copyToClipboard
 import com.jeongmin.honeymoondoctor.core.ui.openGoogleMapsDirections
+import com.jeongmin.honeymoondoctor.core.ui.UndoDeleteSnackbarEffect
 import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryItem
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryStatus
@@ -83,6 +84,13 @@ fun ItineraryScreen(
         }
     }
     val snackbarHostState = rememberActionErrorSnackbar(uiState.actionError, viewModel::clearActionError)
+    val pendingUndo by viewModel.undoDelete.pending.collectAsState()
+    UndoDeleteSnackbarEffect(
+        hostState = snackbarHostState,
+        pending = pendingUndo,
+        onUndo = viewModel::restoreDeleted,
+        onDismissed = viewModel.undoDelete::dismiss,
+    )
 
     Scaffold(
         modifier = modifier,

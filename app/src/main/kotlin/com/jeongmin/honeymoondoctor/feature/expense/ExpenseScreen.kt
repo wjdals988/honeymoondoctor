@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -45,6 +46,7 @@ import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
+import com.jeongmin.honeymoondoctor.core.ui.UndoDeleteSnackbarEffect
 import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.domain.model.Expense
 import com.jeongmin.honeymoondoctor.domain.model.TravelCurrency
@@ -67,6 +69,13 @@ fun ExpenseScreen(
     val uiState by viewModel.uiState.collectAsState()
     var deleteTarget by remember { mutableStateOf<Expense?>(null) }
     val snackbarHostState = rememberActionErrorSnackbar(uiState.actionError, viewModel::clearActionError)
+    val pendingUndo by viewModel.undoDelete.pending.collectAsState()
+    UndoDeleteSnackbarEffect(
+        hostState = snackbarHostState,
+        pending = pendingUndo,
+        onUndo = viewModel::restoreDeleted,
+        onDismissed = viewModel.undoDelete::dismiss,
+    )
 
     Scaffold(
         modifier = modifier,
@@ -132,7 +141,12 @@ fun ExpenseScreen(
                     EmptyState(
                         title = "아직 기록한 지출이 없습니다",
                         modifier = Modifier.padding(top = 48.dp),
-                        description = "+ 버튼으로 첫 지출을 추가해 보세요.",
+                        description = "여행 중 쓴 돈을 기록하면 정산까지 계산해 줍니다.",
+                        action = if (LocalTripReadOnly.current) {
+                            null
+                        } else {
+                            { FilledTonalButton(onClick = onAddExpense) { Text("첫 지출 추가") } }
+                        },
                     )
                 }
             } else {

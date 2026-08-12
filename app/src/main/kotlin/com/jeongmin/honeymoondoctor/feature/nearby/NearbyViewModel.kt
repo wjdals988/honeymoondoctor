@@ -3,6 +3,7 @@ package com.jeongmin.honeymoondoctor.feature.nearby
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jeongmin.honeymoondoctor.core.error.ActionErrorState
+import com.jeongmin.honeymoondoctor.core.error.UndoDeleteState
 import com.jeongmin.honeymoondoctor.core.error.runReporting
 import com.jeongmin.honeymoondoctor.core.location.LocationProvider
 import com.jeongmin.honeymoondoctor.data.local.prefs.AppPreferences
@@ -88,6 +89,9 @@ class NearbyViewModel @Inject constructor(
     private val permissionState = MutableStateFlow(locationProvider.hasLocationPermission())
     private val actionError = ActionErrorState()
 
+    /** 삭제 되돌리기. 화면이 pending을 구독해 스낵바를 띄운다. */
+    val undoDelete = UndoDeleteState<Place>()
+
     private val filtersFlow = combine(
         categoryFilter, unvisitedOnly, sort, refreshing, permissionState,
     ) { category, unvisited, sortValue, refreshingValue, permission ->
@@ -167,8 +171,20 @@ class NearbyViewModel @Inject constructor(
     fun delete(place: Place) {
         val tripId = uiState.value.tripId ?: return
         viewModelScope.launch {
-            actionError.runReporting("장소를 삭제하지 못했습니다. 완료된 여행은 수정할 수 없습니다.") {
+            val deleted = actionError.runReporting("장소를 삭제하지 못했습니다. 완료된 여행은 수정할 수 없습니다.") {
                 placeRepository.delete(tripId, place.id)
+            }
+            if (deleted) undoDelete.offer(place, "장소를 삭제했습니다.")
+        }
+    }
+
+    /** 되돌리기: 같은 id로 다시 만들면 완전 복원이다(문서 id를 클라이언트가 정한다). */
+    fun restoreDeleted() {
+        val tripId = uiState.value.tripId ?: return
+        val place = undoDelete.consume() ?: return
+        viewModelScope.launch {
+            actionError.runReporting("장소를 복원하지 못했습니다.") {
+                placeRepository.create(tripId, place)
             }
         }
     }

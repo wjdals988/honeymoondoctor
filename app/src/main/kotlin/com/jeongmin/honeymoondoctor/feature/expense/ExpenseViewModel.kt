@@ -3,6 +3,7 @@ package com.jeongmin.honeymoondoctor.feature.expense
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jeongmin.honeymoondoctor.core.error.ActionErrorState
+import com.jeongmin.honeymoondoctor.core.error.UndoDeleteState
 import com.jeongmin.honeymoondoctor.core.error.runReporting
 import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.Expense
@@ -73,6 +74,9 @@ class ExpenseViewModel @Inject constructor(
     private val filter = MutableStateFlow(ShoppingFilter.ALL)
     private val actionError = ActionErrorState()
 
+    /** 삭제 되돌리기. 화면이 pending을 구독해 스낵바를 띄운다. */
+    val undoDelete = UndoDeleteState<Expense>()
+
     val uiState: StateFlow<ExpenseUiState> = observeCurrentTrip()
         .flatMapLatest { trip ->
             if (trip == null) {
@@ -129,8 +133,20 @@ class ExpenseViewModel @Inject constructor(
     fun delete(expense: Expense) {
         val tripId = uiState.value.tripId ?: return
         viewModelScope.launch {
-            actionError.runReporting("지출을 삭제하지 못했습니다. 완료된 여행은 수정할 수 없습니다.") {
+            val deleted = actionError.runReporting("지출을 삭제하지 못했습니다. 완료된 여행은 수정할 수 없습니다.") {
                 expenseRepository.delete(tripId, expense.id)
+            }
+            if (deleted) undoDelete.offer(expense, "지출을 삭제했습니다.")
+        }
+    }
+
+    /** 되돌리기: 같은 id로 다시 만들면 완전 복원이다(문서 id를 클라이언트가 정한다). */
+    fun restoreDeleted() {
+        val tripId = uiState.value.tripId ?: return
+        val expense = undoDelete.consume() ?: return
+        viewModelScope.launch {
+            actionError.runReporting("지출을 복원하지 못했습니다.") {
+                expenseRepository.create(tripId, expense)
             }
         }
     }

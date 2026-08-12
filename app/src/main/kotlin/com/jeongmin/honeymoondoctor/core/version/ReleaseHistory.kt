@@ -20,6 +20,16 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.2.1",
+            versionCode = 12,
+            date = "2026-08-12",
+            changes = listOf(
+                "지출·일정·장소·준비물을 삭제하면 \"되돌리기\" 단추가 잠시 나타납니다. 잘못 지웠을 때 바로 복원할 수 있습니다.",
+                "빈 화면에서 바로 추가할 수 있습니다. \"지출이 없습니다\" 같은 안내 아래에 추가 단추가 생겼습니다.",
+                "준비물에 기한을 넣을 수 있습니다. \"출발 전날\", \"일주일 전\" 같은 선택지에서 고르고, 기한이 지난 미완료 항목은 (지남)으로 표시됩니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.2.0",
             versionCode = 11,
             date = "2026-08-12",

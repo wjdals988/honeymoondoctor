@@ -18,6 +18,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -205,7 +206,20 @@ fun DecisionScreen(
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
                 contentAlignment = Alignment.Center,
             ) {
-                EmptyState(title = "결정할 항목이 없습니다.")
+                EmptyState(
+                    title = "결정할 항목이 없습니다.",
+                    description = "숙소·식당처럼 둘이 정해야 할 것을 올리고 투표로 정합니다.",
+                    action = if (LocalTripReadOnly.current) {
+                        null
+                    } else {
+                        {
+                            FilledTonalButton(onClick = {
+                                editorTarget = null
+                                showEditor = true
+                            }) { Text("결정 항목 추가") }
+                        }
+                    },
+                )
             }
         } else {
             LazyColumn(

@@ -3,6 +3,7 @@ package com.jeongmin.honeymoondoctor.feature.itinerary
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jeongmin.honeymoondoctor.core.error.ActionErrorState
+import com.jeongmin.honeymoondoctor.core.error.UndoDeleteState
 import com.jeongmin.honeymoondoctor.core.error.runReporting
 import com.jeongmin.honeymoondoctor.core.time.LocalTimes
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryItem
@@ -62,6 +63,9 @@ class ItineraryViewModel @Inject constructor(
 
     private val actionError = ActionErrorState()
 
+    /** 삭제 되돌리기. 화면이 pending을 구독해 스낵바를 띄운다. */
+    val undoDelete = UndoDeleteState<ItineraryItem>()
+
     val uiState: StateFlow<ItineraryUiState> = authRepository.currentUser
         .flatMapLatest { user ->
             if (user == null) {
@@ -108,11 +112,28 @@ class ItineraryViewModel @Inject constructor(
     fun delete(item: ItineraryItem) {
         val tripId = uiState.value.trip?.id ?: return
         viewModelScope.launch {
-            actionError.runReporting("일정을 삭제하지 못했습니다. 완료된 여행은 수정할 수 없습니다.") {
+            val deleted = actionError.runReporting("일정을 삭제하지 못했습니다. 완료된 여행은 수정할 수 없습니다.") {
                 reservationRepository.observeReservations(tripId).first()
                     .filter { it.linkedItineraryId == item.id }
                     .forEach { reservationRepository.update(tripId, it.copy(linkedItineraryId = null)) }
                 itineraryRepository.delete(tripId, item.id)
+            }
+            if (deleted) undoDelete.offer(item, "일정을 삭제했습니다.")
+        }
+    }
+
+    /**
+     * 되돌리기: 일정 자체는 같은 id로 완전 복원된다. 삭제 때 해제한 예약의
+     * linkedItineraryId는 **복원하지 않는다** — 스낵바가 떠 있는 몇 초 사이 상대가
+     * 그 예약을 다른 일정에 연결했을 수 있어, 덮어쓰면 상대의 변경을 지운다.
+     * 링크는 예약함에서 다시 연결하면 된다.
+     */
+    fun restoreDeleted() {
+        val tripId = uiState.value.trip?.id ?: return
+        val item = undoDelete.consume() ?: return
+        viewModelScope.launch {
+            actionError.runReporting("일정을 복원하지 못했습니다.") {
+                itineraryRepository.create(tripId, item)
             }
         }
     }

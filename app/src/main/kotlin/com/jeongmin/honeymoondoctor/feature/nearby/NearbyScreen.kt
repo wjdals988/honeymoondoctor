@@ -24,6 +24,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -54,6 +55,7 @@ import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
 import com.jeongmin.honeymoondoctor.core.ui.openGoogleMapsDirections
 import com.jeongmin.honeymoondoctor.core.ui.openUrl
+import com.jeongmin.honeymoondoctor.core.ui.UndoDeleteSnackbarEffect
 import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.domain.model.Place
 import com.jeongmin.honeymoondoctor.domain.model.PlaceCategory
@@ -70,6 +72,13 @@ fun NearbyScreen(
     val context = LocalContext.current
     var deleteTarget by remember { mutableStateOf<Place?>(null) }
     val snackbarHostState = rememberActionErrorSnackbar(uiState.actionError, viewModel::clearActionError)
+    val pendingUndo by viewModel.undoDelete.pending.collectAsState()
+    UndoDeleteSnackbarEffect(
+        hostState = snackbarHostState,
+        pending = pendingUndo,
+        onUndo = viewModel::restoreDeleted,
+        onDismissed = viewModel.undoDelete::dismiss,
+    )
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -135,7 +144,12 @@ fun NearbyScreen(
                         EmptyState(
                             title = "저장된 장소가 없습니다",
                             modifier = Modifier.padding(top = 48.dp),
-                            description = "+ 버튼으로 추가하거나 전체 탭의 \"장소 가져오기\"를 사용하세요.",
+                            description = "가고 싶은 곳을 담아 두면 현재 위치 기준으로 추천해 줍니다.",
+                            action = if (LocalTripReadOnly.current) {
+                                null
+                            } else {
+                                { FilledTonalButton(onClick = { onOpenEditor(null) }) { Text("첫 장소 추가") } }
+                            },
                         )
                     }
                 } else {
