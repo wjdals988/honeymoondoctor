@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jeongmin.honeymoondoctor.core.error.toUserMessage
+import com.jeongmin.honeymoondoctor.data.exchange.ExchangeRateFetcher
 import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.Expense
 import com.jeongmin.honeymoondoctor.domain.model.ExpenseCategory
@@ -65,11 +66,15 @@ data class ExpenseEditUiState(
     val itinerary: List<ItineraryItem> = emptyList(),
     val reservations: List<Reservation> = emptyList(),
     val validationError: String? = null,
+    /** 환율 자동 조회 결과 안내(예: "2026-08-11 기준 자동 조회"). 실패 사유도 여기 담는다. */
+    val fxRateNotice: String? = null,
+    val fxRateLoading: Boolean = false,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ExpenseEditViewModel @Inject constructor(
+    private val exchangeRateFetcher: ExchangeRateFetcher,
     savedStateHandle: SavedStateHandle,
     observeCurrentTrip: ObserveCurrentTrip,
     tripRepository: TripRepository,
@@ -82,6 +87,8 @@ class ExpenseEditViewModel @Inject constructor(
     private val editingId: String? = savedStateHandle["expenseId"]
 
     private val validationError = MutableStateFlow<String?>(null)
+    private val fxRateNotice = MutableStateFlow<String?>(null)
+    private val fxRateLoading = MutableStateFlow(false)
     private val _form = MutableStateFlow<ExpenseEditForm?>(null)
     val form: StateFlow<ExpenseEditForm?> = _form
 
@@ -97,8 +104,10 @@ class ExpenseEditViewModel @Inject constructor(
                     cityRepository.observeCities(trip.id),
                     itineraryRepository.observeItinerary(trip.id),
                     reservationRepository.observeReservations(trip.id),
-                    validationError,
-                ) { members, cities, itinerary, reservations, error ->
+                    combine(validationError, fxRateNotice, fxRateLoading) { error, notice, loading ->
+                        Triple(error, notice, loading)
+                    },
+                ) { members, cities, itinerary, reservations, (error, notice, loading) ->
                     ExpenseEditUiState(
                         loading = false,
                         tripId = trip.id,
@@ -107,6 +116,8 @@ class ExpenseEditViewModel @Inject constructor(
                         itinerary = itinerary,
                         reservations = reservations,
                         validationError = error,
+                        fxRateNotice = notice,
+                        fxRateLoading = loading,
                     )
                 }
             }
@@ -154,9 +165,42 @@ class ExpenseEditViewModel @Inject constructor(
         }
     }
 
+    /**
+     * 오늘 환율을 받아 환율 칸에 채운다. **제안일 뿐 저장은 여전히 스냅샷**이다 —
+     * 사용자가 값을 고치면 고친 값이 이기고, 저장된 지출은 나중에 환율이 바뀌어도 흔들리지
+     * 않는다(KrwConverter가 입력 시점 환율을 보존한다).
+     *
+     * 오프라인이 정상 사용 환경(기내·로밍)이므로 실패는 조용히 안내만 하고 직접 입력을 막지
+     * 않는다.
+     */
+    fun fetchTodayRate() {
+        val currency = _form.value?.currency ?: return
+        if (currency == TravelCurrency.KRW || fxRateLoading.value) return
+        fxRateLoading.value = true
+        fxRateNotice.value = null
+        viewModelScope.launch {
+            exchangeRateFetcher.fetch(currency)
+                .onSuccess { fetched ->
+                    updateForm { it.copy(fxRateText = formatRate(fetched.krwPerUnit)) }
+                    fxRateNotice.value = "${fetched.date} 유럽중앙은행 고시 기준입니다. 필요하면 직접 고치세요."
+                }
+                .onFailure {
+                    fxRateNotice.value = "환율을 받지 못했습니다. 직접 입력해 주세요."
+                }
+            fxRateLoading.value = false
+        }
+    }
+
+    /** 소수 둘째 자리까지만 남긴다. 1629.6400000001 같은 값이 칸에 그대로 들어가면 읽기 나쁘다. */
+    private fun formatRate(rate: Double): String =
+        java.math.BigDecimal(rate).setScale(2, java.math.RoundingMode.HALF_UP).toPlainString()
+
     fun updateForm(transform: (ExpenseEditForm) -> ExpenseEditForm) {
-        _form.value = _form.value?.let(transform)
+        val before = _form.value
+        _form.value = before?.let(transform)
         validationError.value = null
+        // 사용자가 환율을 직접 고치면 "자동 조회" 안내는 더 이상 사실이 아니다.
+        if (before?.fxRateText != _form.value?.fxRateText) fxRateNotice.value = null
     }
 
     fun save(onSaved: () -> Unit) {

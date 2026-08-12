@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jeongmin.honeymoondoctor.core.error.toUserMessage
+import com.jeongmin.honeymoondoctor.core.location.LocationProvider
 import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.Place
 import com.jeongmin.honeymoondoctor.domain.model.PlaceCategory
@@ -11,6 +12,7 @@ import com.jeongmin.honeymoondoctor.domain.model.PlacePriority
 import com.jeongmin.honeymoondoctor.domain.model.PreferredTime
 import com.jeongmin.honeymoondoctor.domain.repository.CityRepository
 import com.jeongmin.honeymoondoctor.domain.repository.PlaceRepository
+import com.jeongmin.honeymoondoctor.domain.usecase.MapsUrlCoordinates
 import com.jeongmin.honeymoondoctor.domain.usecase.ObserveCurrentTrip
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
@@ -55,6 +57,7 @@ data class PlaceEditUiState(
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class PlaceEditViewModel @Inject constructor(
+    private val locationProvider: LocationProvider,
     savedStateHandle: SavedStateHandle,
     observeCurrentTrip: ObserveCurrentTrip,
     private val cityRepository: CityRepository,
@@ -112,6 +115,52 @@ class PlaceEditViewModel @Inject constructor(
                 reviewCountText = existing.reviewCountSnapshot?.toString().orEmpty(),
                 visitedAt = existing.visitedAt,
                 sourceUpdatedAt = existing.sourceUpdatedAt,
+            )
+        }
+    }
+
+    /**
+     * 지금 있는 곳의 좌표를 위도·경도 칸에 채운다. 사람이 손으로 넣을 수 있는 값이 아니라
+     * 버튼으로 대신 넣어 준다. 권한이 없거나 위치를 못 잡으면 이유를 표시한다.
+     */
+    fun fillWithCurrentLocation() {
+        viewModelScope.launch {
+            if (!locationProvider.hasLocationPermission()) {
+                validationError.value = "위치 권한이 없습니다. 주변 탭에서 권한을 허용한 뒤 다시 시도해 주세요."
+                return@launch
+            }
+            val location = runCatching { locationProvider.refreshCurrentLocation() }.getOrNull()
+            if (location == null) {
+                validationError.value = "현재 위치를 가져오지 못했습니다. 실외에서 잠시 뒤 다시 시도해 주세요."
+                return@launch
+            }
+            validationError.value = null
+            updateForm {
+                it.copy(
+                    latitudeText = location.latitude.toString(),
+                    longitudeText = location.longitude.toString(),
+                )
+            }
+        }
+    }
+
+    /**
+     * Google Maps 링크(또는 좌표 문자열)에서 좌표를 뽑아 채운다. 지도 SDK가 없어
+     * "지도에서 찍기"를 만들 수 없으므로, 구글 지도에서 "공유 → 링크 복사"한 것을
+     * 붙여넣는 경로를 대신 제공한다.
+     */
+    fun fillFromMapsUrl() {
+        val url = _form.value?.mapsUrl.orEmpty()
+        val coordinates = MapsUrlCoordinates.parse(url)
+        if (coordinates == null) {
+            validationError.value = "링크에서 좌표를 찾지 못했습니다. 구글 지도에서 \"공유 → 링크 복사\"한 주소를 넣어 주세요."
+            return
+        }
+        validationError.value = null
+        updateForm {
+            it.copy(
+                latitudeText = coordinates.latitude.toString(),
+                longitudeText = coordinates.longitude.toString(),
             )
         }
     }

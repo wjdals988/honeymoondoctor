@@ -20,6 +20,17 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.1.9",
+            versionCode = 10,
+            date = "2026-08-12",
+            changes = listOf(
+                "지출을 넣을 때 \"오늘 환율 불러오기\"로 유럽중앙은행 고시 환율을 바로 채웁니다. 직접 입력도 그대로 가능하며, 저장된 지출은 나중에 환율이 바뀌어도 변하지 않습니다.",
+                "장소의 위도·경도를 \"현재 위치\" 버튼이나 구글 지도 링크 붙여넣기로 채웁니다.",
+                "도시를 추가할 때 도시명을 입력하면 국가와 시간대가 자동으로 채워집니다. 시간대가 잘못되면 저장을 막아, 현지 시각이 조용히 안 바뀌는 문제를 없앴습니다.",
+                "장소·예약·일정 편집 화면에서 선택 입력 항목을 접어, 처음 열었을 때 채울 것만 보입니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.1.8",
             versionCode = 9,
             date = "2026-08-12",

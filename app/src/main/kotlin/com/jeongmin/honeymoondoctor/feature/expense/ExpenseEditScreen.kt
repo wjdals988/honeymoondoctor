@@ -4,9 +4,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -103,9 +106,29 @@ fun ExpenseEditScreen(
                 OutlinedTextField(
                     value = currentForm.fxRateText,
                     onValueChange = { value -> viewModel.updateForm { it.copy(fxRateText = value) } },
-                    label = { Text("환율: 1 ${currentForm.currency.code} = ? KRW (직접 입력·보존)") },
+                    label = { Text("환율: 1 ${currentForm.currency.code} = ? KRW") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
+                )
+                // 자동 조회는 "제안"이고 저장은 이 칸의 값 그대로다. 현금 환전처럼 실제로
+                // 적용된 환율이 다르면 직접 고쳐 쓰라고 안내한다.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(
+                        onClick = viewModel::fetchTodayRate,
+                        enabled = !uiState.fxRateLoading,
+                    ) {
+                        if (uiState.fxRateLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.width(6.dp))
+                        }
+                        Text("오늘 환율 불러오기")
+                    }
+                }
+                Text(
+                    text = uiState.fxRateNotice
+                        ?: "직접 입력한 값이 그대로 저장되며, 나중에 환율이 바뀌어도 이 지출은 바뀌지 않습니다.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             currentForm.previewKrw?.let { preview ->

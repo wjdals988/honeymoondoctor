@@ -5,16 +5,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -137,6 +141,25 @@ fun PlaceEditScreen(
                     currentForm.reviewCountText.isNotBlank() ||
                     currentForm.notes.isNotBlank(),
             ) {
+                // 위도·경도는 사람이 손으로 넣을 값이 아니다. 버튼 두 개로 대신 채우고
+                // 직접 입력 칸은 확인·미세 조정용으로만 남긴다.
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilledTonalButton(onClick = viewModel::fillWithCurrentLocation) {
+                        Icon(Icons.Filled.Place, contentDescription = null)
+                        Spacer(Modifier.width(4.dp))
+                        Text("현재 위치")
+                    }
+                    FilledTonalButton(
+                        onClick = viewModel::fillFromMapsUrl,
+                        enabled = currentForm.mapsUrl.isNotBlank(),
+                    ) { Text("링크에서 좌표 채우기") }
+                }
+                Text(
+                    text = "구글 지도에서 \"공유 → 링크 복사\"한 주소를 아래 Google Maps URL 칸에 넣고 누르세요.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = currentForm.latitudeText,
