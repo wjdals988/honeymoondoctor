@@ -121,7 +121,7 @@ fun ReservationDetailScreen(
             Text(reservation.title, style = MaterialTheme.typography.headlineSmall)
             Text(
                 text = listOfNotNull(
-                    reservation.type.labelKo,
+                    reservation.type.display,
                     reservation.status.labelKo,
                     reservation.vendor.takeIf { it.isNotBlank() },
                 ).joinToString(" · "),

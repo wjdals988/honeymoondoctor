@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -30,6 +31,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.time.koreanZoneLabel
@@ -41,6 +43,7 @@ import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.core.ui.TimeField
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryTitleSuggestions
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryType
+import java.time.LocalTime
 
 /** 이번 여행에서 고를 수 있는 시간대 후보. 도시를 고르면 자동으로 바뀌고, 직접 바꿀 수도 있다. */
 private val timeZoneOptions = listOf("Asia/Seoul", "Europe/Prague", "Europe/Madrid")
@@ -164,6 +167,23 @@ fun ItineraryEditScreen(
                     onDateChange = { date -> viewModel.updateForm { it.copy(endDate = date) } },
                 )
             } else {
+                // 여행 일정의 시작 시각은 대부분 정시·30분 단위다. 다이얼 피커(탭 3번)
+                // 전에 흔한 시각 4개를 칩(탭 1번)으로 내민다. 그 외 시각은 아래 피커로.
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                ) {
+                    listOf(
+                        LocalTime.of(9, 0), LocalTime.of(12, 0),
+                        LocalTime.of(14, 0), LocalTime.of(18, 0),
+                    ).forEach { preset ->
+                        FilterChip(
+                            selected = currentForm.startTime == preset,
+                            onClick = { viewModel.updateForm { it.copy(startTime = preset) } },
+                            label = { Text("%d:%02d".format(preset.hour, preset.minute)) },
+                        )
+                    }
+                }
                 TimeField(
                     label = "시작 시각",
                     time = currentForm.startTime,
@@ -246,6 +266,7 @@ fun ItineraryEditScreen(
                     value = currentForm.estimatedKrwText,
                     onValueChange = { value -> viewModel.updateForm { it.copy(estimatedKrwText = value) } },
                     label = { Text("예상 경비 (원)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )

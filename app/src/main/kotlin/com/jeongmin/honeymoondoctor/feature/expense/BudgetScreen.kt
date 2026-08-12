@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -35,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -43,6 +45,7 @@ import com.jeongmin.honeymoondoctor.core.error.ActionErrorState
 import com.jeongmin.honeymoondoctor.core.error.runReporting
 import com.jeongmin.honeymoondoctor.core.ui.AppCard
 import com.jeongmin.honeymoondoctor.core.ui.CardTone
+import com.jeongmin.honeymoondoctor.core.ui.ChipSelector
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
@@ -254,7 +257,7 @@ private fun BudgetCard(
                 Text(
                     text = listOfNotNull(
                         budget.cityId?.let { id -> cities.firstOrNull { it.id == id }?.displayName ?: id } ?: "전체 도시",
-                        budget.category?.labelKo ?: "전체 카테고리",
+                        budget.category?.display ?: "전체 카테고리",
                     ).joinToString(" · "),
                     style = MaterialTheme.typography.titleSmall,
                 )
@@ -296,17 +299,18 @@ private fun BudgetEditorDialog(
                     optionLabel = { it?.displayName ?: "전체 도시" },
                     onSelect = { cityId = it?.id },
                 )
-                DropdownSelector(
+                ChipSelector(
                     label = "카테고리",
-                    selectedLabel = category?.labelKo ?: "전체 카테고리",
                     options = listOf<ExpenseCategory?>(null) + ExpenseCategory.entries,
-                    optionLabel = { it?.labelKo ?: "전체 카테고리" },
+                    selected = category,
+                    optionLabel = { it?.display ?: "전체" },
                     onSelect = { category = it },
                 )
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { amountText = it },
                     label = { Text("예산 금액 (원) *") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )

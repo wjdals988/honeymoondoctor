@@ -28,10 +28,15 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /** 쇼핑 분리 필터(스펙 7-6): 전체 / 쇼핑 제외(일반 여행경비) / 쇼핑만 */
-enum class ShoppingFilter(val labelKo: String) {
-    ALL("전체"),
-    EXCLUDE_SHOPPING("쇼핑 제외"),
-    SHOPPING_ONLY("쇼핑만"),
+/**
+ * 목록 필터. 원래 전체/쇼핑 제외/쇼핑만 3종이었는데, 카테고리가 8종이 되면서
+ * "쇼핑만"의 자리에 카테고리 전부를 놓는 편이 일관적이라 이렇게 바꿨다.
+ * "쇼핑 제외"는 남긴다 — 기념품 씀씀이를 뺀 생활비 파악이라는 별도 용도가 있다.
+ */
+sealed interface ExpenseFilter {
+    data object All : ExpenseFilter
+    data object ExcludeShopping : ExpenseFilter
+    data class ByCategory(val category: ExpenseCategory) : ExpenseFilter
 }
 
 data class CategoryTotal(
@@ -45,7 +50,7 @@ data class ExpenseUiState(
     val expenses: List<Expense> = emptyList(),
     val members: List<TripMember> = emptyList(),
     val cities: List<City> = emptyList(),
-    val filter: ShoppingFilter = ShoppingFilter.ALL,
+    val filter: ExpenseFilter = ExpenseFilter.All,
     /** 필터와 무관한 전체 합계(예산 대비 잔여 계산용) */
     val totalSpentKrw: Long = 0,
     val totalBudgetKrw: Long = 0,
@@ -71,7 +76,7 @@ class ExpenseViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository,
 ) : ViewModel() {
 
-    private val filter = MutableStateFlow(ShoppingFilter.ALL)
+    private val filter = MutableStateFlow<ExpenseFilter>(ExpenseFilter.All)
     private val actionError = ActionErrorState()
 
     /** 삭제 되돌리기. 화면이 pending을 구독해 스낵바를 띄운다. */
@@ -96,9 +101,9 @@ class ExpenseViewModel @Inject constructor(
                     val (expenses, budgets, rest) = data
                     val (members, cities, reservations) = rest
                     val filtered = when (filterValue) {
-                        ShoppingFilter.ALL -> expenses
-                        ShoppingFilter.EXCLUDE_SHOPPING -> expenses.filter { it.category != ExpenseCategory.SHOPPING }
-                        ShoppingFilter.SHOPPING_ONLY -> expenses.filter { it.category == ExpenseCategory.SHOPPING }
+                        ExpenseFilter.All -> expenses
+                        ExpenseFilter.ExcludeShopping -> expenses.filter { it.category != ExpenseCategory.SHOPPING }
+                        is ExpenseFilter.ByCategory -> expenses.filter { it.category == filterValue.category }
                     }
                     val sharedTotal = expenses.filter { it.shared }.sumOf { it.amountKrw }
                     ExpenseUiState(
@@ -124,7 +129,7 @@ class ExpenseViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExpenseUiState())
 
-    fun setFilter(value: ShoppingFilter) {
+    fun setFilter(value: ExpenseFilter) {
         filter.value = value
     }
 

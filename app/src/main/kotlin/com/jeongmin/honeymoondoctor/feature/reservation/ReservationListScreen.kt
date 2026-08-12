@@ -155,7 +155,7 @@ private fun ReservationCard(reservation: Reservation, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(top = 6.dp),
         ) {
-            AssistChip(onClick = {}, label = { Text(reservation.type.labelKo) })
+            AssistChip(onClick = {}, label = { Text(reservation.type.display) })
             AssistChip(onClick = {}, label = { Text(reservation.status.labelKo) })
         }
         // 목록에서는 예약번호·PIN을 항상 마스킹한다(스펙 7-4). 원문은 상세 화면에서만.

@@ -43,15 +43,30 @@ enum class TravelCurrency(
     CZK("CZK", 2, "Kč"),
 }
 
-/** 스펙 7-6 경비 카테고리: 식비, 교통, 숙소, 관광, 쇼핑, 카페, 기타 */
-enum class ExpenseCategory(val labelKo: String) {
-    FOOD("식비"),
-    TRANSPORT("교통"),
-    LODGING("숙소"),
-    SIGHTSEEING("관광"),
-    SHOPPING("쇼핑"),
-    CAFE("카페"),
-    ETC("기타"),
+/**
+ * 경비 카테고리. 스펙 7-6의 7종에 항공을 더했다 — 여행 경비에서 항공권은 금액이
+ * 가장 크고 성격도 현지 교통과 달라서(출발 전 결제, 1회성) 교통에 섞으면 현지
+ * 교통비 파악이 안 된다.
+ *
+ * [emoji]는 화면 어디서든 라벨과 함께 쓴다([display]). 카테고리는 스캔하는 값이라
+ * (목록에서 "식비만 훑기") 글자보다 먼저 눈에 걸리는 그림 하나가 스캔을 줄여 준다.
+ *
+ * 값 추가는 안전하고(Firestore 파싱이 runCatching + 기본값) 삭제·개명은 금지 —
+ * 저장된 지출이 기타/식비로 조용히 바뀐다. TravelCurrency와 같은 규칙.
+ */
+enum class ExpenseCategory(val labelKo: String, val emoji: String) {
+    FOOD("식비", "🍚"),
+    CAFE("카페", "☕"),
+    TRANSPORT("교통", "🚌"),
+    FLIGHT("항공", "✈️"),
+    LODGING("숙소", "🏨"),
+    SIGHTSEEING("관광", "🗺️"),
+    SHOPPING("쇼핑", "🛍️"),
+    ETC("기타", "🧾"),
+    ;
+
+    /** 칩·목록·합계 어디서든 같은 모양으로 보이게 한 곳에서 만든다. */
+    val display: String get() = "$emoji $labelKo"
 }
 
 /**

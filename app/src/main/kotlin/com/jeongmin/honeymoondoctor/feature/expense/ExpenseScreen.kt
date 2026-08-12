@@ -49,6 +49,7 @@ import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
 import com.jeongmin.honeymoondoctor.core.ui.UndoDeleteSnackbarEffect
 import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.domain.model.Expense
+import com.jeongmin.honeymoondoctor.domain.model.ExpenseCategory
 import com.jeongmin.honeymoondoctor.domain.model.TravelCurrency
 import com.jeongmin.honeymoondoctor.domain.usecase.KrwConverter
 import java.text.NumberFormat
@@ -110,15 +111,28 @@ fun ExpenseScreen(
                 SummaryCard(uiState = uiState, onOpenBudgets = onOpenBudgets)
             }
             item {
+                // 편집 화면의 카테고리 칩과 같은 얼굴. 여기는 목록이라 세로 공간이
+                // 귀해 줄바꿈(FlowRow) 대신 가로 스크롤 한 줄로 둔다 — 필터는 선택
+                // 입력이 아니라 탐색 도구라, 전부 안 보여도 스크롤로 충분하다.
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
                 ) {
-                    ShoppingFilter.entries.forEach { filter ->
+                    FilterChip(
+                        selected = uiState.filter == ExpenseFilter.All,
+                        onClick = { viewModel.setFilter(ExpenseFilter.All) },
+                        label = { Text("전체") },
+                    )
+                    FilterChip(
+                        selected = uiState.filter == ExpenseFilter.ExcludeShopping,
+                        onClick = { viewModel.setFilter(ExpenseFilter.ExcludeShopping) },
+                        label = { Text("쇼핑 제외") },
+                    )
+                    ExpenseCategory.entries.forEach { category ->
                         FilterChip(
-                            selected = uiState.filter == filter,
-                            onClick = { viewModel.setFilter(filter) },
-                            label = { Text(filter.labelKo) },
+                            selected = uiState.filter == ExpenseFilter.ByCategory(category),
+                            onClick = { viewModel.setFilter(ExpenseFilter.ByCategory(category)) },
+                            label = { Text(category.display) },
                         )
                     }
                 }
@@ -129,7 +143,7 @@ fun ExpenseScreen(
                         SectionHeader(title = "카테고리별 지출")
                         uiState.categoryTotals.forEach { total ->
                             Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
-                                Text(total.category.labelKo, modifier = Modifier.weight(1f))
+                                Text(total.category.display, modifier = Modifier.weight(1f))
                                 Text(formatKrw(total.totalKrw))
                             }
                         }
@@ -262,7 +276,7 @@ private fun ExpenseRow(
                 val city = uiState.cities.firstOrNull { it.id == expense.cityId }?.displayName
                 Text(
                     text = listOfNotNull(
-                        expense.category.labelKo,
+                        expense.category.display,
                         if (expense.shared) "공동" else "개인",
                         payer?.let { "결제 $it" },
                         city,

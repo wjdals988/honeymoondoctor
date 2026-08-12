@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -32,6 +33,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.ui.CityPickerField
@@ -102,6 +104,9 @@ fun ExpenseEditScreen(
                         if (currentForm.currency == TravelCurrency.KRW) "금액 (원) *" else "금액 (${currentForm.currency.code}) *",
                     )
                 },
+                // 금액 칸에서 문자 자판이 뜨면 숫자 줄로 손을 옮기는 것부터가 일이다.
+                // Decimal인 이유: EUR 12.34처럼 소수 입력이 필요한 통화가 있다.
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -110,6 +115,7 @@ fun ExpenseEditScreen(
                     value = currentForm.fxRateText,
                     onValueChange = { value -> viewModel.updateForm { it.copy(fxRateText = value) } },
                     label = { Text("환율: 1 ${currentForm.currency.code} = ? KRW") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -157,7 +163,7 @@ fun ExpenseEditScreen(
                 label = "카테고리",
                 options = ExpenseCategory.entries,
                 selected = currentForm.category,
-                optionLabel = { it.labelKo },
+                optionLabel = { it.display },
                 onSelect = { category -> viewModel.updateForm { it.copy(category = category) } },
             )
             ChipSelector(
