@@ -40,6 +40,7 @@ import com.jeongmin.honeymoondoctor.core.time.LocalTimes
 import com.jeongmin.honeymoondoctor.core.ui.CityPickerField
 import com.jeongmin.honeymoondoctor.core.ui.CollapsibleSection
 import com.jeongmin.honeymoondoctor.core.ui.RatingStars
+import com.jeongmin.honeymoondoctor.core.ui.ChipSelector
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.domain.model.PlaceCategory
 import com.jeongmin.honeymoondoctor.domain.model.PlacePriority
@@ -103,17 +104,17 @@ fun PlaceEditScreen(
                 onSelect = { city -> viewModel.updateForm { it.copy(cityId = city?.id) } },
                 onCreateCity = viewModel::createCity,
             )
-            DropdownSelector(
+            ChipSelector(
                 label = "카테고리",
-                selectedLabel = currentForm.category.labelKo,
                 options = PlaceCategory.entries,
+                selected = currentForm.category,
                 optionLabel = { it.labelKo },
                 onSelect = { category -> viewModel.updateForm { it.copy(category = category) } },
             )
-            DropdownSelector(
+            ChipSelector(
                 label = "우선순위",
-                selectedLabel = currentForm.priority.labelKo,
                 options = PlacePriority.entries,
+                selected = currentForm.priority,
                 optionLabel = { it.labelKo },
                 onSelect = { priority -> viewModel.updateForm { it.copy(priority = priority) } },
             )

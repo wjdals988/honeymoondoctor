@@ -29,7 +29,10 @@ fun UndoDeleteSnackbarEffect(
         val result = hostState.showSnackbar(
             message = pending.message,
             actionLabel = "되돌리기",
-            duration = SnackbarDuration.Short,
+            // Long(10초). 처음엔 Short(4초)였는데 실기기 검증에서 사람이 스낵바를
+            // 읽고 → 손을 옮겨 → 누르기 전에 사라지는 일이 실제로 났다. 삭제 직후는
+            // "지워졌나?"를 확인하는 시간이 먼저라 4초는 짧다.
+            duration = SnackbarDuration.Long,
         )
         when (result) {
             SnackbarResult.ActionPerformed -> onUndo()

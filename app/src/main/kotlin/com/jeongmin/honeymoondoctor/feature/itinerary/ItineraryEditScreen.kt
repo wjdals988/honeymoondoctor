@@ -36,6 +36,7 @@ import com.jeongmin.honeymoondoctor.core.time.koreanZoneLabel
 import com.jeongmin.honeymoondoctor.core.ui.CityPickerField
 import com.jeongmin.honeymoondoctor.core.ui.CollapsibleSection
 import com.jeongmin.honeymoondoctor.core.ui.DateField
+import com.jeongmin.honeymoondoctor.core.ui.ChipSelector
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.core.ui.TimeField
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryTitleSuggestions
@@ -103,10 +104,10 @@ fun ItineraryEditScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            DropdownSelector(
+            ChipSelector(
                 label = "유형",
-                selectedLabel = currentForm.type.labelKo,
                 options = ItineraryType.entries,
+                selected = currentForm.type,
                 optionLabel = { it.labelKo },
                 onSelect = { type -> viewModel.updateForm { it.copy(type = type) } },
             )
@@ -233,10 +234,10 @@ fun ItineraryEditScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                DropdownSelector(
+                ChipSelector(
                     label = "담당자",
-                    selectedLabel = uiState.members.firstOrNull { it.uid == currentForm.assigneeUid }?.displayName ?: "없음",
                     options = listOf(null) + uiState.members,
+                    selected = uiState.members.firstOrNull { it.uid == currentForm.assigneeUid },
                     optionLabel = { it?.displayName ?: "없음" },
                     onSelect = { member -> viewModel.updateForm { it.copy(assigneeUid = member?.uid) } },
                 )

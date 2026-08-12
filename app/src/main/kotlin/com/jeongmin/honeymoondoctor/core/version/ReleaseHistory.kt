@@ -20,6 +20,16 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.2.2",
+            versionCode = 13,
+            date = "2026-08-12",
+            changes = listOf(
+                "지출·예약·장소·일정 편집의 카테고리·유형·상태·결제자·담당자·우선순위를 누르면 펼쳐지는 목록 대신 항상 보이는 단추로 바꿨습니다. 한 번 눌러 고르고, 고를 수 있는 것이 전부 한눈에 보입니다.",
+                "지출 날짜에 \"오늘\", \"어제\" 단추를 달았습니다. 어제 쓴 돈을 몰아서 적을 때 달력을 열지 않아도 됩니다.",
+                "삭제 \"되돌리기\" 단추가 10초 동안 유지됩니다. 이전 4초는 읽고 누르기에 짧았습니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.2.1",
             versionCode = 12,
             date = "2026-08-12",

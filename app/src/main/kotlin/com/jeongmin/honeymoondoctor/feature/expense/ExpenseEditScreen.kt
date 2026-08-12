@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,9 +36,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.ui.CityPickerField
 import com.jeongmin.honeymoondoctor.core.ui.DateField
+import com.jeongmin.honeymoondoctor.core.ui.ChipSelector
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.domain.model.ExpenseCategory
 import com.jeongmin.honeymoondoctor.domain.model.TravelCurrency
+import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -148,17 +151,19 @@ fun ExpenseEditScreen(
                 )
             }
 
-            DropdownSelector(
+            // 카테고리·결제자는 선택지가 적고 고정이라 드롭다운(펼치기+고르기 두 탭)
+            // 대신 항상 펼쳐진 칩 한 탭으로 받는다. 가계부 앱들의 카테고리 타일과 같은 이유.
+            ChipSelector(
                 label = "카테고리",
-                selectedLabel = currentForm.category.labelKo,
                 options = ExpenseCategory.entries,
+                selected = currentForm.category,
                 optionLabel = { it.labelKo },
                 onSelect = { category -> viewModel.updateForm { it.copy(category = category) } },
             )
-            DropdownSelector(
+            ChipSelector(
                 label = "결제자",
-                selectedLabel = uiState.members.firstOrNull { it.uid == currentForm.paidByUid }?.displayName ?: "미지정",
                 options = listOf(null) + uiState.members,
+                selected = uiState.members.firstOrNull { it.uid == currentForm.paidByUid },
                 optionLabel = { it?.displayName ?: "미지정" },
                 onSelect = { member -> viewModel.updateForm { it.copy(paidByUid = member?.uid) } },
             )
@@ -175,6 +180,20 @@ fun ExpenseEditScreen(
                 onSelect = { city -> viewModel.updateForm { it.copy(cityId = city?.id) } },
                 onCreateCity = viewModel::createCity,
             )
+            // 여행 중에는 "어제 쓴 걸 오늘 몰아서 적는" 일이 잦다. 달력을 여는 대신
+            // 칩 한 탭으로 끝나게 한다. 그 외 날짜는 아래 달력으로.
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = currentForm.spentDate == LocalDate.now(),
+                    onClick = { viewModel.updateForm { it.copy(spentDate = LocalDate.now()) } },
+                    label = { Text("오늘") },
+                )
+                FilterChip(
+                    selected = currentForm.spentDate == LocalDate.now().minusDays(1),
+                    onClick = { viewModel.updateForm { it.copy(spentDate = LocalDate.now().minusDays(1)) } },
+                    label = { Text("어제") },
+                )
+            }
             DateField(
                 label = "지출 날짜",
                 date = currentForm.spentDate,
