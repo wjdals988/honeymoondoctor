@@ -20,6 +20,16 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.6.1",
+            versionCode = 25,
+            date = "2026-08-13",
+            changes = listOf(
+                "우리 위치 핀을 이모지 대신 색으로 구분합니다. 나=파랑, 상대=빨강, 같은 모양의 핀입니다. 카드에도 같은 색 점을 표시해 지도와 목록이 바로 연결됩니다. 주변 탭의 \"내 위치\" 핀도 같은 파란색으로 통일했습니다.",
+                "공유된 위치가 3시간 넘게 지나면 \"오래된 위치일 수 있어요\"로 알려드립니다.",
+                "홈의 다음 일정 남은 시간이 1시간·3시간 이내일 때 아이콘이 함께 표시됩니다. 색이 잘 구분되지 않아도 긴급도를 알 수 있습니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.6.0",
             versionCode = 24,
             date = "2026-08-12",

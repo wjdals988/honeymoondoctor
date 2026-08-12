@@ -5,7 +5,9 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -37,6 +40,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -46,7 +51,9 @@ import com.jeongmin.honeymoondoctor.core.ui.CardTone
 import com.jeongmin.honeymoondoctor.core.ui.ChipSelector
 import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.MapPin
+import com.jeongmin.honeymoondoctor.core.ui.MyLocationPinColor
 import com.jeongmin.honeymoondoctor.core.ui.OsmMiniMap
+import com.jeongmin.honeymoondoctor.core.ui.PartnerLocationPinColor
 import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.data.local.prefs.LocationShareMode
 import java.time.Duration
@@ -125,7 +132,7 @@ fun TogetherScreen(
                             latitude = member.location.latitude,
                             longitude = member.location.longitude,
                             label = if (member.isMe) "나" else member.displayName,
-                            emoji = if (member.isMe) "⭐" else "❤️",
+                            pinColor = personPinColor(member.isMe),
                         )
                     },
                 )
@@ -201,24 +208,40 @@ fun TogetherScreen(
 @Composable
 private fun MemberLocationCard(member: MemberLocationUi, onClearMine: () -> Unit) {
     val context = LocalContext.current
+    // 지도 핀과 같은 색의 점을 이름 앞에 찍어, 카드와 지도의 어느 마커가 누구인지를
+    // 한 번에 연결한다(Life360·Google 지도 위치 공유가 쓰는 방식).
+    val dotColor = personPinColor(member.isMe)
+    // Life360 사용자들이 실제로 겪는 불만: "핀이 몇 시간째 그 자리인데 경고가 없다"
+    // (family-tracker 앱 리뷰에서 반복 지적됨). 오래된 위치는 색+문구로 함께 알린다.
+    val stale = Duration.between(member.location.sharedAt, Instant.now()).toHours() >= 3
     AppCard(
         modifier = Modifier.fillMaxWidth(),
         tone = if (member.isMe) CardTone.Neutral else CardTone.Highlight,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = if (member.isMe) "나 (${member.displayName})" else member.displayName,
-                    style = MaterialTheme.typography.titleMedium,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(dotColor),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = if (member.isMe) "나 (${member.displayName})" else member.displayName,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
                 Text(
                     text = buildString {
                         append(formatAgo(member.location.sharedAt))
                         append(" 공유")
                         member.distanceMeters?.let { append(" · 나와 ${formatDistance(it)}") }
+                        if (stale) append(" · 오래된 위치일 수 있어요")
                     },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (stale) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
                     text = "%.5f, %.5f".format(member.location.latitude, member.location.longitude),
@@ -241,6 +264,14 @@ private fun MemberLocationCard(member: MemberLocationUi, onClearMine: () -> Unit
         }
     }
 }
+
+/**
+ * 나=파랑 / 상대=빨강. "같은 핀, 다른 색"으로 구분하는 관습(Life360·Google 지도
+ * 위치 공유)을 따른다 — 이모지(⭐/❤️)보다 지도 위에서 더 작고 또렷하게 읽힌다.
+ * 색 자체는 주변 탭의 "내 위치" 핀과 통일해서 쓴다(MyLocationPinColor).
+ */
+private fun personPinColor(isMe: Boolean): Color =
+    if (isMe) MyLocationPinColor else PartnerLocationPinColor
 
 /** "방금 · N분 전 · N시간 전 · 날짜" — 위치의 신선도가 이 화면의 핵심 정보다. */
 private fun formatAgo(sharedAt: Instant): String {

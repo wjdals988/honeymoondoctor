@@ -53,6 +53,7 @@ import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.MapPin
+import com.jeongmin.honeymoondoctor.core.ui.MyLocationPinColor
 import com.jeongmin.honeymoondoctor.core.ui.OsmMiniMap
 import com.jeongmin.honeymoondoctor.core.ui.SearchField
 import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
@@ -162,8 +163,10 @@ fun NearbyScreen(
                     }
                     val refLat = uiState.referenceLatitude
                     val refLng = uiState.referenceLongitude
+                    // "우리 위치" 화면의 내 핀과 같은 색(파랑)을 써서, 지도가 있는
+                    // 어느 화면에서든 "이 색 = 나"라는 뜻이 통일된다.
                     val referencePin = if (refLat != null && refLng != null && uiState.referenceLabel == "현재 위치 기준") {
-                        listOf(MapPin(refLat, refLng, "내 위치", emoji = "⭐"))
+                        listOf(MapPin(refLat, refLng, "내 위치", pinColor = MyLocationPinColor))
                     } else {
                         emptyList()
                     }

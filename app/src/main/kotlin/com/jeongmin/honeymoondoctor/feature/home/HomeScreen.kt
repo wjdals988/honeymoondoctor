@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -19,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.PersonPinCircle
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -279,11 +281,38 @@ private fun NextItineraryCard(uiState: HomeUiState) {
                 Text("다음 일정", style = MaterialTheme.typography.labelLarge)
                 BigItineraryBody(next, uiState)
                 snapshot.remaining?.let { remaining ->
-                    Text(
-                        text = "${formatRemaining(remaining)} 남음",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = urgencyColor(snapshot.urgency),
-                    )
+                    // 백로그 3-2k: 색만으로 긴급도를 전달하지 않는다. 1시간·3시간 이내는
+                    // 아이콘을 함께 붙인다(색약 사용자도 "곧이다"를 알 수 있게) — 텍스트가
+                    // 이미 뜻을 담고 있으니 아이콘은 장식으로 취급해 contentDescription은
+                    // 비운다(TalkBack 중복 낭독 방지, 3-2j에서 확인한 규칙과 동일).
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        when (snapshot.urgency) {
+                            NextItineraryUrgency.WITHIN_1H -> {
+                                Icon(
+                                    Icons.Filled.Warning,
+                                    contentDescription = null,
+                                    tint = urgencyColor(snapshot.urgency),
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Spacer(Modifier.width(4.dp))
+                            }
+                            NextItineraryUrgency.WITHIN_3H -> {
+                                Icon(
+                                    Icons.Filled.Schedule,
+                                    contentDescription = null,
+                                    tint = urgencyColor(snapshot.urgency),
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Spacer(Modifier.width(4.dp))
+                            }
+                            else -> {}
+                        }
+                        Text(
+                            text = "${formatRemaining(remaining)} 남음",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = urgencyColor(snapshot.urgency),
+                        )
+                    }
                 }
                 // 이동 일정이면 출발 권장 시각(스펙 7-2). 지났으면 색과 함께 글자로도
                 // 알린다 — 색만으로 상태를 구분하지 않는다.
