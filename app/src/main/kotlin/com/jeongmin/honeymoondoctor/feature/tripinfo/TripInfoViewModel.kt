@@ -3,6 +3,7 @@ package com.jeongmin.honeymoondoctor.feature.tripinfo
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jeongmin.honeymoondoctor.core.error.toUserMessage
+import com.jeongmin.honeymoondoctor.data.local.prefs.AppPreferences
 import com.jeongmin.honeymoondoctor.domain.model.AuthUser
 import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.JoinRequest
@@ -15,6 +16,7 @@ import com.jeongmin.honeymoondoctor.domain.repository.CityRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ItineraryRepository
 import com.jeongmin.honeymoondoctor.domain.repository.PublicTripRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
+import com.jeongmin.honeymoondoctor.domain.usecase.ObserveCurrentTrip
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -41,6 +43,8 @@ data class TripInfoUiState(
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class TripInfoViewModel @Inject constructor(
+    private val appPreferences: AppPreferences,
+    private val observeCurrentTrip: ObserveCurrentTrip,
     private val authRepository: AuthRepository,
     private val tripRepository: TripRepository,
     private val cityRepository: CityRepository,
@@ -56,7 +60,7 @@ class TripInfoViewModel @Inject constructor(
             if (user == null) {
                 flowOf(TripInfoUiState())
             } else {
-                tripRepository.observeMyTrip(user.uid).flatMapLatest { trip ->
+                observeCurrentTrip().flatMapLatest { trip ->
                     if (trip == null) {
                         flowOf(TripInfoUiState(currentUser = user))
                     } else {
@@ -168,6 +172,9 @@ class TripInfoViewModel @Inject constructor(
             }
                 .onSuccess {
                     actionError.value = null
+                    // 선택을 비워야 AuthGate가 여행 목록으로 되돌린다. 안 비우면 방금 사라진
+                    // 여행을 계속 가리켜 "여행 정보를 불러올 수 없습니다"가 뜬다.
+                    appPreferences.setSelectedTripId(null)
                     onDone()
                 }
                 .onFailure { actionError.value = it.toUserMessage("여행을 삭제하지 못했습니다.") }

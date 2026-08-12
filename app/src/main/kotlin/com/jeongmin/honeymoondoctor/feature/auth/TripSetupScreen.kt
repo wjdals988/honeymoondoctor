@@ -36,8 +36,15 @@ fun TripSetupScreen(
     onRequestToJoin: (String, (Result<Unit>) -> Unit) -> Unit,
     onCancelPendingJoin: () -> Unit,
     modifier: Modifier = Modifier,
+    /** 여행 목록에서 들어왔을 때만 준다. 첫 여행을 만들 때는 돌아갈 곳이 없어 null이다. */
+    onNavigateBack: (() -> Unit)? = null,
 ) {
     Column(modifier = modifier.padding(24.dp)) {
+        if (onNavigateBack != null) {
+            TextButton(onClick = onNavigateBack, modifier = Modifier.padding(bottom = 4.dp)) {
+                Text("← 여행 목록")
+            }
+        }
         Text("${user.displayName}님, 환영합니다", style = MaterialTheme.typography.headlineMedium)
         Text(
             "새 여행을 만들거나, 파트너에게 받은 초대코드로 참여하세요.",

@@ -4,6 +4,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -46,6 +47,7 @@ import java.time.Duration
 
 @Composable
 fun HomeScreen(
+    onSwitchTrip: () -> Unit,
     onAddItinerary: () -> Unit,
     onOpenItineraryTab: () -> Unit,
     onOpenNearbyTab: () -> Unit,
@@ -74,7 +76,7 @@ fun HomeScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            HomeHeader(uiState)
+            HomeHeader(uiState, onSwitchTrip = onSwitchTrip)
             NextItineraryCard(uiState)
             if (uiState.conflictCount > 0) {
                 ConflictWarningCard(count = uiState.conflictCount)
@@ -102,10 +104,22 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeHeader(uiState: HomeUiState) {
+private fun HomeHeader(uiState: HomeUiState, onSwitchTrip: () -> Unit) {
     val trip = uiState.trip ?: return
     Column {
-        Text(text = trip.name, style = MaterialTheme.typography.titleMedium)
+        // 여행 이름을 누르면 여행 목록으로. 전환은 자주 하는 동작이 아니라 별도 버튼 대신
+        // 이미 보고 있는 이름 자체를 진입점으로 쓴다("지금 이 여행" → "다른 여행").
+        TextButton(
+            onClick = onSwitchTrip,
+            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+        ) {
+            Text(text = trip.name, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = "  여행 바꾸기 ›",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
         val dDay = uiState.dDayToStart
         if (dDay != null) {
             Text(

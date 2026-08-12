@@ -20,6 +20,16 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.1.6",
+            versionCode = 7,
+            date = "2026-08-11",
+            changes = listOf(
+                "여행을 여러 개 만들 수 있습니다. 로그인하면 내 여행 목록이 먼저 나오고, 그중 하나를 골라 들어갑니다.",
+                "여행 목록은 진행 중과 지난 여행 탭으로 나뉘며, 각 여행의 출발 D-day·여행 중 일차·완료 여부와 구성원 수를 함께 보여줍니다.",
+                "홈 화면의 여행 이름을 누르거나 전체 → 여행 바꾸기로 다른 여행으로 이동합니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.1.5",
             versionCode = 6,
             date = "2026-08-11",

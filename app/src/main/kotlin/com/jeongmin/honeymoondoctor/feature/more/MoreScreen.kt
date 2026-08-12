@@ -40,6 +40,7 @@ fun MoreScreen(
     onNavigateToSyncStatus: () -> Unit,
     onNavigateToPublicTrips: () -> Unit,
     onNavigateToAbout: () -> Unit,
+    onSwitchTrip: () -> Unit,
     onResetDemoData: () -> Unit,
     onLogout: () -> Unit,
     onDeleteAccount: () -> Unit,
@@ -54,6 +55,7 @@ fun MoreScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val menuItems = listOf(
+        MoreMenu("여행 바꾸기", "switch_trip"),
         MoreMenu("예약함", "reservations"),
         MoreMenu("준비물", "checklist"),
         MoreMenu("결정함", "decisions"),
@@ -76,11 +78,13 @@ fun MoreScreen(
                 "sync_status" -> onNavigateToSyncStatus
                 "public_trips" -> onNavigateToPublicTrips
                 "about" -> onNavigateToAbout
+                "switch_trip" -> onSwitchTrip
                 else -> null
             }
             ListItem(
                 headlineContent = { Text(menu.label) },
                 supportingContent = when {
+                    menu.onClickKey == "switch_trip" -> { { Text("다른 여행을 보거나 새로 만듭니다") } }
                     // 목록에서 바로 버전을 읽을 수 있게 한다(들어가지 않아도 확인 가능).
                     menu.onClickKey == "about" ->
                         { { Text("v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})") } }

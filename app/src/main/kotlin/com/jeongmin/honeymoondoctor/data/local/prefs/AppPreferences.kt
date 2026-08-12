@@ -27,6 +27,8 @@ data class AppPrefsSnapshot(
     val selectedCityId: String?,
     val lastKnownLocation: LastKnownLocation?,
     val pendingJoinTripId: String?,
+    /** 지금 보고 있는 여행. null이면 여행 목록 화면에 머문다. */
+    val selectedTripId: String?,
     val lastSyncAtEpochMillis: Long?,
     val scheduledReminderKeys: Set<String>,
 )
@@ -44,6 +46,7 @@ class AppPreferences @Inject constructor(
         val LAST_LONGITUDE = doublePreferencesKey("last_longitude")
         val LAST_LOCATION_AT = longPreferencesKey("last_location_at")
         val PENDING_JOIN_TRIP_ID = stringPreferencesKey("pending_join_trip_id")
+        val SELECTED_TRIP_ID = stringPreferencesKey("selected_trip_id")
         val LAST_SYNC_AT = longPreferencesKey("last_sync_at_epoch_millis")
         val SCHEDULED_REMINDER_KEYS = stringSetPreferencesKey("scheduled_reminder_keys")
     }
@@ -60,6 +63,7 @@ class AppPreferences @Inject constructor(
                 null
             },
             pendingJoinTripId = prefs[Keys.PENDING_JOIN_TRIP_ID],
+            selectedTripId = prefs[Keys.SELECTED_TRIP_ID],
             lastSyncAtEpochMillis = prefs[Keys.LAST_SYNC_AT],
             scheduledReminderKeys = prefs[Keys.SCHEDULED_REMINDER_KEYS].orEmpty(),
         )
@@ -74,6 +78,13 @@ class AppPreferences @Inject constructor(
             it[Keys.LAST_LATITUDE] = location.latitude
             it[Keys.LAST_LONGITUDE] = location.longitude
             it[Keys.LAST_LOCATION_AT] = location.capturedAtEpochMillis
+        }
+    }
+
+    /** 여행 선택/해제. null로 두면 AuthGate가 여행 목록 화면으로 되돌린다. */
+    suspend fun setSelectedTripId(tripId: String?) {
+        dataStore.edit {
+            if (tripId == null) it.remove(Keys.SELECTED_TRIP_ID) else it[Keys.SELECTED_TRIP_ID] = tripId
         }
     }
 

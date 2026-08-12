@@ -13,6 +13,7 @@ import com.jeongmin.honeymoondoctor.domain.repository.ItineraryRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ReservationRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
 import com.jeongmin.honeymoondoctor.domain.usecase.ItineraryConflictDetector
+import com.jeongmin.honeymoondoctor.domain.usecase.ObserveCurrentTrip
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -52,6 +53,7 @@ private val dayHeaderFormatter = DateTimeFormatter.ofPattern("M월 d일 (E)", Lo
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ItineraryViewModel @Inject constructor(
+    private val observeCurrentTrip: ObserveCurrentTrip,
     authRepository: AuthRepository,
     tripRepository: TripRepository,
     private val itineraryRepository: ItineraryRepository,
@@ -65,7 +67,7 @@ class ItineraryViewModel @Inject constructor(
             if (user == null) {
                 flowOf(ItineraryUiState(loading = false))
             } else {
-                tripRepository.observeMyTrip(user.uid).flatMapLatest { trip ->
+                observeCurrentTrip().flatMapLatest { trip ->
                     if (trip == null) {
                         flowOf(ItineraryUiState(loading = false))
                     } else {

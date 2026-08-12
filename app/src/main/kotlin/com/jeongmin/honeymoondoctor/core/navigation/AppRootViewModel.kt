@@ -3,6 +3,7 @@ package com.jeongmin.honeymoondoctor.core.navigation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jeongmin.honeymoondoctor.core.demo.DemoModeManager
+import com.jeongmin.honeymoondoctor.data.local.prefs.AppPreferences
 import com.jeongmin.honeymoondoctor.domain.model.isReadOnly
 import com.jeongmin.honeymoondoctor.domain.usecase.ObserveCurrentTrip
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -11,11 +12,13 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 @HiltViewModel
 class AppRootViewModel @Inject constructor(
     demoModeManager: DemoModeManager,
     observeCurrentTrip: ObserveCurrentTrip,
+    private val appPreferences: AppPreferences,
 ) : ViewModel() {
     val isDemoMode: Boolean = demoModeManager.isDemoMode
 
@@ -23,4 +26,12 @@ class AppRootViewModel @Inject constructor(
     val isTripReadOnly: StateFlow<Boolean> = observeCurrentTrip()
         .map { it?.isReadOnly ?: false }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /**
+     * 여행 목록으로 돌아간다. 선택을 비우면 AuthGate의 상태 흐름이 알아서 목록 화면으로
+     * 되돌리므로, 여기서 화면 전환을 직접 하지 않는다(진입 순서를 한 곳에서만 관리).
+     */
+    fun backToTripList() {
+        viewModelScope.launch { appPreferences.setSelectedTripId(null) }
+    }
 }

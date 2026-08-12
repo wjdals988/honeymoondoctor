@@ -14,6 +14,7 @@ import com.jeongmin.honeymoondoctor.domain.repository.AuthRepository
 import com.jeongmin.honeymoondoctor.domain.repository.CityRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ItineraryRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
+import com.jeongmin.honeymoondoctor.domain.usecase.ObserveCurrentTrip
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import java.time.LocalTime
@@ -66,6 +67,7 @@ data class ItineraryEditUiState(
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ItineraryEditViewModel @Inject constructor(
+    private val observeCurrentTrip: ObserveCurrentTrip,
     savedStateHandle: SavedStateHandle,
     authRepository: AuthRepository,
     tripRepository: TripRepository,
@@ -80,9 +82,7 @@ class ItineraryEditViewModel @Inject constructor(
     private val _form = MutableStateFlow<ItineraryEditForm?>(null)
     val form: StateFlow<ItineraryEditForm?> = _form
 
-    private val tripFlow = authRepository.currentUser.flatMapLatest { user ->
-        if (user == null) flowOf(null) else tripRepository.observeMyTrip(user.uid)
-    }
+    private val tripFlow = observeCurrentTrip()
 
     val uiState: StateFlow<ItineraryEditUiState> = tripFlow
         .flatMapLatest { trip ->

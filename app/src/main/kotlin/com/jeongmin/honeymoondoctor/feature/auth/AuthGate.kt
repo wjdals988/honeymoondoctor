@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.navigation.HoneymoonDoctorAppRoot
 import com.jeongmin.honeymoondoctor.core.ui.DemoModeBanner
+import com.jeongmin.honeymoondoctor.feature.triplist.TripListScreen
 
 /**
  * 로그인 → 여행 생성/참여 → 5탭 메인 화면 순서로 진입을 제어하는 최상위 게이트.
@@ -53,6 +54,38 @@ fun AuthGate(viewModel: AuthGateViewModel = hiltViewModel()) {
                         },
                         modifier = safeDrawingInsets(),
                         signInError = signInError,
+                    )
+                }
+            }
+            is AuthGateState.NeedsTripSelection -> {
+                // 여행이 여러 개일 수 있으므로 무엇을 볼지 먼저 고른다. "새 여행 만들기"는
+                // 만들기 폼(TripSetupScreen)을 그대로 재사용한다 — 참여 코드 입력도 같은 폼에 있다.
+                var showCreateForm by remember { mutableStateOf(false) }
+                if (showCreateForm) {
+                    var createError by remember { mutableStateOf<String?>(null) }
+                    TripSetupScreen(
+                        user = state.user,
+                        pendingJoinTripId = null,
+                        joinRequestStatus = null,
+                        createError = createError,
+                        onCreateTrip = { draft ->
+                            createError = null
+                            viewModel.createTrip(state.user, draft) {
+                                createError = it.message ?: "여행 생성에 실패했습니다."
+                            }
+                        },
+                        onRequestToJoin = { code, onResult -> viewModel.requestToJoin(state.user, code, onResult) },
+                        onCancelPendingJoin = viewModel::cancelPendingJoin,
+                        onNavigateBack = { showCreateForm = false },
+                        modifier = safeDrawingInsets(),
+                    )
+                } else {
+                    TripListScreen(
+                        trips = state.trips,
+                        userDisplayName = state.user.displayName,
+                        onSelectTrip = viewModel::selectTrip,
+                        onCreateTrip = { showCreateForm = true },
+                        modifier = safeDrawingInsets(),
                     )
                 }
             }

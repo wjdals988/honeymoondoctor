@@ -23,6 +23,7 @@ import com.jeongmin.honeymoondoctor.domain.usecase.CurrentCityResolver
 import com.jeongmin.honeymoondoctor.domain.usecase.ItineraryConflictDetector
 import com.jeongmin.honeymoondoctor.domain.usecase.NextItineraryCalculator
 import com.jeongmin.honeymoondoctor.domain.usecase.NextItinerarySnapshot
+import com.jeongmin.honeymoondoctor.domain.usecase.ObserveCurrentTrip
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Instant
@@ -66,6 +67,7 @@ data class HomeUiState(
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
+    private val observeCurrentTrip: ObserveCurrentTrip,
     @ApplicationContext private val context: Context,
     authRepository: AuthRepository,
     tripRepository: TripRepository,
@@ -105,7 +107,7 @@ class HomeViewModel @Inject constructor(
             if (user == null) {
                 flowOf(HomeUiState(loading = false))
             } else {
-                tripRepository.observeMyTrip(user.uid).flatMapLatest { trip ->
+                observeCurrentTrip().flatMapLatest { trip ->
                     if (trip == null) {
                         flowOf(HomeUiState(loading = false))
                     } else {

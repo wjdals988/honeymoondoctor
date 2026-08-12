@@ -41,12 +41,17 @@ class FirebaseTripRepository @Inject constructor(
     // 공개 토글을 켜거나 다시 활성화할 수 있어야 하기 때문이다(완료 즉시 화면에서 밀려나면
     // 공개 처리를 할 화면 자체가 사라진다). 계정당 여행이 1개인 현재 구조에서 "완료 후 새
     // 여행을 곧바로 또 만드는" 흐름은 이번 범위에 포함하지 않았다(§보류: 여러 여행 전환 UI).
-    override fun observeMyTrip(uid: String): Flow<Trip?> =
+    override fun observeMyTrips(uid: String): Flow<List<Trip>> =
         firestore.collection(TRIPS)
             .whereArrayContains("memberIds", uid)
-            .limit(1)
             .snapshotFlow()
-            .map { it?.documents?.firstOrNull()?.toTrip() }
+            .map { snapshot ->
+                // 정렬을 서버 orderBy로 하지 않는 이유: whereArrayContains와 orderBy를 같이 쓰면
+                // 복합 색인이 필요해 배포 절차가 하나 더 늘어난다. 한 사람의 여행은 많아야 수십 개라
+                // 클라이언트 정렬로 충분하다. 최근 출발이 위로 오게 한다.
+                snapshot?.documents.orEmpty().mapNotNull { it.toTrip() }
+                    .sortedByDescending { it.startDate }
+            }
 
     override fun observeMembers(tripId: String): Flow<List<TripMember>> =
         firestore.collection(TRIPS).document(tripId).collection(MEMBERS)

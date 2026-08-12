@@ -47,8 +47,9 @@ class DemoTripRepository @Inject constructor(
     }
 
     // 완료된 여행도 계속 이 값으로 조회된다. FirebaseTripRepository의 observeMyTrip 주석 참고.
-    override fun observeMyTrip(uid: String): Flow<Trip?> = stateFlow.map { state ->
-        state?.takeIf { uid in it.memberIds }?.toDomain()
+    // 데모 모드는 기기 저장소에 여행 하나만 두는 구조라 목록도 0~1개다.
+    override fun observeMyTrips(uid: String): Flow<List<Trip>> = stateFlow.map { state ->
+        listOfNotNull(state?.takeIf { uid in it.memberIds }?.toDomain())
     }
 
     override fun observeMembers(tripId: String): Flow<List<TripMember>> = stateFlow.map { state ->

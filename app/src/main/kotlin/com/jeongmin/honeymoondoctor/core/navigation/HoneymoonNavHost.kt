@@ -102,6 +102,7 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
         ) {
             composable(BottomTab.HOME.route) {
                 HomeScreen(
+                    onSwitchTrip = viewModel::backToTripList,
                     onAddItinerary = { navController.navigate(itineraryEditRoute(null)) },
                     onOpenItineraryTab = { navController.navigateToTab(BottomTab.ITINERARY) },
                     onOpenNearbyTab = { navController.navigateToTab(BottomTab.NEARBY) },
@@ -195,6 +196,7 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                     onNavigateToSyncStatus = { navController.navigate(ROUTE_SYNC_STATUS) },
                     onNavigateToPublicTrips = { navController.navigate(ROUTE_PUBLIC_TRIPS) },
                     onNavigateToAbout = { navController.navigate(ROUTE_ABOUT) },
+                    onSwitchTrip = viewModel::backToTripList,
                     onResetDemoData = moreViewModel::resetDemoData,
                     onLogout = moreViewModel::logout,
                     onDeleteAccount = moreViewModel::deleteAccount,

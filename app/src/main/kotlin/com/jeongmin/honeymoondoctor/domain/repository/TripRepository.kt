@@ -9,8 +9,15 @@ import com.jeongmin.honeymoondoctor.domain.model.TripStatus
 import kotlinx.coroutines.flow.Flow
 
 interface TripRepository {
-    /** 현재 로그인한 사용자가 속한 여행. 아직 없으면 null. */
-    fun observeMyTrip(uid: String): Flow<Trip?>
+    /**
+     * 현재 로그인한 사용자가 속한 모든 여행. 최근 출발 순으로 정렬해 돌려준다.
+     *
+     * 한 계정이 여행을 여러 개 가질 수 있다(v0.1.6부터). 예전에는 `limit(1)`로 하나만
+     * 집어왔는데, 데이터 구조와 보안 규칙은 처음부터 여행별로 되어 있어 쿼리만 바꾸면 됐다.
+     * 어느 여행을 보고 있는지는 `AppPreferences.selectedTripId`가 들고 있고,
+     * `ObserveCurrentTrip`이 그 둘을 합쳐 화면에 하나를 내려준다.
+     */
+    fun observeMyTrips(uid: String): Flow<List<Trip>>
 
     fun observeMembers(tripId: String): Flow<List<TripMember>>
 
