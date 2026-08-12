@@ -20,6 +20,14 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.6.3",
+            versionCode = 27,
+            date = "2026-08-13",
+            changes = listOf(
+                "시스템 글자 크기를 크게 설정했을 때 홈의 \"여행 바꾸기\" 문구와 예약 상세의 바우처 파일명이 중간에 뚝 끊기던 문제를 고쳐, 이제 말줄임(…)으로 자연스럽게 줄어듭니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.6.2",
             versionCode = 26,
             date = "2026-08-13",

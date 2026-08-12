@@ -225,6 +225,11 @@ private fun HomeHeader(uiState: HomeUiState, onSwitchTrip: () -> Unit, onOpenTog
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                     maxLines = 1,
+                    // 글자 크기를 키우면(시스템 큰 글씨) 여행 이름 + 이 안내가 버튼 폭을
+                    // 넘는다. overflow 지정이 없으면 기본값 Clip이라 "여행 바꾸기 ›"가
+                    // 말줄임 없이 "여행"에서 뚝 끊겨 깨진 것처럼 보인다(1.3배 글자 크기로
+                    // 실측해 확인한 문제 — 백로그 3-2i). Ellipsis로 우아하게 잘리게 한다.
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
             Spacer(Modifier.weight(1f))

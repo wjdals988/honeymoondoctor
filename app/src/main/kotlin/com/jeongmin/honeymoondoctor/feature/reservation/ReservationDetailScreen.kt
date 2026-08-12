@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.ui.AppCard
@@ -281,7 +282,14 @@ private fun VoucherRow(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(voucher.fileName, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                Text(
+                    voucher.fileName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    // overflow 미지정 시 기본값 Clip — 파일명이 길면 말줄임 없이
+                    // 뚝 끊긴다(홈 헤더에서 실측으로 확인한 것과 같은 패턴).
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Text(
                     text = "%.1f MB".format(voucher.sizeBytes / 1024f / 1024f),
                     style = MaterialTheme.typography.bodySmall,
