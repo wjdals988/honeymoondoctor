@@ -17,6 +17,12 @@ import kotlinx.coroutines.flow.map
 
 val Context.appDataStore: DataStore<Preferences> by preferencesDataStore(name = "honeymoon_doctor_prefs")
 
+/**
+ * 앱 테마. SYSTEM이 기본 — 사용자가 명시적으로 고르기 전에는 OS 설정을 따른다.
+ * 문자열로 저장하고 모르는 값은 SYSTEM으로 읽는다(다운그레이드 안전).
+ */
+enum class ThemeMode { SYSTEM, LIGHT, DARK }
+
 data class LastKnownLocation(
     val latitude: Double,
     val longitude: Double,
@@ -37,6 +43,12 @@ data class AppPrefsSnapshot(
      * 흔해서, 네트워크 조회의 대체 수단으로도 쓰인다.
      */
     val lastExchangeRates: Map<String, Double>,
+    val themeMode: ThemeMode,
+    /**
+     * 이동 일정 출발 여유(분). 홈의 "출발 권장 시각" = 이동 일정 시작 − 이 값.
+     * 지도 이동시간 데이터가 없어 계산이 아니라 사용자가 정하는 값이다. 기본 60분.
+     */
+    val transportLeadMinutes: Int,
 )
 
 /** 앱 설정, 선택 도시, 최근 위치 메타데이터를 담는 DataStore 래퍼. 위치는 화면 진입/새로고침 때만 갱신된다. */
@@ -62,6 +74,12 @@ class AppPreferences @Inject constructor(
          * 알아야 한다. 집합 하나면 앱이 모르는 통화가 들어와도 그대로 읽힌다.
          */
         val LAST_EXCHANGE_RATES = stringSetPreferencesKey("last_exchange_rates")
+        val THEME_MODE = stringPreferencesKey("theme_mode")
+        val TRANSPORT_LEAD_MINUTES = longPreferencesKey("transport_lead_minutes")
+    }
+
+    private companion object {
+        const val DEFAULT_TRANSPORT_LEAD_MINUTES = 60
     }
 
     val snapshot: Flow<AppPrefsSnapshot> = dataStore.data.map { prefs ->
@@ -80,6 +98,12 @@ class AppPreferences @Inject constructor(
             lastSyncAtEpochMillis = prefs[Keys.LAST_SYNC_AT],
             scheduledReminderKeys = prefs[Keys.SCHEDULED_REMINDER_KEYS].orEmpty(),
             lastExchangeRates = decodeRates(prefs[Keys.LAST_EXCHANGE_RATES].orEmpty()),
+            themeMode = prefs[Keys.THEME_MODE]
+                ?.let { raw -> ThemeMode.entries.firstOrNull { it.name == raw } }
+                ?: ThemeMode.SYSTEM,
+            transportLeadMinutes = prefs[Keys.TRANSPORT_LEAD_MINUTES]?.toInt()
+                ?.takeIf { it in 1..24 * 60 }
+                ?: DEFAULT_TRANSPORT_LEAD_MINUTES,
         )
     }
 
@@ -116,6 +140,15 @@ class AppPreferences @Inject constructor(
     /** 현재 예약돼 있는 일정 알림 키 집합. 다음 재계획 시 사라진 키를 취소하는 기준이 된다. */
     suspend fun setScheduledReminderKeys(keys: Set<String>) {
         dataStore.edit { it[Keys.SCHEDULED_REMINDER_KEYS] = keys }
+    }
+
+    suspend fun setThemeMode(mode: ThemeMode) {
+        dataStore.edit { it[Keys.THEME_MODE] = mode.name }
+    }
+
+    suspend fun setTransportLeadMinutes(minutes: Int) {
+        if (minutes !in 1..24 * 60) return
+        dataStore.edit { it[Keys.TRANSPORT_LEAD_MINUTES] = minutes.toLong() }
     }
 
     /**

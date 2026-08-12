@@ -20,6 +20,15 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.3.0",
+            versionCode = 15,
+            date = "2026-08-12",
+            changes = listOf(
+                "설정 화면이 생겼습니다(전체 → 설정). 테마(시스템/라이트/다크)와 이동 일정 출발 여유를 고를 수 있습니다. 설정은 이 기기에만 적용됩니다.",
+                "다음 일정이 이동이면 홈에 출발 권장 시각이 표시됩니다. 이동 시작 시각에서 설정한 여유(기본 1시간)를 뺀 시각이며, 지났으면 \"지금 나서야 해요\"로 바뀝니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.2.3",
             versionCode = 14,
             date = "2026-08-12",

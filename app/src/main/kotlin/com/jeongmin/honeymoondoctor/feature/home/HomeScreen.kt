@@ -269,6 +269,25 @@ private fun NextItineraryCard(uiState: HomeUiState) {
                         color = urgencyColor(snapshot.urgency),
                     )
                 }
+                // 이동 일정이면 출발 권장 시각(스펙 7-2). 지났으면 색과 함께 글자로도
+                // 알린다 — 색만으로 상태를 구분하지 않는다.
+                uiState.departureAdvice?.let { advice ->
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = if (advice.overdue) {
+                            "출발 권장 ${LocalTimes.formatTime(advice.departAt, next.timeZone)} — 지금 나서야 해요"
+                        } else {
+                            "출발 권장 ${LocalTimes.formatTime(advice.departAt, next.timeZone)} " +
+                                "(${formatRemaining(advice.remaining)} 뒤) · 여유는 설정에서"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (advice.overdue) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                }
             }
 
             else -> {

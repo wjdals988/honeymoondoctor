@@ -28,6 +28,7 @@ import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.ReadOnlyBanner
 import com.jeongmin.honeymoondoctor.core.ui.ReadOnlyEditorPanel
 import com.jeongmin.honeymoondoctor.feature.about.AboutScreen
+import com.jeongmin.honeymoondoctor.feature.settings.SettingsScreen
 import com.jeongmin.honeymoondoctor.feature.checklist.ChecklistScreen
 import com.jeongmin.honeymoondoctor.feature.decision.DecisionScreen
 import com.jeongmin.honeymoondoctor.feature.expense.BudgetScreen
@@ -64,6 +65,7 @@ private const val ROUTE_SYNC_STATUS = "sync_status"
 private const val ROUTE_PUBLIC_TRIPS = "public_trips"
 private const val ROUTE_PUBLIC_TRIP_DETAIL = "public_trip_detail"
 private const val ROUTE_ABOUT = "about"
+private const val ROUTE_SETTINGS = "settings"
 
 private fun itineraryEditRoute(itemId: String?): String =
     if (itemId == null) ROUTE_ITINERARY_EDIT else "$ROUTE_ITINERARY_EDIT?itemId=$itemId"
@@ -216,6 +218,7 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                     onNavigateToSyncStatus = { navController.navigate(ROUTE_SYNC_STATUS) },
                     onNavigateToPublicTrips = { navController.navigate(ROUTE_PUBLIC_TRIPS) },
                     onNavigateToAbout = { navController.navigate(ROUTE_ABOUT) },
+                    onNavigateToSettings = { navController.navigate(ROUTE_SETTINGS) },
                     onSwitchTrip = viewModel::backToTripList,
                     onResetDemoData = moreViewModel::resetDemoData,
                     onLogout = moreViewModel::logout,
@@ -229,6 +232,9 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
             composable(ROUTE_TRIP_INFO) { TripInfoScreen() }
             composable(ROUTE_ABOUT) {
                 AboutScreen(onNavigateBack = { navController.popBackStack() })
+            }
+            composable(ROUTE_SETTINGS) {
+                SettingsScreen(onNavigateBack = { navController.popBackStack() })
             }
             composable(ROUTE_PUBLIC_TRIPS) {
                 PublicTripListScreen(

@@ -6,6 +6,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jeongmin.honeymoondoctor.data.local.prefs.AppPreferences
+import com.jeongmin.honeymoondoctor.data.local.prefs.AppPrefsSnapshot
 import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.ReservationStatus
 import com.jeongmin.honeymoondoctor.domain.model.SyncStatus
@@ -20,6 +22,7 @@ import com.jeongmin.honeymoondoctor.domain.repository.ReservationRepository
 import com.jeongmin.honeymoondoctor.domain.repository.SyncStatusRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
 import com.jeongmin.honeymoondoctor.domain.usecase.CurrentCityResolver
+import com.jeongmin.honeymoondoctor.domain.usecase.DepartureAdvisor
 import com.jeongmin.honeymoondoctor.domain.usecase.ItineraryConflictDetector
 import com.jeongmin.honeymoondoctor.domain.usecase.NextItineraryCalculator
 import com.jeongmin.honeymoondoctor.domain.usecase.NextItinerarySnapshot
@@ -66,6 +69,8 @@ data class HomeUiState(
     val totalSpentKrw: Long = 0,
     /** 여행 중에만 노출(스펙 7-2): 오프라인 상태·마지막 동기화·동기화 대기 변경 수 */
     val syncStatus: SyncStatus? = null,
+    /** 다음 일정이 이동일 때만 non-null. 홈 다음 일정 카드가 표시한다. */
+    val departureAdvice: DepartureAdvisor.Advice? = null,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -82,6 +87,7 @@ class HomeViewModel @Inject constructor(
     expenseRepository: ExpenseRepository,
     budgetRepository: BudgetRepository,
     syncStatusRepository: SyncStatusRepository,
+    private val appPreferences: AppPreferences,
 ) : ViewModel() {
 
     /**
@@ -140,8 +146,18 @@ class HomeViewModel @Inject constructor(
                             preparation,
                             syncStatusRepository.observeSyncStatus(trip.id),
                             clock,
-                        ) { items, cities, summary, syncStatus, now ->
-                            buildState(trip, items, cities, now, summary, syncStatus)
+                            appPreferences.snapshot,
+                        ) { values ->
+                            @Suppress("UNCHECKED_CAST")
+                            buildState(
+                                trip = trip,
+                                items = values[0] as List<com.jeongmin.honeymoondoctor.domain.model.ItineraryItem>,
+                                cities = values[1] as List<City>,
+                                now = values[4] as Instant,
+                                summary = values[2] as PreparationSummary,
+                                syncStatus = values[3] as SyncStatus,
+                                transportLeadMinutes = (values[5] as AppPrefsSnapshot).transportLeadMinutes,
+                            )
                         }
                     }
                 }
@@ -156,6 +172,7 @@ class HomeViewModel @Inject constructor(
         now: Instant,
         summary: PreparationSummary,
         syncStatus: SyncStatus,
+        transportLeadMinutes: Int,
     ): HomeUiState {
         val tripStart = runCatching { LocalDate.parse(trip.startDate) }.getOrNull()
         val tripEnd = runCatching { LocalDate.parse(trip.endDate) }.getOrNull()
@@ -198,6 +215,9 @@ class HomeViewModel @Inject constructor(
             totalBudgetKrw = summary.totalBudgetKrw,
             totalSpentKrw = summary.totalSpentKrw,
             syncStatus = syncStatus,
+            // 스펙 7-2 "이동 일정이면 출발 권장 시각". 다음 일정에 대해서만 계산한다 —
+            // 진행 중 이동은 이미 나선 뒤라 권장할 것이 없다.
+            departureAdvice = DepartureAdvisor.advise(snapshot.next, transportLeadMinutes, now),
         )
     }
 }

@@ -40,6 +40,7 @@ fun MoreScreen(
     onNavigateToSyncStatus: () -> Unit,
     onNavigateToPublicTrips: () -> Unit,
     onNavigateToAbout: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     onSwitchTrip: () -> Unit,
     onResetDemoData: () -> Unit,
     onLogout: () -> Unit,
@@ -65,7 +66,7 @@ fun MoreScreen(
         MoreMenu("여행 둘러보기", "public_trips"),
         MoreMenu("동기화 상태", "sync_status"),
         MoreMenu("버전 정보", "about"),
-        MoreMenu("설정", null),
+        MoreMenu("설정", "settings"),
     )
     LazyColumn(modifier = modifier.padding(vertical = 8.dp)) {
         items(menuItems) { menu ->
@@ -78,6 +79,7 @@ fun MoreScreen(
                 "sync_status" -> onNavigateToSyncStatus
                 "public_trips" -> onNavigateToPublicTrips
                 "about" -> onNavigateToAbout
+                "settings" -> onNavigateToSettings
                 "switch_trip" -> onSwitchTrip
                 else -> null
             }
