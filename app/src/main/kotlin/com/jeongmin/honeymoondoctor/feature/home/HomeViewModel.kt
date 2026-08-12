@@ -24,6 +24,8 @@ import com.jeongmin.honeymoondoctor.domain.usecase.ItineraryConflictDetector
 import com.jeongmin.honeymoondoctor.domain.usecase.NextItineraryCalculator
 import com.jeongmin.honeymoondoctor.domain.usecase.NextItinerarySnapshot
 import com.jeongmin.honeymoondoctor.domain.usecase.ObserveCurrentTrip
+import com.jeongmin.honeymoondoctor.domain.usecase.TripDaySummary
+import com.jeongmin.honeymoondoctor.domain.usecase.TripOverviewBuilder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Instant
@@ -54,6 +56,8 @@ data class HomeUiState(
     val displayZoneId: String = "Asia/Seoul",
     val now: Instant = Instant.EPOCH,
     val next: NextItinerarySnapshot? = null,
+    /** 여행 기간 전체 날짜별 요약. 출발 전 오버뷰에서 "어느 날이 비었나"를 보여준다. */
+    val tripDays: List<TripDaySummary> = emptyList(),
     val conflictCount: Int = 0,
     /** 출발 전 홈 요약(스펙 7-2): 미완료 필수 준비물, 확인 필요 예약, 예산/지출/잔여 */
     val requiredChecklistIncomplete: Int = 0,
@@ -187,6 +191,7 @@ class HomeViewModel @Inject constructor(
             displayZoneId = displayZoneId,
             now = now,
             next = snapshot,
+            tripDays = TripOverviewBuilder.build(trip.startDate, trip.endDate, items),
             conflictCount = ItineraryConflictDetector.findConflictingIds(items).size,
             requiredChecklistIncomplete = summary.requiredChecklistIncomplete,
             attentionReservationCount = summary.attentionReservationCount,

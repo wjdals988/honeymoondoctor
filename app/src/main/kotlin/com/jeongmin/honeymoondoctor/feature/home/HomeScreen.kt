@@ -28,6 +28,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -43,6 +46,7 @@ import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryItem
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryStatus
 import com.jeongmin.honeymoondoctor.domain.usecase.NextItineraryUrgency
+import com.jeongmin.honeymoondoctor.domain.usecase.TripDaySummary
 import java.time.Duration
 
 @Composable
@@ -77,19 +81,42 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             HomeHeader(uiState, onSwitchTrip = onSwitchTrip)
-            NextItineraryCard(uiState)
-            if (uiState.conflictCount > 0) {
-                ConflictWarningCard(count = uiState.conflictCount)
+
+            // 출발 전에는 화면의 중심이 다르다. "다음 일정"은 대개 비어 있거나 몇 주 뒤라
+            // 계획에 도움이 안 되고, 그때 필요한 건 "어느 날이 아직 비었나"다.
+            // 여행 중·완료 후 배치는 종전 그대로 둔다(한 번에 다 바꾸면 어디가 어색한지 못 가린다).
+            val isBeforeTrip = uiState.dDayToStart != null
+            if (isBeforeTrip) {
+                PreparationSummaryCard(
+                    uiState = uiState,
+                    onOpenReservations = onOpenReservations,
+                    onOpenChecklist = onOpenChecklist,
+                )
+                TripOverviewSection(uiState = uiState, onOpenItineraryTab = onOpenItineraryTab)
+                if (uiState.conflictCount > 0) {
+                    ConflictWarningCard(count = uiState.conflictCount)
+                }
+                // 출발 전에는 실제로 다음 일정이 있을 때만 보여준다. 일정이 하나도 없는
+                // 계획 초기에 "남은 일정이 없습니다" 카드는 알려주는 게 없는 소음이다.
+                val hasUpcoming = uiState.next?.let { it.next != null || it.ongoing != null } == true
+                if (hasUpcoming) {
+                    NextItineraryCard(uiState)
+                }
+            } else {
+                NextItineraryCard(uiState)
+                if (uiState.conflictCount > 0) {
+                    ConflictWarningCard(count = uiState.conflictCount)
+                }
+                PreparationSummaryCard(
+                    uiState = uiState,
+                    onOpenReservations = onOpenReservations,
+                    onOpenChecklist = onOpenChecklist,
+                )
+                if (uiState.isDuringTrip) {
+                    SyncStatusFooter(uiState = uiState, onOpenSyncStatus = onOpenSyncStatus)
+                }
+                TodayTimelineSection(uiState)
             }
-            PreparationSummaryCard(
-                uiState = uiState,
-                onOpenReservations = onOpenReservations,
-                onOpenChecklist = onOpenChecklist,
-            )
-            if (uiState.isDuringTrip) {
-                SyncStatusFooter(uiState = uiState, onOpenSyncStatus = onOpenSyncStatus)
-            }
-            TodayTimelineSection(uiState)
             QuickActions(
                 onAddItinerary = onAddItinerary,
                 onOpenItineraryTab = onOpenItineraryTab,
@@ -470,3 +497,97 @@ private fun formatRemaining(duration: Duration): String {
         else -> "${minutes}분"
     }
 }
+
+/**
+ * 여행 기간 전체를 날짜 한 줄씩 보여주는 오버뷰(출발 전 홈의 중심).
+ *
+ * 일정 탭을 옮겨 온 것이 아니라 축약판이다 — 시각·유형·충돌 경고·상태 변경은 계속 일정 탭이
+ * 맡고, 여기서는 "며칠에 몇 건, 첫 일정은 무엇"만 본다. 비어 있는 날을 감추지 않는 것이
+ * 이 섹션의 존재 이유다(계획의 구멍이 드러나야 한다).
+ *
+ * 기간이 길면 목록이 그만큼 길어지므로 앞의 [PREVIEW_DAYS]일만 펼치고 나머지는 접는다.
+ */
+@Composable
+private fun TripOverviewSection(uiState: HomeUiState, onOpenItineraryTab: () -> Unit) {
+    val days = uiState.tripDays
+    if (days.isEmpty()) return
+    var expanded by remember { mutableStateOf(false) }
+    val shown = if (expanded || days.size <= PREVIEW_DAYS) days else days.take(PREVIEW_DAYS)
+    val emptyDayCount = days.count { it.itemCount == 0 }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader(
+            title = "전체 일정",
+            trailing = { TextButton(onClick = onOpenItineraryTab) { Text("일정 탭에서 편집") } },
+        )
+        Text(
+            text = if (emptyDayCount == 0) {
+                "${days.size}일 모두 일정이 있습니다."
+            } else {
+                "${days.size}일 중 ${emptyDayCount}일이 비어 있습니다."
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (emptyDayCount == 0) {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            } else {
+                MaterialTheme.colorScheme.primary
+            },
+        )
+        AppCard(modifier = Modifier.fillMaxWidth()) {
+            shown.forEach { day -> TripOverviewRow(day) }
+        }
+        if (days.size > PREVIEW_DAYS) {
+            TextButton(onClick = { expanded = !expanded }) {
+                Text(if (expanded) "접기" else "${days.size - PREVIEW_DAYS}일 더 보기")
+            }
+        }
+    }
+}
+
+@Composable
+private fun TripOverviewRow(day: TripDaySummary) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+    ) {
+        Text(
+            text = day.dayNumber?.let { "D$it" }.orEmpty(),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.width(36.dp),
+        )
+        Text(
+            text = day.date.format(overviewDateFormatter),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.width(96.dp),
+        )
+        if (day.itemCount == 0) {
+            Text(
+                text = "일정 없음",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+        } else {
+            Text(
+                text = day.firstTitle.orEmpty(),
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            if (day.itemCount > 1) {
+                Text(
+                    text = "+${day.itemCount - 1}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+    }
+}
+
+/** 오버뷰에서 앞쪽 며칠을 펼쳐 둘지. 7일이면 한 주가 한눈에 들어온다. */
+private const val PREVIEW_DAYS = 7
+
+private val overviewDateFormatter = java.time.format.DateTimeFormatter.ofPattern("M월 d일 (E)", java.util.Locale.KOREAN)
