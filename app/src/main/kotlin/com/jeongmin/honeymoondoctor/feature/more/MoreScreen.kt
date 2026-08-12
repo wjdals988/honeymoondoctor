@@ -41,6 +41,7 @@ fun MoreScreen(
     onNavigateToPublicTrips: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToTogether: () -> Unit,
     onSwitchTrip: () -> Unit,
     onResetDemoData: () -> Unit,
     onLogout: () -> Unit,
@@ -57,6 +58,7 @@ fun MoreScreen(
     val scope = rememberCoroutineScope()
     val menuItems = listOf(
         MoreMenu("여행 바꾸기", "switch_trip"),
+        MoreMenu("우리 위치", "together"),
         MoreMenu("예약함", "reservations"),
         MoreMenu("준비물", "checklist"),
         MoreMenu("결정함", "decisions"),
@@ -80,6 +82,7 @@ fun MoreScreen(
                 "public_trips" -> onNavigateToPublicTrips
                 "about" -> onNavigateToAbout
                 "settings" -> onNavigateToSettings
+                "together" -> onNavigateToTogether
                 "switch_trip" -> onSwitchTrip
                 else -> null
             }

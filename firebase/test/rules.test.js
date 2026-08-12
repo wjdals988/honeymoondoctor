@@ -420,3 +420,62 @@ test("소유자가 아닌 구성원은 여행 이름을 수정할 수 없다", a
   const partnerDb = testEnv.authenticatedContext(PARTNER_UID).firestore();
   await assertFails(updateDoc(doc(partnerDb, "trips", TRIP_ID), { name: "몰래 바꾼 이름" }));
 });
+
+// ── 위치 공유 (memberLocations) ────────────────────────────────────────────
+
+test("위치 공유: 구성원은 자기 uid 문서에 좌표를 쓸 수 있다", async () => {
+  const partnerDb = testEnv.authenticatedContext(PARTNER_UID).firestore();
+  await assertSucceeds(
+    setDoc(doc(partnerDb, "trips", TRIP_ID, "memberLocations", PARTNER_UID), {
+      latitude: 35.0116,
+      longitude: 135.7681,
+      sharedAt: new Date(),
+    }),
+  );
+});
+
+test("위치 공유: 상대의 uid 문서에는 쓸 수 없다 (위치 위조 금지)", async () => {
+  const partnerDb = testEnv.authenticatedContext(PARTNER_UID).firestore();
+  await assertFails(
+    setDoc(doc(partnerDb, "trips", TRIP_ID, "memberLocations", OWNER_UID), {
+      latitude: 0, longitude: 0, sharedAt: new Date(),
+    }),
+  );
+});
+
+test("위치 공유: 구성원이 아니면 읽을 수 없다", async () => {
+  const strangerDb = testEnv.authenticatedContext("stranger-uid").firestore();
+  await assertFails(getDoc(doc(strangerDb, "trips", TRIP_ID, "memberLocations", OWNER_UID)));
+});
+
+test("위치 공유: 좌표 범위를 벗어나거나 여분 필드가 있으면 거부된다", async () => {
+  const partnerDb = testEnv.authenticatedContext(PARTNER_UID).firestore();
+  await assertFails(
+    setDoc(doc(partnerDb, "trips", TRIP_ID, "memberLocations", PARTNER_UID), {
+      latitude: 91, longitude: 0, sharedAt: new Date(),
+    }),
+  );
+  await assertFails(
+    setDoc(doc(partnerDb, "trips", TRIP_ID, "memberLocations", PARTNER_UID), {
+      latitude: 0, longitude: 0, sharedAt: new Date(), note: "여분 필드",
+    }),
+  );
+});
+
+test("위치 공유: 완료된 여행에서도 자기 위치는 지울 수 있다", async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "trips", TRIP_ID, "memberLocations", PARTNER_UID), {
+      latitude: 1, longitude: 2, sharedAt: new Date(),
+    });
+    await updateDoc(doc(context.firestore(), "trips", TRIP_ID), { status: "COMPLETED" });
+  });
+  const partnerDb = testEnv.authenticatedContext(PARTNER_UID).firestore();
+  // 갱신은 막히고
+  await assertFails(
+    setDoc(doc(partnerDb, "trips", TRIP_ID, "memberLocations", PARTNER_UID), {
+      latitude: 3, longitude: 4, sharedAt: new Date(),
+    }),
+  );
+  // 삭제는 된다
+  await assertSucceeds(deleteDoc(doc(partnerDb, "trips", TRIP_ID, "memberLocations", PARTNER_UID)));
+});

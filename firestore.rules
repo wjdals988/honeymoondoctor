@@ -138,6 +138,23 @@ service cloud.firestore {
           'expenses', 'budgets', 'places', 'decisions'
         ];
       }
+
+      // ── 위치 공유 ─────────────────────────────────────────────────
+      // 문서 id = uid. 읽기는 구성원 전체, 쓰기·삭제는 자기 문서만 — 상대의 위치를
+      // 위조하거나 지울 수 없다. 운영 데이터와 달리 완료된 여행에서도 삭제를 허용한다:
+      // 위치는 여행 "기록"이 아니라 실시간 편의 데이터라, 여행이 끝났다는 이유로 못
+      // 지우게 하면 마지막 위치가 서버에 박제된다. 쓰기(갱신)는 활성 여행에서만.
+      match /memberLocations/{memberUid} {
+        allow read: if isTripMember(tripId);
+        allow create, update: if isTripMember(tripId) && isTripActive(tripId)
+          && request.auth.uid == memberUid
+          && request.resource.data.keys().hasOnly(['latitude', 'longitude', 'sharedAt'])
+          && request.resource.data.latitude is number
+          && request.resource.data.longitude is number
+          && request.resource.data.latitude >= -90 && request.resource.data.latitude <= 90
+          && request.resource.data.longitude >= -180 && request.resource.data.longitude <= 180;
+        allow delete: if isTripMember(tripId) && request.auth.uid == memberUid;
+      }
     }
 
     // ── publicTrips/{tripId} ───────────────────────────────────────

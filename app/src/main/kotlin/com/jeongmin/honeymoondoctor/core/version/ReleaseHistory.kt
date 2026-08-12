@@ -20,6 +20,15 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.4.0",
+            versionCode = 17,
+            date = "2026-08-12",
+            changes = listOf(
+                "\"우리 위치\"가 생겼습니다(전체 → 우리 위치). \"지금 내 위치 공유하기\"를 누르면 그 순간의 위치가 상대에게 보이고, 서로의 거리와 언제 공유했는지가 함께 표시됩니다. \"지도\"를 누르면 지도 앱에서 열립니다.",
+                "자동으로 따라다니지 않습니다. 버튼을 누른 순간의 위치 1건만 저장되고, 새로 공유하면 덮어써지며, \"지우기\"로 언제든 서버에서 삭제됩니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.3.1",
             versionCode = 16,
             date = "2026-08-12",
