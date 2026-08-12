@@ -647,22 +647,30 @@ private fun TripOverviewRow(day: TripDaySummary, isToday: Boolean, onClick: () -
             )
         } else {
             Text(
-                text = buildString {
-                    append(shownTitles.joinToString("  →  "))
-                    // 폭이 한정돼 앞 몇 개만 잇고 나머지는 숫자로 접는다. 두 줄까지 감싼다.
-                    if (restCount > 0) append("  +$restCount")
-                },
+                text = shownTitles.joinToString("  →  "),
                 style = MaterialTheme.typography.bodyMedium,
-                maxLines = 2,
+                // 세 줄까지 감싼다. 하루 3~5건이면 대부분 온전히 들어가고, 그보다 많으면
+                // 오른쪽 "+N"이 몇 개가 더 있는지 알려준다.
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
+            if (restCount > 0) {
+                // "+N"을 본문 문자열에 넣으면 줄 수를 넘길 때 그것부터 잘려 나가, 정작
+                // "더 있다"는 사실이 사라진다. 별도 칸에 두어 항상 보이게 한다.
+                Text(
+                    text = "+$restCount",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 8.dp),
+                )
+            }
         }
     }
 }
 
-/** 동선에 이어 붙일 최대 일정 수. 넘치면 "+N"으로 접는다. */
-private const val ROUTE_PREVIEW_ITEMS = 4
+/** 동선에 이어 붙일 최대 일정 수. 넘치면 "+N"으로 접는다(세 줄까지 감싸므로 5개는 들어간다). */
+private const val ROUTE_PREVIEW_ITEMS = 5
 
 /** 오버뷰에서 앞쪽 며칠을 펼쳐 둘지. 7일이면 한 주가 한눈에 들어온다. */
 private const val PREVIEW_DAYS = 7

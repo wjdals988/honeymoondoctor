@@ -20,6 +20,14 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.1.8",
+            versionCode = 9,
+            date = "2026-08-12",
+            changes = listOf(
+                "오버뷰의 하루 동선이 세 줄까지 늘어나 일정이 많은 날도 대부분 온전히 보입니다. 그래도 넘치면 오른쪽에 남은 건수를 표시합니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.1.7",
             versionCode = 8,
             date = "2026-08-12",
