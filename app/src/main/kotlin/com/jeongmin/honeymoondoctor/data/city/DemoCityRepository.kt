@@ -57,6 +57,16 @@ class DemoCityRepository @Inject constructor(
         upsert(tripId, city)
     }
 
+    override suspend fun delete(tripId: String, cityId: String) {
+        dataStore.edit { prefs ->
+            val current = prefs[DEMO_CITIES_KEY]?.let { json.decodeFromString(DemoCityStateDto.serializer(), it) }
+                ?.takeIf { it.tripId == tripId }
+                ?: return@edit
+            val next = current.copy(cities = current.cities.filterNot { it.id == cityId })
+            prefs[DEMO_CITIES_KEY] = json.encodeToString(DemoCityStateDto.serializer(), next)
+        }
+    }
+
     private suspend fun upsert(tripId: String, city: City) {
         dataStore.edit { prefs ->
             val current = prefs[DEMO_CITIES_KEY]?.let { json.decodeFromString(DemoCityStateDto.serializer(), it) }

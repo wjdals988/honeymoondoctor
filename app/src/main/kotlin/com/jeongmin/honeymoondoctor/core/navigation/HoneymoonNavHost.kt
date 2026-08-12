@@ -211,6 +211,7 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                 val moreViewModel: MoreViewModel = hiltViewModel()
                 val pendingJoinRequestCount by moreViewModel.pendingJoinRequestCount.collectAsState()
                 val deleteAccountState by moreViewModel.deleteAccountState.collectAsState()
+                val backupMessage by moreViewModel.backupMessage.collectAsState()
                 MoreScreen(
                     isDemoMode = isDemoMode,
                     onNavigateToTripInfo = { navController.navigate(ROUTE_TRIP_INFO) },
@@ -224,6 +225,9 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                     onNavigateToSettings = { navController.navigate(ROUTE_SETTINGS) },
                     onNavigateToTogether = { navController.navigate(ROUTE_TOGETHER) },
                     onSwitchTrip = viewModel::backToTripList,
+                    onExportBackup = moreViewModel::exportBackup,
+                    backupMessage = backupMessage,
+                    onBackupMessageShown = moreViewModel::clearBackupMessage,
                     onResetDemoData = moreViewModel::resetDemoData,
                     onLogout = moreViewModel::logout,
                     onDeleteAccount = moreViewModel::deleteAccount,

@@ -41,6 +41,10 @@ class FirebaseCityRepository @Inject constructor(
             .await()
     }
 
+    override suspend fun delete(tripId: String, cityId: String) {
+        collection(tripId).document(cityId).delete().await()
+    }
+
     private fun DocumentSnapshot.toCity(): City? {
         val displayName = getString("displayName") ?: return null
         return City(

@@ -1,5 +1,7 @@
 package com.jeongmin.honeymoondoctor.feature.more
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +46,9 @@ fun MoreScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToTogether: () -> Unit,
     onSwitchTrip: () -> Unit,
+    onExportBackup: (android.net.Uri) -> Unit,
+    backupMessage: String? = null,
+    onBackupMessageShown: () -> Unit = {},
     onResetDemoData: () -> Unit,
     onLogout: () -> Unit,
     onDeleteAccount: () -> Unit,
@@ -53,8 +59,18 @@ fun MoreScreen(
     modifier: Modifier = Modifier,
 ) {
     var showLogoutConfirm by remember { mutableStateOf(false) }
-    var showDeleteAccountConfirm by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val backupCreator = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri -> uri?.let(onExportBackup) }
+    // 목록 화면이라 스낵바 호스트가 없어 백업 결과는 토스트로 알린다.
+    LaunchedEffect(backupMessage) {
+        if (backupMessage != null) {
+            android.widget.Toast.makeText(context, backupMessage, android.widget.Toast.LENGTH_SHORT).show()
+            onBackupMessageShown()
+        }
+    }
+    var showDeleteAccountConfirm by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val menuItems = listOf(
         MoreMenu("여행 바꾸기", "switch_trip"),
@@ -66,6 +82,7 @@ fun MoreScreen(
         MoreMenu("여행 정보 및 구성원", "trip_info"),
         MoreMenu("장소 가져오기·내보내기", "place_import"),
         MoreMenu("여행 둘러보기", "public_trips"),
+        MoreMenu("전체 백업 내보내기", "backup"),
         MoreMenu("동기화 상태", "sync_status"),
         MoreMenu("버전 정보", "about"),
         MoreMenu("설정", "settings"),
@@ -73,6 +90,13 @@ fun MoreScreen(
     LazyColumn(modifier = modifier.padding(vertical = 8.dp)) {
         items(menuItems) { menu ->
             val onClick: (() -> Unit)? = when (menu.onClickKey) {
+                "backup" -> {
+                    {
+                        backupCreator.launch(
+                            "donghaeng-backup-${java.time.LocalDate.now()}.json",
+                        )
+                    }
+                }
                 "reservations" -> onNavigateToReservations
                 "checklist" -> onNavigateToChecklist
                 "decisions" -> onNavigateToDecisions

@@ -16,6 +16,7 @@ import com.jeongmin.honeymoondoctor.domain.repository.CityRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ItineraryRepository
 import com.jeongmin.honeymoondoctor.domain.repository.PublicTripRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
+import com.jeongmin.honeymoondoctor.domain.usecase.DeleteCityWithReferences
 import com.jeongmin.honeymoondoctor.domain.usecase.ObserveCurrentTrip
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -50,6 +51,7 @@ class TripInfoViewModel @Inject constructor(
     private val cityRepository: CityRepository,
     private val itineraryRepository: ItineraryRepository,
     private val publicTripRepository: PublicTripRepository,
+    private val deleteCityWithReferences: DeleteCityWithReferences,
 ) : ViewModel() {
 
     private val lastGeneratedInviteCode = MutableStateFlow<String?>(null)
@@ -84,6 +86,17 @@ class TripInfoViewModel @Inject constructor(
             runCatching { cityRepository.create(tripId, city) }
                 .onSuccess { actionError.value = null }
                 .onFailure { actionError.value = it.toUserMessage("도시를 추가하지 못했습니다.") }
+        }
+    }
+
+    /** 삭제 확인 다이얼로그용 참조 개수. 실패하면 0으로 취급(경고 없이 진행보다 안전한 기본은 아님이지만, 개수 조회 실패로 삭제 자체를 막지는 않는다). */
+    suspend fun countCityReferences(tripId: String, cityId: String): Int =
+        runCatching { deleteCityWithReferences.countReferences(tripId, cityId) }.getOrDefault(0)
+
+    fun deleteCity(tripId: String, cityId: String) {
+        viewModelScope.launch {
+            runCatching { deleteCityWithReferences(tripId, cityId) }
+                .onFailure { actionError.value = it.toUserMessage("도시를 삭제하지 못했습니다. 완료된 여행은 수정할 수 없습니다.") }
         }
     }
 

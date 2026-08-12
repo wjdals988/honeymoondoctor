@@ -1,7 +1,10 @@
 package com.jeongmin.honeymoondoctor.feature.more
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jeongmin.honeymoondoctor.BuildConfig
 import com.jeongmin.honeymoondoctor.core.demo.DemoDataResetter
 import com.jeongmin.honeymoondoctor.data.local.prefs.AppPreferences
 import com.jeongmin.honeymoondoctor.domain.model.Trip
@@ -10,7 +13,9 @@ import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
 import com.jeongmin.honeymoondoctor.domain.usecase.DeleteAccountOutcome
 import com.jeongmin.honeymoondoctor.domain.usecase.DeleteAccountUseCase
 import com.jeongmin.honeymoondoctor.domain.usecase.ObserveCurrentTrip
+import com.jeongmin.honeymoondoctor.domain.usecase.TripBackupBuilder
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,6 +41,8 @@ class MoreViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val deleteAccountUseCase: DeleteAccountUseCase,
     private val appPreferences: AppPreferences,
+    private val tripBackupBuilder: TripBackupBuilder,
+    @ApplicationContext private val context: Context,
     observeCurrentTrip: ObserveCurrentTrip,
     tripRepository: TripRepository,
 ) : ViewModel() {
@@ -53,6 +60,31 @@ class MoreViewModel @Inject constructor(
 
     private val _deleteAccountState = MutableStateFlow<DeleteAccountUiState>(DeleteAccountUiState.Idle)
     val deleteAccountState: StateFlow<DeleteAccountUiState> = _deleteAccountState
+
+    private val _backupMessage = MutableStateFlow<String?>(null)
+    val backupMessage: StateFlow<String?> = _backupMessage
+    fun clearBackupMessage() { _backupMessage.value = null }
+
+    /**
+     * 여행 전체를 사용자가 고른 파일(SAF)에 JSON으로 쓴다. 실패해도 크래시가 아니라
+     * 메시지로 끝난다 — 백업 실패를 조용히 넘기면 "백업했다고 믿는" 최악의 상태가 된다.
+     */
+    fun exportBackup(uri: Uri) {
+        val trip = currentTrip.value ?: run {
+            _backupMessage.value = "내보낼 여행이 없습니다."
+            return
+        }
+        viewModelScope.launch {
+            runCatching {
+                val json = tripBackupBuilder.build(trip, BuildConfig.VERSION_NAME)
+                context.contentResolver.openOutputStream(uri)?.use { stream ->
+                    stream.write(json.toByteArray(Charsets.UTF_8))
+                } ?: error("파일을 열 수 없습니다.")
+            }
+                .onSuccess { _backupMessage.value = "백업 파일을 저장했습니다." }
+                .onFailure { _backupMessage.value = it.message ?: "백업에 실패했습니다." }
+        }
+    }
 
     fun resetDemoData() {
         viewModelScope.launch { runCatching { demoDataResetter.resetAll() } }

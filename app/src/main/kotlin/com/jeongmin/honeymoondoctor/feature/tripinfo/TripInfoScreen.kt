@@ -15,6 +15,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +50,18 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
     val trip = state.trip ?: return
     val isOwner = state.currentUser?.uid == trip.ownerId
     var showCityDialog by remember { mutableStateOf(false) }
+    var deleteCityTarget by remember { mutableStateOf<City?>(null) }
+    var deleteCityReferenceCount by remember { mutableStateOf(0) }
+    // 삭제 확인을 띄우기 전에 참조 개수를 세어 경고 문구에 넣는다.
+    LaunchedEffect(deleteCityTarget) {
+        val target = deleteCityTarget
+        val tripId = state.trip?.id
+        deleteCityReferenceCount = if (target != null && tripId != null) {
+            viewModel.countCityReferences(tripId, target.id)
+        } else {
+            0
+        }
+    }
     var editingCity by remember { mutableStateOf<City?>(null) }
     var showPublishDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
@@ -170,7 +183,10 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
                 },
                 trailingContent = {
                     if (!trip.isReadOnly) {
-                        TextButton(onClick = { editingCity = city; showCityDialog = true }) { Text("수정") }
+                        Row {
+                            TextButton(onClick = { editingCity = city; showCityDialog = true }) { Text("수정") }
+                            TextButton(onClick = { deleteCityTarget = city }) { Text("삭제") }
+                        }
                     }
                 },
             )
@@ -325,6 +341,31 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) { Text("취소") }
             },
+        )
+    }
+
+    deleteCityTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = { deleteCityTarget = null },
+            title = { Text("도시 삭제") },
+            text = {
+                Text(
+                    buildString {
+                        append("\"${target.displayName}\" 도시를 삭제할까요?")
+                        if (deleteCityReferenceCount > 0) {
+                            append("\n\n이 도시를 쓰는 일정·지출·장소 ${deleteCityReferenceCount}건은 ")
+                            append("삭제되지 않고 \"도시 없음\"으로 남습니다.")
+                        }
+                    },
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    state.trip?.id?.let { viewModel.deleteCity(it, target.id) }
+                    deleteCityTarget = null
+                }) { Text("삭제") }
+            },
+            dismissButton = { TextButton(onClick = { deleteCityTarget = null }) { Text("취소") } },
         )
     }
 

@@ -57,8 +57,8 @@ android {
         applicationId = "com.jeongmin.honeymoondoctor"
         minSdk = 26
         targetSdk = 37
-        versionCode = 23
-        versionName = "0.5.3"
+        versionCode = 24
+        versionName = "0.6.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

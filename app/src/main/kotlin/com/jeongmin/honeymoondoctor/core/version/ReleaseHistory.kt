@@ -20,6 +20,15 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.6.0",
+            versionCode = 24,
+            date = "2026-08-12",
+            changes = listOf(
+                "도시를 삭제할 수 있습니다(여행 정보 → 도시). 그 도시를 쓰던 일정·지출·장소는 삭제되지 않고 \"도시 없음\"으로 남으며, 삭제 전에 몇 건이 영향을 받는지 알려줍니다.",
+                "전체 백업 내보내기가 생겼습니다(전체 → 전체 백업 내보내기). 여행 정보·도시·일정·예약·준비물·경비·예산·장소·결정을 JSON 파일 하나로 저장합니다. 계정을 잃어도 기록은 남습니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.5.3",
             versionCode = 23,
             date = "2026-08-12",
