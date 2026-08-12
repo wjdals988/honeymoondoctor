@@ -1,4 +1,4 @@
-package com.jeongmin.honeymoondoctor.feature.together
+package com.jeongmin.honeymoondoctor.core.ui
 
 import android.content.Context
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,25 +13,36 @@ import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.CopyrightOverlay
 import org.osmdroid.views.overlay.Marker
 
+/** 미니맵에 찍을 핀 하나. [label]은 마커를 탭했을 때 말풍선으로 보인다. */
+data class MapPin(
+    val latitude: Double,
+    val longitude: Double,
+    val label: String,
+)
+
 /**
- * 우리 위치 화면의 앱 내 미니맵. 오픈스트리트맵(osmdroid) — 키·결제 계정 없이 쓸 수 있어
- * "월 0원" 제약을 지킨다. 구글지도 SDK는 무료 티어여도 GCP 결제 등록이 필요해서 뺐고,
- * 상세 지도가 필요하면 카드의 "지도" 버튼이 기기 지도 앱(구글지도)을 연다 — 앱 내
- * 지도는 "서로 어디쯤인지 한눈에"까지만 책임진다.
+ * 앱 공용 미니맵(오픈스트리트맵/osmdroid — 키·결제 계정 불필요, "월 0원" 유지).
+ * 우리 위치·주변 탭이 함께 쓴다. 상세 탐색은 각 화면의 "지도" 버튼이 기기 지도 앱을
+ * 여는 이원 구조 — 미니맵은 "한눈에 어디쯤"까지만 책임진다.
  *
- * OSM 타일 정책 준수: userAgentValue를 앱 패키지로 설정(익명 UA 차단 대상),
- * CopyrightOverlay로 저작권 표기를 지도 위에 그린다.
+ * 기본 줌 규칙:
+ * - 핀 1개: [initialZoom](기본 17). OSM에서 가게·장소 명칭이 보이기 시작하는 레벨이
+ *   16~17이라, "지도를 열자마자 주변 장소 이름이 읽히는" 상태로 시작한다.
+ * - 핀 여러 개: 전부 보이게 BoundingBox로 맞추되, 핀들이 아주 가까우면(같은 골목)
+ *   과도하게 확대되므로 [initialZoom]을 상한으로 되민다. 멀면 자연히 줌아웃된다.
  */
 @Composable
-fun TogetherMiniMap(
-    locations: List<MemberLocationUi>,
+fun OsmMiniMap(
+    pins: List<MapPin>,
     modifier: Modifier = Modifier,
+    initialZoom: Double = 17.0,
 ) {
-    if (locations.isEmpty()) return
+    if (pins.isEmpty()) return
     val shape = MaterialTheme.shapes.medium
     AndroidView(
         modifier = modifier
@@ -44,32 +55,37 @@ fun TogetherMiniMap(
                 setTileSource(TileSourceFactory.MAPNIK)
                 setMultiTouchControls(true)
                 // 미니맵은 훑어보는 용도라 줌 버튼을 그리지 않는다(멀티터치로 충분).
-                zoomController.setVisibility(
-                    org.osmdroid.views.CustomZoomButtonsController.Visibility.NEVER,
-                )
+                zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
                 overlays.add(CopyrightOverlay(context))
             }
         },
         update = { map ->
-            // 위치가 갱신될 때마다 마커를 다시 그린다. CopyrightOverlay(첫 번째)는 남긴다.
+            // 핀이 갱신될 때마다 마커만 다시 그린다. CopyrightOverlay는 남긴다.
             map.overlays.removeAll { it is Marker }
-            locations.forEach { member ->
+            pins.forEach { pin ->
                 map.overlays.add(
                     Marker(map).apply {
-                        position = GeoPoint(member.location.latitude, member.location.longitude)
+                        position = GeoPoint(pin.latitude, pin.longitude)
                         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                        title = if (member.isMe) "나" else member.displayName
+                        title = pin.label
                     },
                 )
             }
-            val points = locations.map { GeoPoint(it.location.latitude, it.location.longitude) }
+            val points = pins.map { GeoPoint(it.latitude, it.longitude) }
             if (points.size == 1) {
-                map.controller.setZoom(15.0)
+                map.controller.setZoom(initialZoom)
                 map.controller.setCenter(points.first())
             } else {
-                // 두 사람이 모두 보이게 테두리 여유를 두고 맞춘다.
                 val box = BoundingBox.fromGeoPoints(points)
-                map.post { map.zoomToBoundingBox(box.increaseByScale(1.6f), false) }
+                map.post {
+                    map.zoomToBoundingBox(box.increaseByScale(1.4f), false)
+                    // 핀들이 한 골목 안이면 BoundingBox가 20레벨까지 파고든다 —
+                    // 명칭 가독 레벨을 상한으로 되민다.
+                    if (map.zoomLevelDouble > initialZoom) {
+                        map.controller.setZoom(initialZoom)
+                        map.controller.setCenter(box.centerWithDateLine)
+                    }
+                }
             }
             map.invalidate()
         },

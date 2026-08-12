@@ -45,6 +45,8 @@ import com.jeongmin.honeymoondoctor.core.ui.AppCard
 import com.jeongmin.honeymoondoctor.core.ui.CardTone
 import com.jeongmin.honeymoondoctor.core.ui.ChipSelector
 import com.jeongmin.honeymoondoctor.core.ui.EmptyState
+import com.jeongmin.honeymoondoctor.core.ui.MapPin
+import com.jeongmin.honeymoondoctor.core.ui.OsmMiniMap
 import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.data.local.prefs.LocationShareMode
 import java.time.Duration
@@ -116,7 +118,16 @@ fun TogetherScreen(
                 )
             } else {
                 // 앱 내 미니맵(오픈스트리트맵). 상세 탐색은 카드의 "지도"가 지도 앱을 연다.
-                TogetherMiniMap(locations = uiState.locations)
+                // 두 사람이면 둘 다 보이게 맞추고, 가까우면 명칭 가독 레벨(17)로 되민다.
+                OsmMiniMap(
+                    pins = uiState.locations.map { member ->
+                        MapPin(
+                            latitude = member.location.latitude,
+                            longitude = member.location.longitude,
+                            label = if (member.isMe) "나" else member.displayName,
+                        )
+                    },
+                )
             }
 
             uiState.locations.forEach { member ->

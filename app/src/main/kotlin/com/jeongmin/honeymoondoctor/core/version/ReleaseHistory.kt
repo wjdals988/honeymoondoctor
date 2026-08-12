@@ -20,6 +20,15 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.5.1",
+            versionCode = 21,
+            date = "2026-08-12",
+            changes = listOf(
+                "주변 탭에도 지도가 생겼습니다. 담아 둔 장소들이 핀으로 표시되고, 위치 권한이 있으면 내 위치 핀도 함께 찍혀 어느 방향인지 보입니다. 필터를 바꾸면 지도도 따라 바뀝니다.",
+                "지도 기본 확대를 조정했습니다. 처음 열릴 때 가게·장소 명칭이 읽히는 수준까지 확대되고, 핀이 여러 개면 전부 보이게 자동으로 맞추되 서로 가까우면 과하게 파고들지 않습니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.5.0",
             versionCode = 20,
             date = "2026-08-12",

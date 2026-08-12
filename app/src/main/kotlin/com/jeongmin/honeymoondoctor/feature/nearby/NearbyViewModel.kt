@@ -52,6 +52,9 @@ data class NearbyUiState(
     val refreshing: Boolean = false,
     /** 거리 계산 기준점 설명. null이면 거리 계산 불가 상태를 명시적으로 보여준다. */
     val referenceLabel: String? = null,
+    /** 기준점 좌표. 지도에 "내 위치" 핀으로도 쓴다. */
+    val referenceLatitude: Double? = null,
+    val referenceLongitude: Double? = null,
     val cities: List<City> = emptyList(),
     val selectedCityId: String? = null,
     val currentCityId: String? = null,
@@ -285,6 +288,8 @@ class NearbyViewModel @Inject constructor(
             hasLocationPermission = filters.permission,
             refreshing = filters.refreshing,
             referenceLabel = referenceLabel,
+            referenceLatitude = refLat,
+            referenceLongitude = refLng,
             cities = cities,
             selectedCityId = selectedCityId,
             currentCityId = currentCity?.id,

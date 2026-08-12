@@ -52,6 +52,8 @@ import com.jeongmin.honeymoondoctor.core.ui.CardTone
 import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
+import com.jeongmin.honeymoondoctor.core.ui.MapPin
+import com.jeongmin.honeymoondoctor.core.ui.OsmMiniMap
 import com.jeongmin.honeymoondoctor.core.ui.SearchField
 import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
 import com.jeongmin.honeymoondoctor.core.ui.openGoogleMapsDirections
@@ -145,6 +147,26 @@ fun NearbyScreen(
                 }
                 item {
                     FilterRow(uiState = uiState, viewModel = viewModel)
+                }
+                // 필터를 통과한 장소들을 지도에 핀으로. 기준점(내 위치·도시 좌표)이 있으면
+                // 함께 찍어 "여기서 어느 방향인지"가 보인다. 좌표 없는 장소는 지도에
+                // 없으므로 아래 목록의 "좌표 없음" 구획이 계속 역할을 한다.
+                item {
+                    val placePins = (uiState.top3 + uiState.others).map { scored ->
+                        MapPin(
+                            latitude = scored.place.latitude!!,
+                            longitude = scored.place.longitude!!,
+                            label = scored.place.name,
+                        )
+                    }
+                    val refLat = uiState.referenceLatitude
+                    val refLng = uiState.referenceLongitude
+                    val referencePin = if (refLat != null && refLng != null && uiState.referenceLabel == "현재 위치 기준") {
+                        listOf(MapPin(refLat, refLng, "내 위치"))
+                    } else {
+                        emptyList()
+                    }
+                    OsmMiniMap(pins = referencePin + placePins)
                 }
 
                 if (uiState.totalPlaceCount == 0) {
