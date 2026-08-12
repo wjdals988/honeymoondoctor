@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
@@ -28,6 +29,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,10 +60,28 @@ import java.util.Locale
 fun ItineraryScreen(
     onOpenEditor: (itemId: String?) -> Unit,
     modifier: Modifier = Modifier,
+    /** 홈 오버뷰에서 날짜 줄을 눌러 들어온 경우 그 날짜(ISO-8601). 없으면 맨 위부터. */
+    focusDate: String? = null,
     viewModel: ItineraryViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var deleteTarget by remember { mutableStateOf<ItineraryItem?>(null) }
+    val listState = rememberLazyListState()
+
+    // 날짜별 헤더가 목록 몇 번째인지 세어 그 위치로 보낸다. 헤더 1 + 종일 일정 + (빈 날이면 1)
+    // + 시각 일정 순으로 쌓이는 아래 구조와 같은 순서로 계산한다 — 구조를 바꾸면 여기도 바뀐다.
+    LaunchedEffect(focusDate, uiState.days) {
+        val target = focusDate?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() } ?: return@LaunchedEffect
+        var index = 0
+        for (day in uiState.days) {
+            if (day.date == target) {
+                listState.scrollToItem(index)
+                return@LaunchedEffect
+            }
+            index += 1 + day.allDayItems.size + day.timedItems.size +
+                if (day.timedItems.isEmpty() && day.allDayItems.isEmpty()) 1 else 0
+        }
+    }
     val snackbarHostState = rememberActionErrorSnackbar(uiState.actionError, viewModel::clearActionError)
 
     Scaffold(
@@ -87,6 +107,7 @@ fun ItineraryScreen(
             ) { Text("여행 정보를 불러올 수 없습니다.") }
 
             else -> LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(
                     start = 16.dp, end = 16.dp, top = 8.dp, bottom = FabSpacing.ContentBottomPadding,

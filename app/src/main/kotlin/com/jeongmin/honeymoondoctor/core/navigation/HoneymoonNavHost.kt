@@ -105,6 +105,14 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                     onSwitchTrip = viewModel::backToTripList,
                     onAddItinerary = { navController.navigate(itineraryEditRoute(null)) },
                     onOpenItineraryTab = { navController.navigateToTab(BottomTab.ITINERARY) },
+                    // 오버뷰의 날짜 줄 → 일정 탭의 그 날짜로. 탭 자체는 그대로 두고
+                    // 인자만 실어 보낸다(하단 탭으로 들어올 때는 인자가 없다).
+                    onOpenItineraryDate = { date ->
+                        navController.navigate("${BottomTab.ITINERARY.route}?date=$date") {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                        }
+                    },
                     onOpenNearbyTab = { navController.navigateToTab(BottomTab.NEARBY) },
                     onAddExpense = { navController.navigate(expenseEditRoute(null)) },
                     onOpenReservations = { navController.navigate(ROUTE_RESERVATIONS) },
@@ -112,8 +120,20 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                     onOpenSyncStatus = { navController.navigate(ROUTE_SYNC_STATUS) },
                 )
             }
-            composable(BottomTab.ITINERARY.route) {
-                ItineraryScreen(onOpenEditor = { itemId -> navController.navigate(itineraryEditRoute(itemId)) })
+            composable(
+                route = "${BottomTab.ITINERARY.route}?date={date}",
+                arguments = listOf(
+                    navArgument("date") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                ),
+            ) { entry ->
+                ItineraryScreen(
+                    onOpenEditor = { itemId -> navController.navigate(itineraryEditRoute(itemId)) },
+                    focusDate = entry.arguments?.getString("date"),
+                )
             }
             composable(
                 route = "$ROUTE_ITINERARY_EDIT?itemId={itemId}",

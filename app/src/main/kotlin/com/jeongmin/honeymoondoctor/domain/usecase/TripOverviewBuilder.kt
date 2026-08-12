@@ -6,17 +6,20 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
 /**
- * 홈 오버뷰의 하루치 요약. 일정 탭이 항목 하나하나를 보여준다면 여기는 "며칠에 몇 건"만 본다.
+ * 홈 오버뷰의 하루치 요약.
  *
- * [firstTitle]은 그날의 첫 일정 제목이다. 건수만 있으면 "3건"이 무엇인지 알 수 없어
- * 일정 탭에 들어가 봐야 하고, 그러면 오버뷰가 목적을 잃는다.
+ * [titles]는 그날 일정의 제목을 시간순으로 담는다. 화면은 이걸 "장소1 → 장소2 → 장소3"처럼
+ * 이어 붙여 하루 동선을 한 줄로 보여준다. 건수만("3건") 주면 무엇을 하는 날인지 알 수 없어
+ * 결국 일정 탭에 들어가야 하고, 그러면 오버뷰가 목적을 잃는다.
+ *
+ * 몇 개까지 보여줄지는 화면이 정한다(폭이 기기마다 다르다). 여기서는 자르지 않는다.
  */
 data class TripDaySummary(
     val date: LocalDate,
     /** 여행 몇째 날(D1부터). 여행 기간 밖이면 null. */
     val dayNumber: Int?,
     val itemCount: Int,
-    val firstTitle: String?,
+    val titles: List<String>,
 )
 
 /**
@@ -46,7 +49,7 @@ object TripOverviewBuilder {
                     date = date,
                     dayNumber = (ChronoUnit.DAYS.between(start, date) + 1).toInt(),
                     itemCount = dayItems.size,
-                    firstTitle = dayItems.firstOrNull()?.title,
+                    titles = dayItems.map { it.title },
                 )
             }
             .toList()

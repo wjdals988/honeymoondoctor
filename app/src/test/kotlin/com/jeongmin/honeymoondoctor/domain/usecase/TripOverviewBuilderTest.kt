@@ -56,7 +56,7 @@ class TripOverviewBuilderTest {
     }
 
     @Test
-    fun `그날의 첫 일정 제목과 건수를 함께 준다`() {
+    fun `그날 일정 제목을 시간순으로 모두 준다`() {
         val days = TripOverviewBuilder.build(
             "2026-08-10",
             "2026-08-10",
@@ -67,7 +67,8 @@ class TripOverviewBuilderTest {
         )
 
         assertThat(days.single().itemCount).isEqualTo(2)
-        assertThat(days.single().firstTitle).isEqualTo("아침 산책")
+        // 입력 순서가 아니라 시간순이어야 한다 — 화면이 이 순서를 동선으로 이어 붙인다.
+        assertThat(days.single().titles).containsExactly("아침 산책", "저녁 식사").inOrder()
     }
 
     @Test

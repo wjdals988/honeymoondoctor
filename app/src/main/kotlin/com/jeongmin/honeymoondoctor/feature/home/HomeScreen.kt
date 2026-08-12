@@ -1,5 +1,6 @@
 package com.jeongmin.honeymoondoctor.feature.home
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,6 +56,7 @@ fun HomeScreen(
     onSwitchTrip: () -> Unit,
     onAddItinerary: () -> Unit,
     onOpenItineraryTab: () -> Unit,
+    onOpenItineraryDate: (java.time.LocalDate) -> Unit,
     onOpenNearbyTab: () -> Unit,
     onAddExpense: () -> Unit,
     onOpenReservations: () -> Unit,
@@ -97,7 +99,11 @@ fun HomeScreen(
                     onOpenReservations = onOpenReservations,
                     onOpenChecklist = onOpenChecklist,
                 )
-                TripOverviewSection(uiState = uiState, onOpenItineraryTab = onOpenItineraryTab)
+                TripOverviewSection(
+                    uiState = uiState,
+                    onOpenItineraryTab = onOpenItineraryTab,
+                    onOpenItineraryDate = onOpenItineraryDate,
+                )
                 if (uiState.conflictCount > 0) {
                     ConflictWarningCard(count = uiState.conflictCount)
                 }
@@ -113,6 +119,7 @@ fun HomeScreen(
                 TripOverviewSection(
                     uiState = uiState,
                     onOpenItineraryTab = onOpenItineraryTab,
+                    onOpenItineraryDate = onOpenItineraryDate,
                 )
                 PreparationSummaryCard(
                     uiState = uiState,
@@ -138,6 +145,7 @@ fun HomeScreen(
                 TripOverviewSection(
                     uiState = uiState,
                     onOpenItineraryTab = onOpenItineraryTab,
+                    onOpenItineraryDate = onOpenItineraryDate,
                 )
             }
             QuickActions(
@@ -533,7 +541,11 @@ private fun formatRemaining(duration: Duration): String {
  * 기간이 길면 목록이 그만큼 길어지므로 앞의 [PREVIEW_DAYS]일만 펼치고 나머지는 접는다.
  */
 @Composable
-private fun TripOverviewSection(uiState: HomeUiState, onOpenItineraryTab: () -> Unit) {
+private fun TripOverviewSection(
+    uiState: HomeUiState,
+    onOpenItineraryTab: () -> Unit,
+    onOpenItineraryDate: (java.time.LocalDate) -> Unit,
+) {
     val days = uiState.tripDays
     if (days.isEmpty()) return
     var expanded by remember { mutableStateOf(false) }
@@ -579,7 +591,11 @@ private fun TripOverviewSection(uiState: HomeUiState, onOpenItineraryTab: () -> 
         )
         AppCard(modifier = Modifier.fillMaxWidth()) {
             shown.forEach { day ->
-                TripOverviewRow(day = day, isToday = uiState.isDuringTrip && day.date == today)
+                TripOverviewRow(
+                    day = day,
+                    isToday = uiState.isDuringTrip && day.date == today,
+                    onClick = { onOpenItineraryDate(day.date) },
+                )
             }
         }
         if (hiddenCount > 0 || expanded) {
@@ -591,28 +607,37 @@ private fun TripOverviewSection(uiState: HomeUiState, onOpenItineraryTab: () -> 
 }
 
 @Composable
-private fun TripOverviewRow(day: TripDaySummary, isToday: Boolean) {
+private fun TripOverviewRow(day: TripDaySummary, isToday: Boolean, onClick: () -> Unit) {
+    // 하루 동선을 "장소1 → 장소2 → 장소3"으로 잇는다. 건수만 세는 것보다 그날 무엇을
+    // 하는지가 바로 보이고, 순서가 있으니 동선이 말이 되는지도 판단할 수 있다.
+    val shownTitles = day.titles.take(ROUTE_PREVIEW_ITEMS)
+    val restCount = day.itemCount - shownTitles.size
+
     Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        verticalAlignment = Alignment.Top,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
     ) {
-        Text(
-            text = day.dayNumber?.let { "D$it" }.orEmpty(),
-            style = MaterialTheme.typography.labelLarge,
-            // 여행 중에는 오늘 줄을 강조한다. 목록에서 "지금 어디쯤"을 못 찾으면
-            // 날짜를 세어 가며 읽어야 한다.
-            color = if (isToday) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
-            modifier = Modifier.width(36.dp),
-        )
-        Text(
-            text = day.date.format(overviewDateFormatter),
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.width(96.dp),
-        )
+        Column(modifier = Modifier.width(112.dp)) {
+            Text(
+                text = day.dayNumber?.let { "Day $it" }.orEmpty(),
+                style = MaterialTheme.typography.labelLarge,
+                // 여행 중에는 오늘 줄을 강조한다. 목록에서 "지금 어디쯤"을 못 찾으면
+                // 날짜를 세어 가며 읽어야 한다.
+                color = if (isToday) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+            )
+            Text(
+                text = day.date.format(overviewDateFormatter),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         if (day.itemCount == 0) {
             Text(
                 text = "일정 없음",
@@ -622,22 +647,22 @@ private fun TripOverviewRow(day: TripDaySummary, isToday: Boolean) {
             )
         } else {
             Text(
-                text = day.firstTitle.orEmpty(),
+                text = buildString {
+                    append(shownTitles.joinToString("  →  "))
+                    // 폭이 한정돼 앞 몇 개만 잇고 나머지는 숫자로 접는다. 두 줄까지 감싼다.
+                    if (restCount > 0) append("  +$restCount")
+                },
                 style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            if (day.itemCount > 1) {
-                Text(
-                    text = "+${day.itemCount - 1}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
         }
     }
 }
+
+/** 동선에 이어 붙일 최대 일정 수. 넘치면 "+N"으로 접는다. */
+private const val ROUTE_PREVIEW_ITEMS = 4
 
 /** 오버뷰에서 앞쪽 며칠을 펼쳐 둘지. 7일이면 한 주가 한눈에 들어온다. */
 private const val PREVIEW_DAYS = 7

@@ -20,6 +20,15 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.1.7",
+            versionCode = 8,
+            date = "2026-08-12",
+            changes = listOf(
+                "홈 오버뷰가 하루 동선을 보여줍니다. \"Day 1 (9월 9일) 간사이공항 → 기온 → 기요미즈데라\"처럼 그날 일정을 순서대로 잇습니다.",
+                "오버뷰의 날짜 줄을 누르면 일정 탭의 그 날짜로 바로 이동합니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.1.6",
             versionCode = 7,
             date = "2026-08-11",
