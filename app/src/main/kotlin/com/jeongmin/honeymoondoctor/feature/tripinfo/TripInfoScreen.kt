@@ -24,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -32,6 +33,7 @@ import com.jeongmin.honeymoondoctor.core.ui.DateField
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
+import com.jeongmin.honeymoondoctor.core.ui.confirm
 import com.jeongmin.honeymoondoctor.core.ui.copyToClipboard
 import com.jeongmin.honeymoondoctor.core.ui.shareText
 import com.jeongmin.honeymoondoctor.domain.model.City
@@ -47,6 +49,7 @@ import java.time.format.DateTimeFormatter
 fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     val trip = state.trip ?: return
     val isOwner = state.currentUser?.uid == trip.ownerId
     var showCityDialog by remember { mutableStateOf(false) }
@@ -361,6 +364,7 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
             },
             confirmButton = {
                 TextButton(onClick = {
+                    haptic.confirm()
                     state.trip?.id?.let { viewModel.deleteCity(it, target.id) }
                     deleteCityTarget = null
                 }) { Text("삭제") }

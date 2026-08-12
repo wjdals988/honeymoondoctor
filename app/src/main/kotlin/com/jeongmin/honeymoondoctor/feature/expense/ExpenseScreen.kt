@@ -36,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -47,6 +48,7 @@ import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
 import com.jeongmin.honeymoondoctor.core.ui.UndoDeleteSnackbarEffect
+import com.jeongmin.honeymoondoctor.core.ui.confirm
 import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.domain.model.Expense
 import com.jeongmin.honeymoondoctor.domain.model.ExpenseCategory
@@ -70,6 +72,7 @@ fun ExpenseScreen(
     viewModel: ExpenseViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val haptic = LocalHapticFeedback.current
     var deleteTarget by remember { mutableStateOf<Expense?>(null) }
     val snackbarHostState = rememberActionErrorSnackbar(uiState.actionError, viewModel::clearActionError)
     val pendingUndo by viewModel.undoDelete.pending.collectAsState()
@@ -214,6 +217,7 @@ fun ExpenseScreen(
             text = { Text("${formatKrw(target.amountKrw)} 지출 기록을 삭제할까요?") },
             confirmButton = {
                 TextButton(onClick = {
+                    haptic.confirm()
                     viewModel.delete(target)
                     deleteTarget = null
                 }) { Text("삭제") }

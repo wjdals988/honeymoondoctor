@@ -44,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -57,6 +58,7 @@ import com.jeongmin.honeymoondoctor.core.ui.MyLocationPinColor
 import com.jeongmin.honeymoondoctor.core.ui.OsmMiniMap
 import com.jeongmin.honeymoondoctor.core.ui.SearchField
 import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
+import com.jeongmin.honeymoondoctor.core.ui.confirm
 import com.jeongmin.honeymoondoctor.core.ui.openGoogleMapsDirections
 import com.jeongmin.honeymoondoctor.core.ui.openUrl
 import com.jeongmin.honeymoondoctor.core.ui.UndoDeleteSnackbarEffect
@@ -73,6 +75,7 @@ fun NearbyScreen(
     viewModel: NearbyViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
     var deleteTarget by remember { mutableStateOf<Place?>(null) }
     val snackbarHostState = rememberActionErrorSnackbar(uiState.actionError, viewModel::clearActionError)
@@ -255,6 +258,7 @@ fun NearbyScreen(
             text = { Text("\"${target.name}\" 장소를 삭제할까요?") },
             confirmButton = {
                 TextButton(onClick = {
+                    haptic.confirm()
                     viewModel.delete(target)
                     deleteTarget = null
                 }) { Text("삭제") }

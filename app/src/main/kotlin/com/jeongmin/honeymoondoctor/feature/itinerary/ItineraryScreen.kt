@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -54,6 +55,7 @@ import com.jeongmin.honeymoondoctor.core.ui.CardTone
 import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
+import com.jeongmin.honeymoondoctor.core.ui.confirm
 import com.jeongmin.honeymoondoctor.core.ui.copyToClipboard
 import com.jeongmin.honeymoondoctor.core.ui.openGoogleMapsDirections
 import com.jeongmin.honeymoondoctor.core.ui.UndoDeleteSnackbarEffect
@@ -72,6 +74,7 @@ fun ItineraryScreen(
     viewModel: ItineraryViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val haptic = LocalHapticFeedback.current
     var deleteTarget by remember { mutableStateOf<ItineraryItem?>(null) }
     val listState = rememberLazyListState()
 
@@ -183,6 +186,7 @@ fun ItineraryScreen(
         DeleteConfirmDialog(
             item = target,
             onConfirm = {
+                haptic.confirm()
                 viewModel.delete(target)
                 deleteTarget = null
             },

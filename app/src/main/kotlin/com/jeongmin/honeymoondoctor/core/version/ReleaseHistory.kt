@@ -20,6 +20,15 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.6.2",
+            versionCode = 26,
+            date = "2026-08-13",
+            changes = listOf(
+                "홈의 \"우리 위치\" 아이콘을 다듬었습니다. 배경이 채워진 단추 모양에 \"위치\" 글자를 붙여, 무엇을 누르는 버튼인지 바로 알 수 있고, 여행 이름 줄의 오른쪽 위 가장자리에 자리 잡습니다.",
+                "체크·저장·삭제하는 순간에 촉각 피드백이 옵니다. 준비물 체크, 지출·일정·예약·장소 저장, 지출·일정·장소·준비물·도시 삭제 확인에 적용됩니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.6.1",
             versionCode = 25,
             date = "2026-08-13",

@@ -29,6 +29,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -38,6 +39,7 @@ import com.jeongmin.honeymoondoctor.core.ui.DateField
 import com.jeongmin.honeymoondoctor.core.ui.ChipSelector
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.core.ui.TimeField
+import com.jeongmin.honeymoondoctor.core.ui.confirm
 import com.jeongmin.honeymoondoctor.domain.model.ReservationStatus
 import com.jeongmin.honeymoondoctor.domain.model.ReservationType
 
@@ -67,6 +69,7 @@ fun ReservationEditScreen(
             )
         },
     ) { innerPadding ->
+        val haptic = LocalHapticFeedback.current
         val currentForm = form
         if (uiState.loading || currentForm == null) {
             Box(
@@ -240,7 +243,10 @@ fun ReservationEditScreen(
 
 
             Button(
-                onClick = { viewModel.save(onSaved = onNavigateBack) },
+                onClick = {
+                    haptic.confirm()
+                    viewModel.save(onSaved = onNavigateBack)
+                },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(if (currentForm.reservationId == null) "예약 추가" else "변경 사항 저장") }
         }

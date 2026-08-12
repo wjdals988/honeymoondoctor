@@ -33,6 +33,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -40,6 +41,7 @@ import com.jeongmin.honeymoondoctor.core.ui.CityPickerField
 import com.jeongmin.honeymoondoctor.core.ui.DateField
 import com.jeongmin.honeymoondoctor.core.ui.ChipSelector
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
+import com.jeongmin.honeymoondoctor.core.ui.confirm
 import com.jeongmin.honeymoondoctor.domain.model.ExpenseCategory
 import com.jeongmin.honeymoondoctor.domain.model.TravelCurrency
 import java.time.LocalDate
@@ -68,6 +70,7 @@ fun ExpenseEditScreen(
             )
         },
     ) { innerPadding ->
+        val haptic = LocalHapticFeedback.current
         val currentForm = form
         if (uiState.loading || currentForm == null) {
             Box(
@@ -230,7 +233,10 @@ fun ExpenseEditScreen(
             )
 
             Button(
-                onClick = { viewModel.save(onSaved = onNavigateBack) },
+                onClick = {
+                    haptic.confirm()
+                    viewModel.save(onSaved = onNavigateBack)
+                },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(if (currentForm.expenseId == null) "지출 추가" else "변경 사항 저장") }
         }

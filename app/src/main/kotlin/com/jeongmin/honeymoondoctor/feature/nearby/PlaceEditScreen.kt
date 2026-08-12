@@ -34,6 +34,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.time.LocalTimes
@@ -42,6 +43,7 @@ import com.jeongmin.honeymoondoctor.core.ui.CollapsibleSection
 import com.jeongmin.honeymoondoctor.core.ui.RatingStars
 import com.jeongmin.honeymoondoctor.core.ui.ChipSelector
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
+import com.jeongmin.honeymoondoctor.core.ui.confirm
 import com.jeongmin.honeymoondoctor.domain.model.PlaceCategory
 import com.jeongmin.honeymoondoctor.domain.model.PlacePriority
 import com.jeongmin.honeymoondoctor.domain.model.PreferredTime
@@ -70,6 +72,7 @@ fun PlaceEditScreen(
             )
         },
     ) { innerPadding ->
+        val haptic = LocalHapticFeedback.current
         val currentForm = form
         if (uiState.loading || currentForm == null) {
             Box(
@@ -224,7 +227,10 @@ fun PlaceEditScreen(
             }
 
             Button(
-                onClick = { viewModel.save(onSaved = onNavigateBack) },
+                onClick = {
+                    haptic.confirm()
+                    viewModel.save(onSaved = onNavigateBack)
+                },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(if (currentForm.placeId == null) "장소 추가" else "변경 사항 저장") }
         }

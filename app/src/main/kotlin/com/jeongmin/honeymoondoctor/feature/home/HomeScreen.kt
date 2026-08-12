@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -166,6 +167,30 @@ fun HomeScreen(
     }
 }
 
+/**
+ * "저게 그 아이콘인지 잘 인지가 안 된다"는 피드백 — 아이콘 하나만 덜렁 있으면 장식으로
+ * 읽혀 붕 떠 보인다. 바텀 내비게이션과 같은 형식(아이콘 위에 짧은 글자)으로 맞춰,
+ * 처음 보는 사람도 "이건 누르는 버튼이고 위치 관련"이라는 걸 바로 알 수 있게 한다.
+ * FilledTonalIconButton의 채워진 배경도 "탭할 수 있는 버튼"임을 분명히 해 준다.
+ */
+@Composable
+private fun TogetherShortcutButton(onClick: () -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        FilledTonalIconButton(onClick = onClick, modifier = Modifier.size(36.dp)) {
+            Icon(
+                Icons.Filled.PersonPinCircle,
+                contentDescription = "우리 위치",
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        Text(
+            text = "위치",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
 @Composable
 private fun HomeHeader(uiState: HomeUiState, onSwitchTrip: () -> Unit, onOpenTogether: () -> Unit) {
     val trip = uiState.trip ?: return
@@ -173,29 +198,39 @@ private fun HomeHeader(uiState: HomeUiState, onSwitchTrip: () -> Unit, onOpenTog
     Column {
         // 여행 이름을 누르면 여행 목록으로. 전환은 자주 하는 동작이 아니라 별도 버튼 대신
         // 이미 보고 있는 이름 자체를 진입점으로 쓴다("지금 이 여행" → "다른 여행").
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        //
+        // verticalAlignment를 Top으로 둔 이유: 우리 위치 버튼을 헤더의 맨 위 가장자리에
+        // 붙인다("우상단에 붙어 있는 느낌"이 필요하다는 피드백) — Center로 두면 버튼이
+        // 여행 이름과 같은 기준선에서 어중간하게 떠 보인다.
+        //
+        // TextButton은 weight(1f, fill = false)로 폭을 "content만큼, 최대 화면의
+        // 남는 절반까지"로 제한한다. fill = true(꽉 채우기)를 주면 M3 Button의 내부
+        // Row가 기본 Arrangement.Center라 늘어난 폭 안에서 내용이 중앙으로 밀린다 —
+        // "여행 제목이 좌상단 고정이 아니게 됐다"는 것이 정확히 이 증상이었다.
+        // Spacer(weight(1f))가 남는 공간을 전부 흡수해 오른쪽 버튼을 끝으로 밀어낸다.
+        Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
             TextButton(
                 onClick = onSwitchTrip,
                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
                 modifier = Modifier.weight(1f, fill = false),
             ) {
-                Text(text = trip.name, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = trip.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Text(
                     text = "  여행 바꾸기 ›",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
                 )
             }
             Spacer(Modifier.weight(1f))
             // 우리 위치 바로가기. 홈 어디서든 한 탭 — 서로를 급히 찾아야 하는 상황
             // (일행 놓침·비상)에 전체 탭 → 우리 위치 두 단계는 길다.
-            IconButton(onClick = onOpenTogether) {
-                Icon(
-                    Icons.Filled.PersonPinCircle,
-                    contentDescription = "우리 위치",
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
+            TogetherShortcutButton(onClick = onOpenTogether)
         }
         // 완료된 여행에 "출발 D-28"은 맞지 않다. 끝난 계획이므로 기간만 보여준다.
         val dDay = uiState.dDayToStart.takeIf { !isCompleted }

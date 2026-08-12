@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -53,6 +54,7 @@ import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.SearchField
 import com.jeongmin.honeymoondoctor.core.ui.UndoDeleteSnackbarEffect
+import com.jeongmin.honeymoondoctor.core.ui.confirm
 import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.domain.model.ChecklistCategory
 import com.jeongmin.honeymoondoctor.domain.model.ChecklistItem
@@ -67,6 +69,7 @@ fun ChecklistScreen(
     viewModel: ChecklistViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val haptic = LocalHapticFeedback.current
     var editorTarget by remember { mutableStateOf<ChecklistItem?>(null) }
     var showEditor by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<ChecklistItem?>(null) }
@@ -217,6 +220,7 @@ fun ChecklistScreen(
             text = { Text("\"${target.title}\" 항목을 삭제할까요?") },
             confirmButton = {
                 TextButton(onClick = {
+                    haptic.confirm()
                     viewModel.delete(target)
                     deleteTarget = null
                 }) { Text("삭제") }
@@ -234,13 +238,18 @@ private fun ChecklistRow(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    // 체크 순간의 촉각 피드백(백로그 3-3o) — 화면을 보지 않아도 "체크됐다"를 손끝으로 안다.
+    val haptic = LocalHapticFeedback.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Checkbox(
             checked = item.completed,
-            onCheckedChange = { onToggle() },
+            onCheckedChange = {
+                haptic.confirm()
+                onToggle()
+            },
             enabled = !LocalTripReadOnly.current,
         )
         Column(
@@ -391,9 +400,11 @@ private fun ChecklistEditorDialog(
             }
         },
         confirmButton = {
+            val haptic = LocalHapticFeedback.current
             TextButton(
                 onClick = {
                     if (title.isNotBlank()) {
+                        haptic.confirm()
                         onSave(
                             (original ?: ChecklistItem(id = "", title = "", category = category)).copy(
                                 title = title.trim(),
