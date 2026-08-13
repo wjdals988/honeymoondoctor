@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -63,6 +62,8 @@ import com.jeongmin.honeymoondoctor.core.ui.CardTone
 import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
+import com.jeongmin.honeymoondoctor.core.ui.SkeletonBar
+import com.jeongmin.honeymoondoctor.core.ui.SkeletonBlock
 import com.jeongmin.honeymoondoctor.core.ui.TabHeader
 import com.jeongmin.honeymoondoctor.core.ui.confirm
 import com.jeongmin.honeymoondoctor.core.ui.copyToClipboard
@@ -137,10 +138,7 @@ fun ItineraryScreen(
         },
     ) { innerPadding ->
         when {
-            uiState.loading -> Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator() }
+            uiState.loading -> ItinerarySkeleton(modifier = Modifier.padding(innerPadding))
 
             uiState.trip == null -> Box(
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
@@ -220,6 +218,20 @@ fun ItineraryScreen(
             },
             onDismiss = { deleteTarget = null },
         )
+    }
+}
+
+/** 백로그 3-1f: 날짜 칩 줄 + 날짜별 그룹 몇 개를 흉내낸 스켈레톤. */
+@Composable
+private fun ItinerarySkeleton(modifier: Modifier = Modifier) {
+    Column(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            repeat(4) { SkeletonBlock(Modifier.width(76.dp), height = 32.dp, shape = MaterialTheme.shapes.small) }
+        }
+        repeat(3) {
+            SkeletonBar(Modifier.fillMaxWidth(0.3f), height = 16.dp)
+            SkeletonBlock(Modifier.fillMaxWidth(), height = 64.dp)
+        }
     }
 }
 

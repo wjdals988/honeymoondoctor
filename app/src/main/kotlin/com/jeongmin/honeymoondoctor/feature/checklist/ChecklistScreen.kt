@@ -19,7 +19,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilledTonalButton
@@ -53,6 +52,8 @@ import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.SearchField
+import com.jeongmin.honeymoondoctor.core.ui.SkeletonBar
+import com.jeongmin.honeymoondoctor.core.ui.SkeletonBlock
 import com.jeongmin.honeymoondoctor.core.ui.UndoDeleteSnackbarEffect
 import com.jeongmin.honeymoondoctor.core.ui.confirm
 import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
@@ -106,10 +107,7 @@ fun ChecklistScreen(
         },
     ) { innerPadding ->
         if (uiState.loading) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator() }
+            ChecklistSkeleton(modifier = Modifier.padding(innerPadding))
             return@Scaffold
         }
 
@@ -227,6 +225,20 @@ fun ChecklistScreen(
             },
             dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("취소") } },
         )
+    }
+}
+
+/** 백로그 3-1f: 진행률 바 + 검색창 + 체크 행 몇 개를 흉내낸 스켈레톤. */
+@Composable
+private fun ChecklistSkeleton(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        SkeletonBar(Modifier.fillMaxWidth(0.4f))
+        SkeletonBlock(Modifier.fillMaxWidth(), height = 8.dp, shape = MaterialTheme.shapes.extraSmall)
+        SkeletonBlock(Modifier.fillMaxWidth(), height = 48.dp, shape = MaterialTheme.shapes.small)
+        repeat(4) { SkeletonBlock(Modifier.fillMaxWidth(), height = 48.dp) }
     }
 }
 

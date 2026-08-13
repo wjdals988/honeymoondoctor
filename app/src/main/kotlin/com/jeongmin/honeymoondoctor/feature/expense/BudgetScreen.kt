@@ -16,7 +16,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -50,6 +49,7 @@ import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
+import com.jeongmin.honeymoondoctor.core.ui.SkeletonBlock
 import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.domain.model.Budget
 import com.jeongmin.honeymoondoctor.domain.model.City
@@ -183,10 +183,7 @@ fun BudgetScreen(
         },
     ) { innerPadding ->
         if (uiState.loading) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator() }
+            BudgetSkeleton(modifier = Modifier.padding(innerPadding))
             return@Scaffold
         }
 
@@ -236,6 +233,17 @@ fun BudgetScreen(
             },
             onDismiss = { showEditor = false },
         )
+    }
+}
+
+/** 백로그 3-1f: 예산 카드 몇 장을 흉내낸 스켈레톤. */
+@Composable
+private fun BudgetSkeleton(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        repeat(3) { SkeletonBlock(Modifier.fillMaxWidth(), height = 76.dp) }
     }
 }
 

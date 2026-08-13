@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -20,7 +21,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -59,6 +59,8 @@ import com.jeongmin.honeymoondoctor.core.ui.MyLocationPinColor
 import com.jeongmin.honeymoondoctor.core.ui.OsmMiniMap
 import com.jeongmin.honeymoondoctor.core.ui.SearchField
 import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
+import com.jeongmin.honeymoondoctor.core.ui.SkeletonBar
+import com.jeongmin.honeymoondoctor.core.ui.SkeletonBlock
 import com.jeongmin.honeymoondoctor.core.ui.TabHeader
 import com.jeongmin.honeymoondoctor.core.ui.confirm
 import com.jeongmin.honeymoondoctor.core.ui.openGoogleMapsDirections
@@ -108,10 +110,7 @@ fun NearbyScreen(
         },
     ) { innerPadding ->
         if (uiState.loading) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator() }
+            NearbySkeleton(modifier = Modifier.padding(innerPadding))
             return@Scaffold
         }
 
@@ -285,6 +284,21 @@ private fun openDirections(context: android.content.Context, place: Place) {
 private val emptyScore = PlaceScore(
     distancePoints = 0, cityPoints = 0, priorityPoints = 0, timePoints = 0, ratingPoints = 0, lowConfidence = true,
 )
+
+/** 백로그 3-1f: 상태 문구 + 필터 칩 줄 + 지도 + 카드 몇 장을 흉내낸 스켈레톤. */
+@Composable
+private fun NearbySkeleton(modifier: Modifier = Modifier) {
+    Column(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SkeletonBar(Modifier.fillMaxWidth(0.5f))
+        SkeletonBlock(Modifier.fillMaxWidth(), height = 48.dp, shape = MaterialTheme.shapes.small)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            repeat(4) { SkeletonBlock(Modifier.width(64.dp), height = 32.dp, shape = MaterialTheme.shapes.small) }
+        }
+        SkeletonBlock(Modifier.fillMaxWidth(), height = 160.dp)
+        SkeletonBlock(Modifier.fillMaxWidth(), height = 90.dp)
+        SkeletonBlock(Modifier.fillMaxWidth(), height = 90.dp)
+    }
+}
 
 @Composable
 private fun StatusHeader(

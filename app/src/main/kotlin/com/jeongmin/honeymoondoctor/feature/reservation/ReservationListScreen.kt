@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -16,7 +17,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
@@ -42,6 +42,7 @@ import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.SearchField
+import com.jeongmin.honeymoondoctor.core.ui.SkeletonBlock
 import com.jeongmin.honeymoondoctor.domain.model.Reservation
 import com.jeongmin.honeymoondoctor.domain.model.ReservationStatus
 import com.jeongmin.honeymoondoctor.domain.model.maskSecret
@@ -76,10 +77,7 @@ fun ReservationListScreen(
         },
     ) { innerPadding ->
         if (uiState.loading) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator() }
+            ReservationListSkeleton(modifier = Modifier.padding(innerPadding))
             return@Scaffold
         }
 
@@ -130,6 +128,18 @@ fun ReservationListScreen(
                 }
             }
         }
+    }
+}
+
+/** 백로그 3-1f: 검색창 + 필터 칩 줄 + 예약 카드 몇 장을 흉내낸 스켈레톤. */
+@Composable
+private fun ReservationListSkeleton(modifier: Modifier = Modifier) {
+    Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SkeletonBlock(Modifier.fillMaxWidth(), height = 48.dp, shape = MaterialTheme.shapes.small)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            repeat(3) { SkeletonBlock(Modifier.width(64.dp), height = 32.dp, shape = MaterialTheme.shapes.small) }
+        }
+        repeat(3) { SkeletonBlock(Modifier.fillMaxWidth(), height = 64.dp) }
     }
 }
 

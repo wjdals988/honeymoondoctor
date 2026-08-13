@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -17,7 +18,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
@@ -48,6 +48,8 @@ import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
+import com.jeongmin.honeymoondoctor.core.ui.SkeletonBar
+import com.jeongmin.honeymoondoctor.core.ui.SkeletonBlock
 import com.jeongmin.honeymoondoctor.core.ui.TabHeader
 import com.jeongmin.honeymoondoctor.core.ui.UndoDeleteSnackbarEffect
 import com.jeongmin.honeymoondoctor.core.ui.confirm
@@ -97,10 +99,7 @@ fun ExpenseScreen(
         },
     ) { innerPadding ->
         if (uiState.loading) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator() }
+            ExpenseSkeleton(modifier = Modifier.padding(innerPadding))
             return@Scaffold
         }
 
@@ -229,6 +228,19 @@ fun ExpenseScreen(
             },
             dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("취소") } },
         )
+    }
+}
+
+/** 백로그 3-1f: 요약 카드 + 필터 칩 줄 + 지출 행 몇 개를 흉내낸 스켈레톤. */
+@Composable
+private fun ExpenseSkeleton(modifier: Modifier = Modifier) {
+    Column(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SkeletonBlock(Modifier.fillMaxWidth(), height = 96.dp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            repeat(3) { SkeletonBlock(Modifier.width(64.dp), height = 32.dp, shape = MaterialTheme.shapes.small) }
+        }
+        SkeletonBar(Modifier.fillMaxWidth(0.25f), height = 16.dp)
+        repeat(3) { SkeletonBlock(Modifier.fillMaxWidth(), height = 56.dp) }
     }
 }
 

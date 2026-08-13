@@ -146,8 +146,10 @@ fun PlaceImportFormContent(
                 Text(
                     text = "구글 지도 \"공유 → 링크 복사\"로 받은 개별 장소 링크를 한 줄에 하나씩 붙여넣으면 " +
                         "이름·좌표를 자동으로 채워 추가합니다. \"저장된 목록\"(장소 여러 개를 모아 둔) 링크는 " +
-                        "안의 장소들을 구글 지도 앱이 나중에 따로 불러오는 구조라 이 방식으로는 읽을 수 없습니다 " +
-                        "— 목록에 있는 장소를 하나씩 공유해 링크로 붙여넣어 주세요.",
+                        "안의 장소들을 구글 지도 앱이 나중에 따로 불러오는 구조라 이 방식으로는 읽을 수 없습니다.\n\n" +
+                        "저장한 장소가 많다면 구글 계정의 \"Takeout\"(takeout.google.com → Saved 항목 선택)에서 " +
+                        "목록별 CSV로 내보낸 뒤, 그 파일을 열어 URL 열의 값들을 통째로 복사해 여기 붙여넣으세요 — " +
+                        "장소를 하나씩 다시 공유할 필요가 없습니다.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

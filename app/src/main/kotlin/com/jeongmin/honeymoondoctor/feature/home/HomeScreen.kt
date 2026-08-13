@@ -23,7 +23,6 @@ import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -49,6 +48,8 @@ import com.jeongmin.honeymoondoctor.core.ui.AppCard
 import com.jeongmin.honeymoondoctor.core.ui.CardTone
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
+import com.jeongmin.honeymoondoctor.core.ui.SkeletonBar
+import com.jeongmin.honeymoondoctor.core.ui.SkeletonBlock
 import com.jeongmin.honeymoondoctor.core.ui.TabHeader
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryItem
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryStatus
@@ -75,9 +76,7 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     when {
-        uiState.loading -> Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
+        uiState.loading -> HomeSkeleton(modifier = modifier)
 
         uiState.trip == null -> Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("여행 정보를 불러올 수 없습니다.")
@@ -166,6 +165,22 @@ fun HomeScreen(
             )
             Spacer(Modifier.height(8.dp))
         }
+    }
+}
+
+/** 백로그 3-1f: 전면 스피너 대신, 실제 홈 화면(헤더+D-day+카드 2장)과 대략 같은 모양을 먼저 보여준다. */
+@Composable
+private fun HomeSkeleton(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        SkeletonBar(Modifier.fillMaxWidth(0.35f), height = 14.dp)
+        SkeletonBar(Modifier.fillMaxWidth(0.5f), height = 22.dp)
+        SkeletonBar(Modifier.fillMaxWidth(0.4f), height = 34.dp)
+        SkeletonBar(Modifier.fillMaxWidth(0.6f), height = 16.dp)
+        SkeletonBlock(Modifier.fillMaxWidth(), height = 140.dp)
+        SkeletonBlock(Modifier.fillMaxWidth(), height = 100.dp)
     }
 }
 

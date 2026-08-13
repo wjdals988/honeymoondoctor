@@ -20,6 +20,15 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.6.6",
+            versionCode = 30,
+            date = "2026-08-13",
+            changes = listOf(
+                "홈·일정·주변·경비·예산·예약함·준비물·결정함 화면의 첫 로딩이 빈 화면 대신 " +
+                    "각 화면 모양을 흉내낸 스켈레톤으로 바뀝니다. 화면이 비었다가 한꺼번에 채워지는 깜빡임이 줄어듭니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.6.5",
             versionCode = 29,
             date = "2026-08-13",
