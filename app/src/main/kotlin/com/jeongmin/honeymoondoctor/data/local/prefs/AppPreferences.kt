@@ -3,6 +3,7 @@ package com.jeongmin.honeymoondoctor.data.local.prefs
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -66,6 +67,8 @@ data class AppPrefsSnapshot(
      */
     val transportLeadMinutes: Int,
     val locationShareMode: LocationShareMode,
+    /** 첫 실행 온보딩을 이미 봤는지(백로그 3-3l). 로그아웃·탈퇴 시 다른 사람이 같은 기기를 쓸 수 있어 [clearAll]로 함께 지워진다. */
+    val hasSeenOnboarding: Boolean,
 )
 
 /** 앱 설정, 선택 도시, 최근 위치 메타데이터를 담는 DataStore 래퍼. 위치는 화면 진입/새로고침 때만 갱신된다. */
@@ -94,6 +97,7 @@ class AppPreferences @Inject constructor(
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val TRANSPORT_LEAD_MINUTES = longPreferencesKey("transport_lead_minutes")
         val LOCATION_SHARE_MODE = stringPreferencesKey("location_share_mode")
+        val HAS_SEEN_ONBOARDING = booleanPreferencesKey("has_seen_onboarding")
     }
 
     private companion object {
@@ -125,6 +129,7 @@ class AppPreferences @Inject constructor(
             locationShareMode = prefs[Keys.LOCATION_SHARE_MODE]
                 ?.let { raw -> LocationShareMode.entries.firstOrNull { it.name == raw } }
                 ?: LocationShareMode.MANUAL,
+            hasSeenOnboarding = prefs[Keys.HAS_SEEN_ONBOARDING] ?: false,
         )
     }
 
@@ -174,6 +179,10 @@ class AppPreferences @Inject constructor(
     suspend fun setTransportLeadMinutes(minutes: Int) {
         if (minutes !in 1..24 * 60) return
         dataStore.edit { it[Keys.TRANSPORT_LEAD_MINUTES] = minutes.toLong() }
+    }
+
+    suspend fun setHasSeenOnboarding(seen: Boolean) {
+        dataStore.edit { it[Keys.HAS_SEEN_ONBOARDING] = seen }
     }
 
     /**

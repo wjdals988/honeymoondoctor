@@ -20,6 +20,15 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.6.7",
+            versionCode = 31,
+            date = "2026-08-13",
+            changes = listOf(
+                "처음 실행하면 이 앱이 뭘 해주는지 3장짜리 화면으로 먼저 보여줍니다. " +
+                    "한 번만 보이고, 다음부터는 곧바로 로그인/여행 화면으로 이동합니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.6.6",
             versionCode = 30,
             date = "2026-08-13",

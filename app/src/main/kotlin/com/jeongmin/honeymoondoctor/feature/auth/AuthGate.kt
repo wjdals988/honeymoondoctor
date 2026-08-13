@@ -36,27 +36,37 @@ fun AuthGate(viewModel: AuthGateViewModel = hiltViewModel()) {
         if (viewModel.demoModeManager.isDemoMode) {
             DemoModeBanner()
         }
-        when (val state = viewModel.state.collectAsState().value) {
-            is AuthGateState.Loading -> LoadingIndicator()
-            is AuthGateState.NeedsLogin -> {
-                if (viewModel.demoModeManager.isDemoMode) {
-                    LoadingIndicator() // 데모 모드는 자동으로 로그인되므로 잠깐만 보인다.
-                } else {
-                    // 오류 콜백을 빈 람다로 두면 Firebase 인증 실패가 조용히 사라져
-                    // "계정을 골랐는데 아무 일도 안 일어난다"로만 보인다(실기기에서 겪은 문제).
-                    var signInError by remember { mutableStateOf<String?>(null) }
-                    LoginScreen(
-                        onGoogleIdToken = { token ->
-                            signInError = null
-                            viewModel.signInWithGoogleIdToken(token) {
-                                signInError = "Firebase 인증에 실패했습니다: ${it.message}"
-                            }
-                        },
-                        modifier = safeDrawingInsets(),
-                        signInError = signInError,
-                    )
-                }
+        when (viewModel.hasSeenOnboarding.collectAsState().value) {
+            null -> LoadingIndicator()
+            false -> OnboardingScreen(onDone = viewModel::markOnboardingSeen, modifier = safeDrawingInsets())
+            true -> AuthGateContent(viewModel)
+        }
+    }
+}
+
+@Composable
+private fun AuthGateContent(viewModel: AuthGateViewModel) {
+    when (val state = viewModel.state.collectAsState().value) {
+        is AuthGateState.Loading -> LoadingIndicator()
+        is AuthGateState.NeedsLogin -> {
+            if (viewModel.demoModeManager.isDemoMode) {
+                LoadingIndicator() // 데모 모드는 자동으로 로그인되므로 잠깐만 보인다.
+            } else {
+                // 오류 콜백을 빈 람다로 두면 Firebase 인증 실패가 조용히 사라져
+                // "계정을 골랐는데 아무 일도 안 일어난다"로만 보인다(실기기에서 겪은 문제).
+                var signInError by remember { mutableStateOf<String?>(null) }
+                LoginScreen(
+                    onGoogleIdToken = { token ->
+                        signInError = null
+                        viewModel.signInWithGoogleIdToken(token) {
+                            signInError = "Firebase 인증에 실패했습니다: ${it.message}"
+                        }
+                    },
+                    modifier = safeDrawingInsets(),
+                    signInError = signInError,
+                )
             }
+        }
             is AuthGateState.NeedsTripSelection -> {
                 // 여행이 여러 개일 수 있으므로 무엇을 볼지 먼저 고른다. "새 여행 만들기"는
                 // 만들기 폼(TripSetupScreen)을 그대로 재사용한다 — 참여 코드 입력도 같은 폼에 있다.
@@ -105,8 +115,7 @@ fun AuthGate(viewModel: AuthGateViewModel = hiltViewModel()) {
                     modifier = safeDrawingInsets(),
                 )
             }
-            is AuthGateState.Ready -> HoneymoonDoctorAppRoot()
-        }
+        is AuthGateState.Ready -> HoneymoonDoctorAppRoot()
     }
 }
 

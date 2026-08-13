@@ -55,6 +55,19 @@ class AuthGateViewModel @Inject constructor(
     val demoModeManager: DemoModeManager,
 ) : ViewModel() {
 
+    /**
+     * 첫 실행 온보딩(백로그 3-3l)을 봤는지. null이면 DataStore에서 아직 안 읽힌 상태 —
+     * 그동안은 [state]와 별개로 로딩만 보여준다(안 봤다고 잘못 단정해 매번 온보딩이
+     * 잠깐 스쳐 지나가는 것을 막는다).
+     */
+    val hasSeenOnboarding: StateFlow<Boolean?> = appPreferences.snapshot
+        .map { it.hasSeenOnboarding }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun markOnboardingSeen() {
+        viewModelScope.launch { appPreferences.setHasSeenOnboarding(true) }
+    }
+
     val state: StateFlow<AuthGateState> =
         authRepository.currentUser
             .flatMapLatest { user ->
