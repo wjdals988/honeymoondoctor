@@ -81,23 +81,33 @@ fun PublicTripDetailScreen(
                     EmptyState(title = "공개된 일정이 없습니다.")
                 }
             }
-            items(state.itinerary) { item ->
-                val cityName = state.cities.firstOrNull { it.id == item.cityId }?.displayName
-                AppCard(
-                    tone = CardTone.Neutral,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                ) {
-                    Text(item.title, style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "${LocalTimes.formatDate(item.startAt, item.timeZone)} " +
-                            "${LocalTimes.formatTime(item.startAt, item.timeZone)} " +
-                            "(${koreanZoneLabel(item.timeZone)}) · ${item.type.labelKo}" +
-                            (cityName?.let { " · $it" }.orEmpty()) +
-                            (item.location?.let { " · $it" }.orEmpty()),
-                        style = MaterialTheme.typography.bodyMedium,
+            // 벤치마킹: 일정 탭은 이미 날짜별로 묶여 있는데(백로그 3-1) 여행 둘러보기 상세는
+            // 평면 목록이라 같은 앱 안에서 패턴이 갈렸다. 같은 방식으로 날짜 헤더를 끼운다.
+            val grouped = state.itinerary.groupBy { LocalTimes.toLocalDate(it.startAt, it.timeZone) }
+            grouped.forEach { (date, dayItems) ->
+                item(key = "day-$date") {
+                    SectionHeader(
+                        title = "${date.monthValue}월 ${date.dayOfMonth}일",
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
+                }
+                items(dayItems, key = { it.id }) { item ->
+                    val cityName = state.cities.firstOrNull { it.id == item.cityId }?.displayName
+                    AppCard(
+                        tone = CardTone.Neutral,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                    ) {
+                        Text(item.title, style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "${LocalTimes.formatTime(item.startAt, item.timeZone)} " +
+                                "(${koreanZoneLabel(item.timeZone)}) · ${item.type.labelKo}" +
+                                (cityName?.let { " · $it" }.orEmpty()) +
+                                (item.location?.let { " · $it" }.orEmpty()),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
                 }
             }
         }

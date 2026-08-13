@@ -1,10 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- 백로그 3-3m: 아이콘을 완전 평평한 단색보다 살짝 입체감 있게 — 좌상단에서 우하단으로
+     테라코타가 약간 밝아지는 대각선 그라디언트. 평균 색상은 기존 #B84F32와 거의 같아
+     포그라운드(ic_launcher_foreground.xml)의 대비는 그대로 유지된다. -->
+<vector xmlns:aapt="http://schemas.android.com/aapt"
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path
-        android:fillColor="#B84F32"
-        android:pathData="M0,0h108v108h-108z" />
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0"
+                android:startY="0"
+                android:endX="108"
+                android:endY="108"
+                android:startColor="#C25A3C"
+                android:endColor="#A8431F" />
+        </aapt:attr>
+    </path>
 </vector>

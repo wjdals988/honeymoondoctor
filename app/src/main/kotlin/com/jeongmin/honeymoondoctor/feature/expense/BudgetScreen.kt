@@ -217,6 +217,7 @@ fun BudgetScreen(
                             showEditor = true
                         },
                         onDelete = { viewModel.delete(row.budget) },
+                        modifier = Modifier.animateItem(),
                     )
                 }
             }
@@ -253,10 +254,11 @@ private fun BudgetCard(
     cities: List<City>,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val budget = row.budget
     val remaining = budget.budgetKrw - row.spentKrw
-    AppCard(onClick = onEdit, modifier = Modifier.fillMaxWidth(), tone = CardTone.Neutral) {
+    AppCard(onClick = onEdit, modifier = modifier.fillMaxWidth(), tone = CardTone.Neutral) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(),

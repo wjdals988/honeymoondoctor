@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -46,11 +47,20 @@ import com.jeongmin.honeymoondoctor.core.ui.AppCard
 import com.jeongmin.honeymoondoctor.core.ui.CardTone
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.copyToClipboard
+import com.jeongmin.honeymoondoctor.core.ui.containerColor
+import com.jeongmin.honeymoondoctor.core.ui.contentColor
 import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.data.local.db.VoucherMetadataEntity
+import com.jeongmin.honeymoondoctor.domain.model.ReservationStatus
 import com.jeongmin.honeymoondoctor.domain.model.maskSecret
 import java.text.NumberFormat
 import java.util.Locale
+
+private fun ReservationStatus.tone(): CardTone = when (this) {
+    ReservationStatus.NEEDS_CHECK, ReservationStatus.NEEDS_BOOKING, ReservationStatus.NEEDS_PAYMENT -> CardTone.Warn
+    ReservationStatus.CONFIRMED, ReservationStatus.USED -> CardTone.Done
+    ReservationStatus.CANCELED -> CardTone.Neutral
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -120,15 +130,30 @@ fun ReservationDetailScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(reservation.title, style = MaterialTheme.typography.headlineSmall)
-            Text(
-                text = listOfNotNull(
-                    reservation.type.display,
-                    reservation.status.labelKo,
-                    reservation.vendor.takeIf { it.isNotBlank() },
-                ).joinToString(" · "),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // 벤치마킹: 목록 카드는 상태를 색 배지로 강조하는데, 상세에서는 회색 보조
+                // 텍스트에 묻혀 있었다. 확인·예약·결제가 필요한 상태만 눈에 띄게 뗀다.
+                val statusTone = reservation.status.tone()
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = statusTone.containerColor(),
+                    contentColor = statusTone.contentColor(),
+                ) {
+                    Text(
+                        text = reservation.status.labelKo,
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    )
+                }
+                Text(
+                    text = listOfNotNull(
+                        reservation.type.display,
+                        reservation.vendor.takeIf { it.isNotBlank() },
+                    ).joinToString(" · "),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             reservationScheduleLabel(reservation)?.let {
                 Text(it, style = MaterialTheme.typography.bodyLarge)
             }

@@ -123,7 +123,11 @@ fun ReservationListScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(uiState.reservations, key = { it.id }) { reservation ->
-                        ReservationCard(reservation = reservation, onClick = { onOpenDetail(reservation.id) })
+                        ReservationCard(
+                            reservation = reservation,
+                            onClick = { onOpenDetail(reservation.id) },
+                            modifier = Modifier.animateItem(),
+                        )
                     }
                 }
             }
@@ -144,8 +148,8 @@ private fun ReservationListSkeleton(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun ReservationCard(reservation: Reservation, onClick: () -> Unit) {
-    AppCard(modifier = Modifier.fillMaxWidth(), tone = CardTone.Neutral, onClick = onClick) {
+private fun ReservationCard(reservation: Reservation, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    AppCard(modifier = modifier.fillMaxWidth(), tone = CardTone.Neutral, onClick = onClick) {
         Text(
             text = reservationScheduleLabel(reservation) ?: "일시 미정",
             style = MaterialTheme.typography.labelLarge,

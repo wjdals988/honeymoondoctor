@@ -26,6 +26,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -37,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -44,10 +46,13 @@ import androidx.lifecycle.viewModelScope
 import com.jeongmin.honeymoondoctor.core.error.ActionErrorState
 import com.jeongmin.honeymoondoctor.core.error.runReporting
 import com.jeongmin.honeymoondoctor.core.ui.AppCard
+import com.jeongmin.honeymoondoctor.core.ui.CardTone
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
+import com.jeongmin.honeymoondoctor.core.ui.containerColor
+import com.jeongmin.honeymoondoctor.core.ui.contentColor
 import com.jeongmin.honeymoondoctor.core.ui.SkeletonBlock
 import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.domain.model.Decision
@@ -239,6 +244,7 @@ fun DecisionScreen(
                             showEditor = true
                         },
                         onDelete = { deleteTarget = decision },
+                        modifier = Modifier.animateItem(),
                     )
                 }
             }
@@ -290,8 +296,9 @@ private fun DecisionCard(
     onSetStatus: (DecisionStatus) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    AppCard(modifier = Modifier.fillMaxWidth()) {
+    AppCard(modifier = modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = decision.title,
@@ -303,20 +310,40 @@ private fun DecisionCard(
                 Icon(Icons.Filled.Delete, contentDescription = "${decision.title} 삭제")
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             AssistChip(onClick = {}, label = { Text(decision.category.labelKo) })
-            AssistChip(onClick = {}, label = { Text(decision.status.labelKo) })
+            // 벤치마킹: "결정 필요"와 "결정됨"이 같은 회색 칩이라 구분이 안 됐다. 아직 결정
+            // 안 된 상태는 눈에 띄게, 결정된 상태는 톤을 낮춰 "끝났다"는 인상을 준다.
+            val statusTone = if (decision.status == DecisionStatus.DECIDED) CardTone.Done else CardTone.Warn
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = statusTone.containerColor(),
+                contentColor = statusTone.contentColor(),
+            ) {
+                Text(
+                    text = decision.status.labelKo,
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                )
+            }
         }
         decision.options.forEach { option ->
+            val isSelected = decision.selectedOptionId == option.id
+            // 결정이 끝나면 선택 안 된 옵션은 톤을 낮춰, 무엇이 결정됐는지 한눈에 읽히게 한다.
+            val dimmed = decision.status == DecisionStatus.DECIDED && !isSelected
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 RadioButton(
-                    selected = decision.selectedOptionId == option.id,
+                    selected = isSelected,
                     onClick = { onSelectOption(option) },
                 )
-                Text(option.label, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    option.label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (dimmed) MaterialTheme.colorScheme.onSurfaceVariant else Color.Unspecified,
+                )
             }
         }
         decision.notes?.let {

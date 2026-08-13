@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.jeongmin.honeymoondoctor.core.ui.AppCard
 import com.jeongmin.honeymoondoctor.core.ui.CityFormDialog
 import com.jeongmin.honeymoondoctor.core.ui.DateField
 import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
@@ -73,68 +74,72 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
 
     LazyColumn(modifier = modifier.padding(16.dp)) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(trip.name, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
-                if (isOwner && !trip.isReadOnly) {
-                    TextButton(onClick = { showEditDialog = true }) { Text("수정") }
+            // 벤치마킹: 이름·기간·배너·에러·버튼이 카드 경계 없이 텍스트만 쌓여 있어
+            // AppCard로 다듬은 다른 화면들과 대비되는 텍스트 벽이었다. 한 카드로 묶는다.
+            AppCard(modifier = Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(trip.name, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
+                    if (isOwner && !trip.isReadOnly) {
+                        TextButton(onClick = { showEditDialog = true }) { Text("수정") }
+                    }
                 }
-            }
-            Text(
-                "${trip.startDate} ~ ${trip.endDate} · ${trip.defaultCurrency}",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-            if (trip.isReadOnly) {
                 Text(
-                    "완료된 여행 — 더 이상 수정할 수 없습니다.",
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
-            }
-            state.actionError?.let {
-                Text(
-                    it,
-                    color = MaterialTheme.colorScheme.error,
+                    "${trip.startDate} ~ ${trip.endDate} · ${trip.defaultCurrency}",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(top = 4.dp),
                 )
-            }
-            if (isOwner) {
-                if (trip.isReadOnly && trip.isPublic) {
+                if (trip.isReadOnly) {
                     Text(
-                        "공개 중에는 다시 활성화할 수 없습니다 — 먼저 공개를 중단하세요.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        "완료된 여행 — 더 이상 수정할 수 없습니다.",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(top = 4.dp),
                     )
-                } else {
-                    TextButton(
-                        onClick = {
-                            // 완료 처리는 모든 탭이 읽기전용으로 바뀌는 큰 변화라 확인을 받는다.
-                            // 다시 활성화는 되돌리는 방향이라 바로 실행한다.
-                            if (trip.isReadOnly) {
-                                viewModel.setStatus(trip.id, TripStatus.ACTIVE)
-                            } else {
-                                showCompleteConfirm = true
-                            }
-                        },
-                        modifier = Modifier.padding(top = 4.dp),
-                    ) {
-                        Text(if (trip.isReadOnly) "다시 활성화" else "여행 완료 처리")
-                    }
                 }
-            }
-            if (isOwner && trip.isReadOnly) {
-                if (trip.isPublic) {
+                state.actionError?.let {
                     Text(
-                        "다른 사용자에게 공개 중입니다.",
+                        it,
+                        color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(top = 4.dp),
                     )
-                    TextButton(onClick = { viewModel.unpublish(trip.id) }) { Text("공개 중단") }
-                } else {
-                    TextButton(onClick = { showPublishDialog = true }) { Text("다른 사용자에게 공개") }
+                }
+                if (isOwner) {
+                    if (trip.isReadOnly && trip.isPublic) {
+                        Text(
+                            "공개 중에는 다시 활성화할 수 없습니다 — 먼저 공개를 중단하세요.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    } else {
+                        TextButton(
+                            onClick = {
+                                // 완료 처리는 모든 탭이 읽기전용으로 바뀌는 큰 변화라 확인을 받는다.
+                                // 다시 활성화는 되돌리는 방향이라 바로 실행한다.
+                                if (trip.isReadOnly) {
+                                    viewModel.setStatus(trip.id, TripStatus.ACTIVE)
+                                } else {
+                                    showCompleteConfirm = true
+                                }
+                            },
+                            modifier = Modifier.padding(top = 4.dp),
+                        ) {
+                            Text(if (trip.isReadOnly) "다시 활성화" else "여행 완료 처리")
+                        }
+                    }
+                }
+                if (isOwner && trip.isReadOnly) {
+                    if (trip.isPublic) {
+                        Text(
+                            "다른 사용자에게 공개 중입니다.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                        TextButton(onClick = { viewModel.unpublish(trip.id) }) { Text("공개 중단") }
+                    } else {
+                        TextButton(onClick = { showPublishDialog = true }) { Text("다른 사용자에게 공개") }
+                    }
                 }
             }
             SectionHeader(

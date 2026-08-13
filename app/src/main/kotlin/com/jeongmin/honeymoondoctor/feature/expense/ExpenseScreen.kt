@@ -207,6 +207,7 @@ fun ExpenseScreen(
                             uiState = uiState,
                             onEdit = { onEditExpense(expense.id) },
                             onDelete = { deleteTarget = expense },
+                            modifier = Modifier.animateItem(),
                         )
                     }
                 }
@@ -304,8 +305,9 @@ private fun ExpenseRow(
     uiState: ExpenseUiState,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    AppCard(onClick = onEdit, modifier = Modifier.fillMaxWidth(), tone = CardTone.Neutral) {
+    AppCard(onClick = onEdit, modifier = modifier.fillMaxWidth(), tone = CardTone.Neutral) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(),

@@ -205,6 +205,7 @@ fun NearbyScreen(
                                 onEdit = { onOpenEditor(scored.place.id) },
                                 onToggleVisited = { viewModel.toggleVisited(scored.place) },
                                 onDelete = { deleteTarget = scored.place },
+                                modifier = Modifier.animateItem(),
                             )
                         }
                     }
@@ -222,6 +223,7 @@ fun NearbyScreen(
                                 onEdit = { onOpenEditor(scored.place.id) },
                                 onToggleVisited = { viewModel.toggleVisited(scored.place) },
                                 onDelete = { deleteTarget = scored.place },
+                                modifier = Modifier.animateItem(),
                             )
                         }
                     }
@@ -247,6 +249,7 @@ fun NearbyScreen(
                                 onEdit = { onOpenEditor(place.id) },
                                 onToggleVisited = { viewModel.toggleVisited(place) },
                                 onDelete = { deleteTarget = place },
+                                modifier = Modifier.animateItem(),
                             )
                         }
                     }
@@ -405,12 +408,13 @@ private fun TopPlaceCard(
     onEdit: () -> Unit,
     onToggleVisited: () -> Unit,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     AppCard(
         onClick = onEdit,
         tone = CardTone.Highlight,
         shape = MaterialTheme.shapes.large,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
@@ -463,9 +467,10 @@ private fun PlaceRow(
     onToggleVisited: () -> Unit,
     onDelete: () -> Unit,
     showScore: Boolean = true,
+    modifier: Modifier = Modifier,
 ) {
     val place = scored.place
-    AppCard(onClick = onEdit, tone = CardTone.Neutral, modifier = Modifier.fillMaxWidth()) {
+    AppCard(onClick = onEdit, tone = CardTone.Neutral, modifier = modifier.fillMaxWidth()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(),

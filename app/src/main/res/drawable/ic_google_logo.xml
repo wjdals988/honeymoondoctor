@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Google 로그인 버튼에 붙이는 표준 "G" 로고(Google Sign-In 브랜딩 가이드 권장 형태). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="18dp"
+    android:height="18dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="#4285F4"
+        android:pathData="M45.12,24.5c0,-1.56 -0.14,-3.06 -0.4,-4.5H24v9h11.8c-0.51,2.75 -2.07,5.08 -4.42,6.64v5.52h7.13C42.85,37.24 45.12,31.35 45.12,24.5z" />
+    <path
+        android:fillColor="#34A853"
+        android:pathData="M24,46c5.94,0 10.92,-1.97 14.56,-5.34l-7.13,-5.52c-1.98,1.33 -4.5,2.11 -7.43,2.11 -5.71,0 -10.55,-3.85 -12.29,-9.03H4.34v5.7C7.96,41.07 15.4,46 24,46z" />
+    <path
+        android:fillColor="#FBBC05"
+        android:pathData="M11.71,28.22c-0.44,-1.33 -0.69,-2.75 -0.69,-4.22s0.25,-2.89 0.69,-4.22v-5.7H4.34C2.85,17.09 2,20.45 2,24s0.85,6.91 2.34,9.92z" />
+    <path
+        android:fillColor="#EA4335"
+        android:pathData="M24,10.75c3.23,0 6.13,1.11 8.41,3.29l6.31,-6.31C34.91,4.18 29.93,2 24,2 15.4,2 7.96,6.93 4.34,14.08l7.37,5.7c1.74,-5.18 6.58,-9.03 12.29,-9.03z" />
+</vector>

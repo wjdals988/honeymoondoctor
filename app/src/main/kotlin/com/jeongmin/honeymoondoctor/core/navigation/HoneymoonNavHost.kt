@@ -1,5 +1,9 @@
 package com.jeongmin.honeymoondoctor.core.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
@@ -104,6 +108,20 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
             startDestination = BottomTab.HOME.route,
             // 인셋은 위 Column이 처리한다. 여기서 다시 적용하면 하위 화면의 TopAppBar와
             // 이중으로 겹쳐 제목 위 여백이 두 배가 된다(v0.1.2에서 고친 문제).
+            //
+            // 백로그 3-3n: 전환에 모션을 준다. 방향성 있는 슬라이드(왼→오)는 하단 탭 전환처럼
+            // 계층이 없는 이동에는 어색해서, M3의 "페이드 스루"(옛 화면은 빠르게 사라지고 새
+            // 화면은 살짝 커지며 나타남)를 push/pop/탭 전환 구분 없이 전부 동일하게 적용한다.
+            enterTransition = {
+                fadeIn(tween(220, delayMillis = 90)) +
+                    scaleIn(initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90))
+            },
+            exitTransition = { fadeOut(tween(90)) },
+            popEnterTransition = {
+                fadeIn(tween(220, delayMillis = 90)) +
+                    scaleIn(initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90))
+            },
+            popExitTransition = { fadeOut(tween(90)) },
         ) {
             composable(BottomTab.HOME.route) {
                 HomeScreen(

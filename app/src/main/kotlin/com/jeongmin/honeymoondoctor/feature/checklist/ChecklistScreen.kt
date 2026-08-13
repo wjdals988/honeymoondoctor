@@ -191,6 +191,7 @@ fun ChecklistScreen(
                                 showEditor = true
                             },
                             onDelete = { deleteTarget = item },
+                            modifier = Modifier.animateItem(),
                         )
                     }
                 }
@@ -249,12 +250,13 @@ private fun ChecklistRow(
     onToggle: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     // 체크 순간의 촉각 피드백(백로그 3-3o) — 화면을 보지 않아도 "체크됐다"를 손끝으로 안다.
     val haptic = LocalHapticFeedback.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Checkbox(
             checked = item.completed,

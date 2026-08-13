@@ -20,6 +20,18 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.6.8",
+            versionCode = 32,
+            date = "2026-08-13",
+            changes = listOf(
+                "화면 전환과 목록 추가·삭제에 자연스러운 움직임이 생깁니다.",
+                "구글 로그인 버튼에 구글 로고가 붙고, 더보기 메뉴가 여행/함께/데이터/앱" +
+                    "4묶음으로 정리됩니다.",
+                "예약 상세·결정함의 상태가 색으로 더 잘 구분되고, 여행 둘러보기 상세도 " +
+                    "일정 탭처럼 날짜별로 묶입니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.6.7",
             versionCode = 31,
             date = "2026-08-13",

@@ -185,6 +185,7 @@ fun ItineraryScreen(
                             onEdit = onOpenEditor,
                             onSetStatus = viewModel::setStatus,
                             onDeleteRequest = { deleteTarget = it },
+                            modifier = Modifier.animateItem(),
                         )
                     }
                     if (day.timedItems.isEmpty() && day.allDayItems.isEmpty()) {
@@ -200,6 +201,7 @@ fun ItineraryScreen(
                             onEdit = onOpenEditor,
                             onSetStatus = viewModel::setStatus,
                             onDeleteRequest = { deleteTarget = it },
+                            modifier = Modifier.animateItem(),
                         )
                     }
                 }
@@ -319,12 +321,13 @@ private fun ItineraryCard(
     onEdit: (String) -> Unit,
     onSetStatus: (ItineraryItem, ItineraryStatus) -> Unit,
     onDeleteRequest: (ItineraryItem) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val dimmed = item.status != ItineraryStatus.PLANNED
 
     AppCard(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         tone = if (dimmed) CardTone.Done else CardTone.Neutral,
         onClick = { onEdit(item.id) },
     ) {
