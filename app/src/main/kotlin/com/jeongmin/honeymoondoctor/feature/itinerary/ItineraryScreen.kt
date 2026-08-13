@@ -5,9 +5,13 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,7 +20,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Warning
@@ -25,6 +31,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,6 +46,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +63,7 @@ import com.jeongmin.honeymoondoctor.core.ui.CardTone
 import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
+import com.jeongmin.honeymoondoctor.core.ui.TabHeader
 import com.jeongmin.honeymoondoctor.core.ui.confirm
 import com.jeongmin.honeymoondoctor.core.ui.copyToClipboard
 import com.jeongmin.honeymoondoctor.core.ui.openGoogleMapsDirections
@@ -63,8 +72,12 @@ import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryItem
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryStatus
 import java.text.NumberFormat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ItineraryScreen(
     onOpenEditor: (itemId: String?) -> Unit,
@@ -77,20 +90,13 @@ fun ItineraryScreen(
     val haptic = LocalHapticFeedback.current
     var deleteTarget by remember { mutableStateOf<ItineraryItem?>(null) }
     val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
 
-    // 날짜별 헤더가 목록 몇 번째인지 세어 그 위치로 보낸다. 헤더 1 + 종일 일정 + (빈 날이면 1)
-    // + 시각 일정 순으로 쌓이는 아래 구조와 같은 순서로 계산한다 — 구조를 바꾸면 여기도 바뀐다.
+    // 날짜별 헤더가 목록 몇 번째인지 세어 그 위치로 보낸다(날짜 칩을 눌렀을 때도 같은
+    // 계산을 쓴다 — indexOfDay). 구조를 바꾸면 그 계산도 같이 바뀐다.
     LaunchedEffect(focusDate, uiState.days) {
-        val target = focusDate?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() } ?: return@LaunchedEffect
-        var index = 0
-        for (day in uiState.days) {
-            if (day.date == target) {
-                listState.scrollToItem(index)
-                return@LaunchedEffect
-            }
-            index += 1 + day.allDayItems.size + day.timedItems.size +
-                if (day.timedItems.isEmpty() && day.allDayItems.isEmpty()) 1 else 0
-        }
+        val target = focusDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return@LaunchedEffect
+        indexOfDay(uiState.days, target)?.let { listState.scrollToItem(it) }
     }
     val snackbarHostState = rememberActionErrorSnackbar(uiState.actionError, viewModel::clearActionError)
 
@@ -141,18 +147,39 @@ fun ItineraryScreen(
                 contentAlignment = Alignment.Center,
             ) { Text("여행 정보를 불러올 수 없습니다.") }
 
-            else -> LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                    start = 16.dp, end = 16.dp, top = 8.dp, bottom = FabSpacing.ContentBottomPadding,
-                ),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                uiState.days.forEach { day ->
-                    item(key = "header-${day.date}") {
-                        DayHeader(day)
+            else -> Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                TabHeader(
+                    Icons.AutoMirrored.Filled.List,
+                    "일정",
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
+                )
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 16.dp, end = 16.dp, top = 8.dp, bottom = FabSpacing.ContentBottomPadding,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    // 그냥 스크롤만 되는 목록이라는 피드백("밋밋함") — 여행이 길어지면
+                    // "그날이 몇 번째 화면인지" 감으로 스크롤해야 했다. 날짜 칩을
+                    // 스크롤 상단에 고정해(stickyHeader) 항상 눌러서 바로 이동할 수 있게
+                    // 한다(Wanderlog·TripIt 등 여행 일정 앱의 표준 패턴).
+                    stickyHeader {
+                        DayChipRow(
+                            days = uiState.days,
+                            today = LocalDate.now(),
+                            onSelectDay = { date ->
+                                indexOfDay(uiState.days, date)?.let { index ->
+                                    coroutineScope.launch { listState.animateScrollToItem(index) }
+                                }
+                            },
+                        )
                     }
+                    uiState.days.forEach { day ->
+                        item(key = "header-${day.date}") {
+                            DayHeader(day)
+                        }
                     items(day.allDayItems.size, key = { i -> "allday-${day.allDayItems[i].id}" }) { i ->
                         ItineraryCard(
                             item = day.allDayItems[i],
@@ -181,6 +208,7 @@ fun ItineraryScreen(
             }
         }
     }
+    }
 
     deleteTarget?.let { target ->
         DeleteConfirmDialog(
@@ -192,6 +220,61 @@ fun ItineraryScreen(
             },
             onDismiss = { deleteTarget = null },
         )
+    }
+}
+
+/**
+ * [day]가 [ItineraryScreen]의 `LazyColumn`에서 몇 번째 항목인지 센다. 헤더 1 +
+ * 종일 일정 + (그 날이 완전히 비었으면 자리채움 1) + 시각 일정 순으로 쌓이는 실제
+ * 목록 구조와 반드시 같은 순서여야 한다 — 목록 구조를 바꾸면 이 계산도 같이 바꾼다.
+ */
+private fun indexOfDay(days: List<ItineraryDay>, target: LocalDate): Int? {
+    var index = 0
+    for (day in days) {
+        if (day.date == target) return index
+        index += 1 + day.allDayItems.size + day.timedItems.size +
+            if (day.timedItems.isEmpty() && day.allDayItems.isEmpty()) 1 else 0
+    }
+    return null
+}
+
+private val dayChipDateFormatter = DateTimeFormatter.ofPattern("M/d")
+
+/**
+ * 날짜 칩 가로 스크롤러(백로그 피드백: 일정 탭이 "밋밋하다"·상단에 뭔가 있어야 한다).
+ * Wanderlog·TripIt류 여행 일정 앱의 표준 패턴을 반영했다 — 여행이 길어질수록
+ * "그날이 몇 번째 화면인지" 감으로 스크롤하지 않고 탭 한 번으로 이동할 수 있어야 한다.
+ * 오늘(여행 중일 때)은 강조해 "지금 어디쯤"도 함께 알려준다.
+ */
+@Composable
+private fun DayChipRow(
+    days: List<ItineraryDay>,
+    today: LocalDate,
+    onSelectDay: (LocalDate) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.background)
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        days.forEach { day ->
+            val isToday = day.date == today
+            FilterChip(
+                selected = isToday,
+                onClick = { onSelectDay(day.date) },
+                label = {
+                    Text(
+                        buildString {
+                            day.dayNumber?.let { append("D$it · ") }
+                            append(day.date.format(dayChipDateFormatter))
+                        },
+                    )
+                },
+            )
+        }
     }
 }
 

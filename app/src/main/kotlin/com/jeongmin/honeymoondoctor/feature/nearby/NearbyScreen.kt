@@ -18,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -58,6 +59,7 @@ import com.jeongmin.honeymoondoctor.core.ui.MyLocationPinColor
 import com.jeongmin.honeymoondoctor.core.ui.OsmMiniMap
 import com.jeongmin.honeymoondoctor.core.ui.SearchField
 import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
+import com.jeongmin.honeymoondoctor.core.ui.TabHeader
 import com.jeongmin.honeymoondoctor.core.ui.confirm
 import com.jeongmin.honeymoondoctor.core.ui.openGoogleMapsDirections
 import com.jeongmin.honeymoondoctor.core.ui.openUrl
@@ -128,6 +130,9 @@ fun NearbyScreen(
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                item {
+                    TabHeader(Icons.Filled.Place, "주변")
+                }
                 item {
                     StatusHeader(
                         uiState = uiState,

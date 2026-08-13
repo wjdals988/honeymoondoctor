@@ -5,14 +5,20 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jeongmin.honeymoondoctor.core.error.toUserMessage
+import com.jeongmin.honeymoondoctor.data.maps.MapsLinkResolver
+import com.jeongmin.honeymoondoctor.data.maps.MapsShortLink
 import com.jeongmin.honeymoondoctor.data.place.PlaceImportParser
 import com.jeongmin.honeymoondoctor.data.place.PlaceImportPreview
 import com.jeongmin.honeymoondoctor.domain.model.City
+import com.jeongmin.honeymoondoctor.domain.model.Place
 import com.jeongmin.honeymoondoctor.domain.repository.CityRepository
 import com.jeongmin.honeymoondoctor.domain.repository.PlaceRepository
+import com.jeongmin.honeymoondoctor.domain.usecase.MapsUrlCoordinates
+import com.jeongmin.honeymoondoctor.domain.usecase.MapsUrlPlaceName
 import com.jeongmin.honeymoondoctor.domain.usecase.ObserveCurrentTrip
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -28,6 +34,11 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/** [PlaceImportViewModel.importFromUrls] 결과 요약. */
+data class UrlImportSummary(val requested: Int, val added: Int)
+
+private data class UrlImportState(val importing: Boolean = false, val summary: UrlImportSummary? = null)
+
 data class PlaceImportUiState(
     val loading: Boolean = true,
     val tripId: String? = null,
@@ -37,6 +48,8 @@ data class PlaceImportUiState(
     val fileName: String? = null,
     val importedCount: Int? = null,
     val error: String? = null,
+    val urlImporting: Boolean = false,
+    val urlImportSummary: UrlImportSummary? = null,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -46,11 +59,13 @@ class PlaceImportViewModel @Inject constructor(
     observeCurrentTrip: ObserveCurrentTrip,
     cityRepository: CityRepository,
     private val placeRepository: PlaceRepository,
+    private val mapsLinkResolver: MapsLinkResolver,
 ) : ViewModel() {
 
     private val preview = MutableStateFlow<Pair<String, PlaceImportPreview>?>(null) // fileName to preview
     private val importedCount = MutableStateFlow<Int?>(null)
     private val error = MutableStateFlow<String?>(null)
+    private val urlImportState = MutableStateFlow(UrlImportState())
 
     val uiState: StateFlow<PlaceImportUiState> = observeCurrentTrip()
         .flatMapLatest { trip ->
@@ -62,8 +77,8 @@ class PlaceImportViewModel @Inject constructor(
                     placeRepository.observePlaces(trip.id).map { it.size },
                     preview,
                     importedCount,
-                    error,
-                ) { cities, placeCount, previewValue, imported, errorValue ->
+                    combine(error, urlImportState) { errorValue, urlState -> errorValue to urlState },
+                ) { cities, placeCount, previewValue, imported, (errorValue, urlState) ->
                     PlaceImportUiState(
                         loading = false,
                         tripId = trip.id,
@@ -73,6 +88,8 @@ class PlaceImportViewModel @Inject constructor(
                         fileName = previewValue?.first,
                         importedCount = imported,
                         error = errorValue,
+                        urlImporting = urlState.importing,
+                        urlImportSummary = urlState.summary,
                     )
                 }
             }
@@ -136,6 +153,56 @@ class PlaceImportViewModel @Inject constructor(
         preview.value = null
         importedCount.value = null
         error.value = null
+    }
+
+    /**
+     * 개별 장소 링크를 한 줄에 하나씩 붙여넣어 가져온다. 좌표는 [MapsLinkResolver]로
+     * (단축 링크면 펼쳐서) 뽑고, 이름은 펼친 URL의 `/maps/place/<이름>/` 경로에서 뽑는다 —
+     * "저장된 목록" 링크 안의 장소 여러 개를 한 번에 읽어오는 기능은 아니다. 구글 지도가
+     * 목록 내용을 사용자가 앱을 열었을 때 비공개 API로 나중에 불러오는 구조라, 이 앱처럼
+     * 단순 HTTP 요청만 하는 쪽에서는 목록 자체의 내용이 응답에 없다.
+     */
+    fun importFromUrls(rawText: String) {
+        val tripId = uiState.value.tripId ?: return
+        val urls = rawText.lines().map { it.trim() }.filter { it.isNotBlank() }
+        if (urls.isEmpty()) return
+        urlImportState.value = UrlImportState(importing = true)
+        viewModelScope.launch {
+            val existingNames = placeRepository.observePlaces(tripId).first()
+                .map { it.name.lowercase() }.toHashSet()
+            val seenInBatch = HashSet<String>()
+            val places = mutableListOf<Place>()
+            for (raw in urls) {
+                val expanded = if (MapsShortLink.isShortLink(raw)) {
+                    mapsLinkResolver.resolve(raw).getOrNull()
+                } else {
+                    raw
+                } ?: continue
+                val coordinates = MapsUrlCoordinates.parse(expanded) ?: continue
+                val name = MapsUrlPlaceName.parse(expanded) ?: "이름 없는 장소"
+                val key = name.lowercase()
+                if (key in existingNames || !seenInBatch.add(key)) continue
+                places += Place(
+                    id = "place-${UUID.randomUUID()}",
+                    name = name,
+                    latitude = coordinates.latitude,
+                    longitude = coordinates.longitude,
+                    mapsUrl = expanded,
+                )
+            }
+            if (places.isNotEmpty()) {
+                runCatching { placeRepository.createAll(tripId, places) }
+                    .onFailure { error.value = it.toUserMessage("장소를 저장하지 못했습니다. 완료된 여행은 수정할 수 없습니다.") }
+            }
+            urlImportState.value = UrlImportState(
+                importing = false,
+                summary = UrlImportSummary(requested = urls.size, added = places.size),
+            )
+        }
+    }
+
+    fun clearUrlImportSummary() {
+        urlImportState.value = UrlImportState()
     }
 
     /** 현재 장소 전체를 TSV로 내보낸다(SAF CreateDocument가 만든 uri에 기록). */

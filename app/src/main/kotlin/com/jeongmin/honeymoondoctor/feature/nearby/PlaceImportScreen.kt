@@ -7,9 +7,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -22,13 +25,18 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -90,6 +98,13 @@ fun PlaceImportFormContent(
         ActivityResultContracts.OpenDocument(),
     ) { uri -> uri?.let { viewModel.loadFile(it, uiState.cities) } }
 
+    var urlText by remember { mutableStateOf("") }
+    // 가져오기가 끝나면(성공이든 일부 실패든) 칸을 비운다 — 결과 요약 카드가 몇 개
+    // 추가됐는지 알려주므로, 입력을 그대로 남겨 두면 다시 누를 때 중복처럼 보인다.
+    LaunchedEffect(uiState.urlImportSummary) {
+        if (uiState.urlImportSummary != null) urlText = ""
+    }
+
     if (uiState.loading) {
         Box(
             modifier = modifier.fillMaxSize(),
@@ -120,6 +135,52 @@ fun PlaceImportFormContent(
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("TSV/JSON 파일 선택") }
                 header()
+            }
+        }
+
+        item {
+            HorizontalDivider()
+        }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "구글 지도 \"공유 → 링크 복사\"로 받은 개별 장소 링크를 한 줄에 하나씩 붙여넣으면 " +
+                        "이름·좌표를 자동으로 채워 추가합니다. \"저장된 목록\"(장소 여러 개를 모아 둔) 링크는 " +
+                        "안의 장소들을 구글 지도 앱이 나중에 따로 불러오는 구조라 이 방식으로는 읽을 수 없습니다 " +
+                        "— 목록에 있는 장소를 하나씩 공유해 링크로 붙여넣어 주세요.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = urlText,
+                    onValueChange = { urlText = it },
+                    label = { Text("장소 링크 (한 줄에 하나씩)") },
+                    minLines = 3,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Button(
+                    onClick = { viewModel.importFromUrls(urlText) },
+                    enabled = urlText.isNotBlank() && !uiState.urlImporting,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    if (uiState.urlImporting) {
+                        CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(6.dp))
+                    }
+                    Text("URL로 가져오기")
+                }
+                uiState.urlImportSummary?.let { summary ->
+                    AppCard(tone = CardTone.Highlight, modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = if (summary.added == summary.requested) {
+                                "요청 ${summary.requested}개 모두 추가됐습니다."
+                            } else {
+                                "요청 ${summary.requested}개 중 ${summary.added}개가 추가됐습니다. " +
+                                    "나머지는 좌표를 찾지 못했거나 이미 있는 장소입니다."
+                            },
+                        )
+                    }
+                }
             }
         }
 

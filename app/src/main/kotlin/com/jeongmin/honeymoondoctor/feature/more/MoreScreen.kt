@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
@@ -24,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.jeongmin.honeymoondoctor.BuildConfig
 import com.jeongmin.honeymoondoctor.core.auth.requestGoogleIdToken
+import com.jeongmin.honeymoondoctor.core.ui.TabHeader
 import kotlinx.coroutines.launch
 
 /**
@@ -88,6 +91,9 @@ fun MoreScreen(
         MoreMenu("설정", "settings"),
     )
     LazyColumn(modifier = modifier.padding(vertical = 8.dp)) {
+        item {
+            TabHeader(Icons.Filled.Menu, "전체", modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        }
         items(menuItems) { menu ->
             val onClick: (() -> Unit)? = when (menu.onClickKey) {
                 "backup" -> {

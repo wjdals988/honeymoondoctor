@@ -20,6 +20,17 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.6.5",
+            versionCode = 29,
+            date = "2026-08-13",
+            changes = listOf(
+                "홈 헤더의 \"우리 위치\" 아이콘이 여행 이름 길이와 무관하게 항상 화면 오른쪽 끝에 고정되도록 고쳤습니다.",
+                "일정 탭 맨 위에 날짜 칩(D1·D2·...)을 추가했습니다 — 눌러서 그 날로 바로 이동하고, 스크롤 중에도 상단에 고정됩니다.",
+                "주변 탭 \"저장목록 불러오기\"에서 구글 지도 개별 장소 링크를 한 줄에 하나씩 붙여넣으면 이름·좌표를 자동으로 채워 추가합니다.",
+                "홈·일정·주변·경비·전체 5개 탭 맨 위에 지금 보고 있는 탭을 알려주는 작은 표시를 추가했습니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.6.4",
             versionCode = 28,
             date = "2026-08-13",

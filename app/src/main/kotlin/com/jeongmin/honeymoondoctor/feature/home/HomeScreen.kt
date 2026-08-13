@@ -5,7 +5,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PersonPinCircle
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Schedule
@@ -49,6 +49,7 @@ import com.jeongmin.honeymoondoctor.core.ui.AppCard
 import com.jeongmin.honeymoondoctor.core.ui.CardTone
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
+import com.jeongmin.honeymoondoctor.core.ui.TabHeader
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryItem
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryStatus
 import com.jeongmin.honeymoondoctor.domain.model.isReadOnly
@@ -89,6 +90,7 @@ fun HomeScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            TabHeader(Icons.Filled.Home, "홈")
             HomeHeader(uiState, onSwitchTrip = onSwitchTrip, onOpenTogether = onOpenTogether)
 
             // 출발 전에는 화면의 중심이 다르다. "다음 일정"은 대개 비어 있거나 몇 주 뒤라
@@ -203,16 +205,20 @@ private fun HomeHeader(uiState: HomeUiState, onSwitchTrip: () -> Unit, onOpenTog
         // 붙인다("우상단에 붙어 있는 느낌"이 필요하다는 피드백) — Center로 두면 버튼이
         // 여행 이름과 같은 기준선에서 어중간하게 떠 보인다.
         //
-        // TextButton은 weight(1f, fill = false)로 폭을 "content만큼, 최대 화면의
-        // 남는 절반까지"로 제한한다. fill = true(꽉 채우기)를 주면 M3 Button의 내부
-        // Row가 기본 Arrangement.Center라 늘어난 폭 안에서 내용이 중앙으로 밀린다 —
-        // "여행 제목이 좌상단 고정이 아니게 됐다"는 것이 정확히 이 증상이었다.
-        // Spacer(weight(1f))가 남는 공간을 전부 흡수해 오른쪽 버튼을 끝으로 밀어낸다.
+        // TextButton(weight(1f, fill=false) + Spacer(weight(1f)))이었던 이전 버전은
+        // 위치 아이콘이 화면 우측 끝이 아니라 "여행 이름의 실제 폭 + 남는 공간의 절반"
+        // 위치에 놓였다 — 여행 이름이 짧으면 아이콘이 왼쪽으로, 길면 오른쪽 끝에 가깝게
+        // 움직여 보였다(실측으로 확인한 문제). weight(1f) 하나로 남는 공간을 전부
+        // 이 Row가 흡수하게 하고 M3 Button의 내부 Arrangement.Center를 피하기 위해
+        // TextButton 대신 직접 clickable Row(기본 Arrangement.Start)를 쓴다 — 아이콘이
+        // 여행 이름 길이와 무관하게 항상 화면의 진짜 오른쪽 끝에 고정된다.
         Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
-            TextButton(
-                onClick = onSwitchTrip,
-                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-                modifier = Modifier.weight(1f, fill = false),
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onSwitchTrip)
+                    .padding(horizontal = 4.dp),
             ) {
                 Text(
                     text = trip.name,
@@ -225,14 +231,13 @@ private fun HomeHeader(uiState: HomeUiState, onSwitchTrip: () -> Unit, onOpenTog
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                     maxLines = 1,
-                    // 글자 크기를 키우면(시스템 큰 글씨) 여행 이름 + 이 안내가 버튼 폭을
+                    // 글자 크기를 키우면(시스템 큰 글씨) 여행 이름 + 이 안내가 줄 폭을
                     // 넘는다. overflow 지정이 없으면 기본값 Clip이라 "여행 바꾸기 ›"가
                     // 말줄임 없이 "여행"에서 뚝 끊겨 깨진 것처럼 보인다(1.3배 글자 크기로
                     // 실측해 확인한 문제 — 백로그 3-2i). Ellipsis로 우아하게 잘리게 한다.
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Spacer(Modifier.weight(1f))
             // 우리 위치 바로가기. 홈 어디서든 한 탭 — 서로를 급히 찾아야 하는 상황
             // (일행 놓침·비상)에 전체 탭 → 우리 위치 두 단계는 길다.
             TogetherShortcutButton(onClick = onOpenTogether)
