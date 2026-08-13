@@ -5,6 +5,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -43,10 +44,6 @@ fun PlaceImportScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    val filePicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument(),
-    ) { uri -> uri?.let { viewModel.loadFile(it, uiState.cities) } }
-
     val exportCreator = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/tab-separated-values"),
     ) { uri -> uri?.let(viewModel::exportTo) }
@@ -63,44 +60,70 @@ fun PlaceImportScreen(
             )
         },
     ) { innerPadding ->
-        if (uiState.loading) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator() }
-            return@Scaffold
+        PlaceImportFormContent(
+            viewModel = viewModel,
+            modifier = Modifier.padding(innerPadding),
+            header = {
+                OutlinedButton(
+                    onClick = { exportCreator.launch("honeymoon_places.tsv") },
+                    enabled = uiState.placeCount > 0,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("현재 장소 ${uiState.placeCount}개 TSV로 내보내기") }
+            },
+        )
+    }
+}
+
+/**
+ * [PlaceImportScreen]의 본문만 떼어낸 것 — "장소 추가" 진입 탭(저장목록 불러오기)에서도 쓴다.
+ * 내보내기 버튼은 "추가" 흐름과 무관해 [header] 슬롯으로 분리했다(기존 화면에서만 채움).
+ */
+@Composable
+fun PlaceImportFormContent(
+    viewModel: PlaceImportViewModel,
+    modifier: Modifier = Modifier,
+    header: @Composable ColumnScope.() -> Unit = {},
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    val filePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri -> uri?.let { viewModel.loadFile(it, uiState.cities) } }
+
+    if (uiState.loading) {
+        Box(
+            modifier = modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) { CircularProgressIndicator() }
+        return
+    }
+
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Google Maps 저장 목록은 자동으로 읽지 않습니다.\n" +
+                        "docs/templates 의 TSV/JSON 템플릿에 채워 가져오세요.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Button(
+                    onClick = {
+                        filePicker.launch(
+                            arrayOf("text/tab-separated-values", "text/plain", "application/json", "text/*"),
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("TSV/JSON 파일 선택") }
+                header()
+            }
         }
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(innerPadding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "Google Maps 저장 목록은 자동으로 읽지 않습니다.\n" +
-                            "docs/templates 의 TSV/JSON 템플릿에 채워 가져오세요.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Button(
-                        onClick = {
-                            filePicker.launch(
-                                arrayOf("text/tab-separated-values", "text/plain", "application/json", "text/*"),
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text("TSV/JSON 파일 선택") }
-                    OutlinedButton(
-                        onClick = { exportCreator.launch("honeymoon_places.tsv") },
-                        enabled = uiState.placeCount > 0,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text("현재 장소 ${uiState.placeCount}개 TSV로 내보내기") }
-                }
-            }
-
-            uiState.error?.let { error ->
+        uiState.error?.let { error ->
                 item {
                     Text(error, color = MaterialTheme.colorScheme.error)
                 }
@@ -166,4 +189,4 @@ fun PlaceImportScreen(
             }
         }
     }
-}
+

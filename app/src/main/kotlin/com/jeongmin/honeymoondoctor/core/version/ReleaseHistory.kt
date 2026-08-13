@@ -20,6 +20,14 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.6.4",
+            versionCode = 28,
+            date = "2026-08-13",
+            changes = listOf(
+                "주변 탭에서 장소를 추가할 때 \"직접 추가\"와 \"저장목록 불러오기(TSV/JSON)\" 를 탭으로 나눠 한 화면에서 고를 수 있습니다. 기존에는 불러오기가 전체 메뉴 안에 따로 있어 있는지도 모르기 쉬웠습니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.6.3",
             versionCode = 27,
             date = "2026-08-13",

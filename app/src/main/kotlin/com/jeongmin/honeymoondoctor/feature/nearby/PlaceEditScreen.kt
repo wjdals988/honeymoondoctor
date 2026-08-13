@@ -54,7 +54,6 @@ fun PlaceEditScreen(
     onNavigateBack: () -> Unit,
     viewModel: PlaceEditViewModel = hiltViewModel(),
 ) {
-    val uiState by viewModel.uiState.collectAsState()
     val form by viewModel.form.collectAsState()
 
     Scaffold(
@@ -72,24 +71,40 @@ fun PlaceEditScreen(
             )
         },
     ) { innerPadding ->
-        val haptic = LocalHapticFeedback.current
-        val currentForm = form
-        if (uiState.loading || currentForm == null) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator() }
-            return@Scaffold
-        }
+        PlaceEditFormContent(
+            viewModel = viewModel,
+            onSaved = onNavigateBack,
+            modifier = Modifier.padding(innerPadding),
+        )
+    }
+}
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+/** [PlaceEditScreen]의 본문만 떼어낸 것 — "장소 추가" 진입 탭(직접 추가)에서 재사용한다. */
+@Composable
+fun PlaceEditFormContent(
+    viewModel: PlaceEditViewModel,
+    onSaved: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val form by viewModel.form.collectAsState()
+    val haptic = LocalHapticFeedback.current
+    val currentForm = form
+    if (uiState.loading || currentForm == null) {
+        Box(
+            modifier = modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) { CircularProgressIndicator() }
+        return
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
             uiState.validationError?.let { error ->
                 Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
             }
@@ -226,13 +241,12 @@ fun PlaceEditScreen(
                 )
             }
 
-            Button(
-                onClick = {
-                    haptic.confirm()
-                    viewModel.save(onSaved = onNavigateBack)
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text(if (currentForm.placeId == null) "장소 추가" else "변경 사항 저장") }
-        }
+        Button(
+            onClick = {
+                haptic.confirm()
+                viewModel.save(onSaved = onSaved)
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text(if (currentForm.placeId == null) "장소 추가" else "변경 사항 저장") }
     }
 }

@@ -41,6 +41,7 @@ import com.jeongmin.honeymoondoctor.feature.itinerary.ItineraryScreen
 import com.jeongmin.honeymoondoctor.feature.more.MoreScreen
 import com.jeongmin.honeymoondoctor.feature.more.MoreViewModel
 import com.jeongmin.honeymoondoctor.feature.nearby.NearbyScreen
+import com.jeongmin.honeymoondoctor.feature.nearby.PlaceAddScreen
 import com.jeongmin.honeymoondoctor.feature.nearby.PlaceEditScreen
 import com.jeongmin.honeymoondoctor.feature.nearby.PlaceImportScreen
 import com.jeongmin.honeymoondoctor.feature.publictrip.PublicTripDetailScreen
@@ -60,6 +61,7 @@ private const val ROUTE_RESERVATION_DETAIL = "reservation_detail"
 private const val ROUTE_RESERVATION_EDIT = "reservation_edit"
 private const val ROUTE_EXPENSE_EDIT = "expense_edit"
 private const val ROUTE_BUDGETS = "budgets"
+private const val ROUTE_PLACE_ADD = "place_add"
 private const val ROUTE_PLACE_EDIT = "place_edit"
 private const val ROUTE_PLACE_IMPORT = "place_import"
 private const val ROUTE_SYNC_STATUS = "sync_status"
@@ -78,8 +80,7 @@ private fun reservationEditRoute(reservationId: String?): String =
 private fun expenseEditRoute(expenseId: String?): String =
     if (expenseId == null) ROUTE_EXPENSE_EDIT else "$ROUTE_EXPENSE_EDIT?expenseId=$expenseId"
 
-private fun placeEditRoute(placeId: String?): String =
-    if (placeId == null) ROUTE_PLACE_EDIT else "$ROUTE_PLACE_EDIT?placeId=$placeId"
+private fun placeEditRoute(placeId: String): String = "$ROUTE_PLACE_EDIT?placeId=$placeId"
 
 /** 데모 모드 배너는 AuthGate가 로그인/여행설정 화면을 포함해 항상 최상단에 그린다. */
 @Composable
@@ -157,7 +158,22 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                 }
             }
             composable(BottomTab.NEARBY.route) {
-                NearbyScreen(onOpenEditor = { placeId -> navController.navigate(placeEditRoute(placeId)) })
+                NearbyScreen(
+                    onOpenEditor = { placeId ->
+                        if (placeId == null) {
+                            navController.navigate(ROUTE_PLACE_ADD)
+                        } else {
+                            navController.navigate(placeEditRoute(placeId))
+                        }
+                    },
+                )
+            }
+            composable(ROUTE_PLACE_ADD) {
+                if (LocalTripReadOnly.current) {
+                    ReadOnlyEditorPanel(onNavigateBack = { navController.popBackStack() })
+                } else {
+                    PlaceAddScreen(onNavigateBack = { navController.popBackStack() })
+                }
             }
             composable(
                 route = "$ROUTE_PLACE_EDIT?placeId={placeId}",
