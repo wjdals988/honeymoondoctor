@@ -22,6 +22,8 @@ data class ReservationListUiState(
     val loading: Boolean = true,
     val tripId: String? = null,
     val reservations: List<Reservation> = emptyList(),
+    /** 필터·검색 이전의 전체 건수. 빈 화면이 "아직 없음"인지 "검색 결과 없음"인지 가른다. */
+    val totalCount: Int = 0,
     val statusFilter: ReservationStatus? = null, // null = 전체
     val query: String = "",
     val needsAttentionCount: Int = 0, // 확인 필요 + 예약 필요 + 결제 필요
@@ -60,6 +62,7 @@ class ReservationListViewModel @Inject constructor(
                             // 예약번호까지 검색 대상 — "체크인 데스크에서 번호로 찾기"가 실사용이다.
                             .filter { matchesQuery(queryValue, it.title, it.vendor, it.confirmationCode) }
                             .sortedWith(compareBy(nullsLast()) { it.startAt }),
+                        totalCount = reservations.size,
                         statusFilter = filter,
                         query = queryValue,
                         needsAttentionCount = reservations.count { it.status in attention },

@@ -10,7 +10,18 @@ import com.jeongmin.honeymoondoctor.domain.model.Place
  */
 object ItineraryDayStops {
 
-    data class Stop(val sequenceNumber: Int, val item: ItineraryItem, val place: Place)
+    data class Stop(
+        val sequenceNumber: Int,
+        val item: ItineraryItem,
+        val place: Place,
+        /**
+         * 직전 경유지에서의 **직선** 거리(m). 첫 경유지는 null.
+         *
+         * 실제 이동 거리·소요 시간이 아니다 — 경로 API를 쓰지 않으므로(월 0원 제약)
+         * "대충 얼마나 떨어져 있나"만 알려주고, 화면 문구도 "직선"임을 밝힌다.
+         */
+        val straightLineFromPreviousMeters: Double? = null,
+    )
 
     /** [allDayItems]/[timedItems]는 ItineraryDay와 같은 순서로 넘겨야 한다(종일 → 시간순). */
     fun resolve(allDayItems: List<ItineraryItem>, timedItems: List<ItineraryItem>, places: List<Place>): List<Stop> {
@@ -20,5 +31,17 @@ object ItineraryDayStops {
                 item.placeId?.let(placesById::get)?.takeIf { it.hasCoordinates }?.let { item to it }
             }
             .mapIndexed { index, pair -> Stop(index + 1, pair.first, pair.second) }
+            .withStraightLineDistances()
+    }
+
+    private fun List<Stop>.withStraightLineDistances(): List<Stop> = mapIndexed { index, stop ->
+        if (index == 0) return@mapIndexed stop
+        val previous = this[index - 1].place
+        stop.copy(
+            straightLineFromPreviousMeters = Haversine.distanceMeters(
+                previous.latitude!!, previous.longitude!!,
+                stop.place.latitude!!, stop.place.longitude!!,
+            ),
+        )
     }
 }

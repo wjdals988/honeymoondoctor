@@ -10,6 +10,7 @@ import com.jeongmin.honeymoondoctor.data.seed.SeedAssetLoader
 import com.jeongmin.honeymoondoctor.data.seed.toDomainChecklistItem
 import com.jeongmin.honeymoondoctor.domain.model.JoinRequest
 import com.jeongmin.honeymoondoctor.domain.model.JoinRequestStatus
+import com.jeongmin.honeymoondoctor.data.city.toFirestoreMap
 import com.jeongmin.honeymoondoctor.domain.model.NewTripDraft
 import com.jeongmin.honeymoondoctor.domain.model.Trip
 import com.jeongmin.honeymoondoctor.domain.model.TripMember
@@ -104,6 +105,18 @@ class FirebaseTripRepository @Inject constructor(
         runCatching {
             firestore.runTransaction { transaction ->
                 transaction.set(memberRef, memberData)
+                // 첫 목적지를 도시로 함께 저장한다. 체류 기간은 여행 기간과 같게 둬서
+                // 홈의 현지 시각이 만들자마자 그 도시 기준으로 뜨게 한다.
+                draft.firstCity?.let { city ->
+                    transaction.set(
+                        tripRef.collection("cities").document(city.id),
+                        city.copy(startDate = draft.startDate, endDate = draft.endDate).toFirestoreMap() +
+                            mapOf(
+                                "createdAt" to FieldValue.serverTimestamp(),
+                                "updatedAt" to FieldValue.serverTimestamp(),
+                            ),
+                    )
+                }
                 defaults.checklistItems.forEach { checklistSeed ->
                     val checklistItem = checklistSeed.toDomainChecklistItem()
                     transaction.set(

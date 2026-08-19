@@ -22,11 +22,11 @@ class ItineraryDayStopsTest {
         placeId = placeId,
     )
 
-    private fun place(id: String, hasCoordinates: Boolean = true) = Place(
+    private fun place(id: String, hasCoordinates: Boolean = true, lat: Double = 37.0, lng: Double = 127.0) = Place(
         id = id,
         name = id,
-        latitude = if (hasCoordinates) 37.0 else null,
-        longitude = if (hasCoordinates) 127.0 else null,
+        latitude = if (hasCoordinates) lat else null,
+        longitude = if (hasCoordinates) lng else null,
     )
 
     @Test
@@ -68,5 +68,18 @@ class ItineraryDayStopsTest {
         assertThat(stops).hasSize(2)
         assertThat(stops.map { it.sequenceNumber }).containsExactly(1, 2).inOrder()
         assertThat(stops.map { it.place.id }).containsExactly("p1", "p1")
+    }
+
+    @Test
+    fun `첫 경유지는 직전 거리가 없고 두 번째부터 채워진다`() {
+        val a = item("a", "2026-09-10T09:00:00", placeId = "p1")
+        val b = item("b", "2026-09-10T14:00:00", placeId = "p2")
+        // 위도 0.01도 차이 ≈ 1.1km
+        val places = listOf(place("p1", lat = 37.00), place("p2", lat = 37.01))
+
+        val stops = ItineraryDayStops.resolve(emptyList(), listOf(a, b), places)
+
+        assertThat(stops[0].straightLineFromPreviousMeters).isNull()
+        assertThat(stops[1].straightLineFromPreviousMeters).isWithin(50.0).of(1110.0)
     }
 }

@@ -55,7 +55,7 @@ private enum class MoreSection(val title: String) {
 
 /**
  * 전체 탭 메뉴(스펙 6장). 예약함·준비물·결정함·여행 정보는 실제 화면으로 연결됐고,
- * 긴급상황은 아직 자리표시자다.
+ * 긴급상황까지 모두 실제 화면으로 연결됐다(자리표시자 없음).
  *
  * 백로그(벤치마킹): 13개 항목을 아이콘·그룹 없이 한 줄씩 나열하면 스캔성이 떨어져
  * [section]·[icon]을 추가해 구역별로 묶었다.
@@ -75,6 +75,7 @@ fun MoreScreen(
     onNavigateToAbout: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToTogether: () -> Unit,
+    onNavigateToEmergency: () -> Unit,
     onSwitchTrip: () -> Unit,
     onExportBackup: (android.net.Uri) -> Unit,
     backupMessage: String? = null,
@@ -110,7 +111,7 @@ fun MoreScreen(
         MoreMenu("예약함", "reservations", MoreSection.TOGETHER, Icons.Filled.ConfirmationNumber),
         MoreMenu("준비물", "checklist", MoreSection.TOGETHER, Icons.Filled.Checklist),
         MoreMenu("결정함", "decisions", MoreSection.TOGETHER, Icons.Filled.HowToVote),
-        MoreMenu("긴급상황", null, MoreSection.TOGETHER, Icons.Filled.WarningAmber),
+        MoreMenu("긴급상황", "emergency", MoreSection.TOGETHER, Icons.Filled.WarningAmber),
         MoreMenu("장소 가져오기·내보내기", "place_import", MoreSection.DATA, Icons.Filled.ImportExport),
         MoreMenu("전체 백업 내보내기", "backup", MoreSection.DATA, Icons.Filled.CloudUpload),
         MoreMenu("동기화 상태", "sync_status", MoreSection.DATA, Icons.Filled.Sync),
@@ -149,6 +150,7 @@ fun MoreScreen(
                     "public_trips" -> onNavigateToPublicTrips
                     "about" -> onNavigateToAbout
                     "settings" -> onNavigateToSettings
+                    "emergency" -> onNavigateToEmergency
                     "together" -> onNavigateToTogether
                     "switch_trip" -> onSwitchTrip
                     else -> null

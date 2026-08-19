@@ -57,3 +57,13 @@ fun copyToClipboard(context: Context, label: String, text: String) {
         Toast.makeText(context, "복사했습니다: $label", Toast.LENGTH_SHORT).show()
     }
 }
+
+/**
+ * 다이얼러에 번호를 올린다. ACTION_CALL이 아니라 ACTION_DIAL을 쓰는 이유: 긴급번호를
+ * 오탭으로 곧바로 거는 사고를 막기 위해 마지막 통화 버튼은 사용자가 직접 누르게 한다
+ * (CALL_PHONE 권한도 필요 없다).
+ */
+fun dialNumber(context: Context, number: String) {
+    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${number.replace(" ", "")}"))
+    runCatching { context.startActivity(intent) }
+}

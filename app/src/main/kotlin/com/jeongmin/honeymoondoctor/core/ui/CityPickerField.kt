@@ -281,8 +281,11 @@ fun CityFormDialog(
                             timeZoneId = timeZoneId.trim().ifBlank { "Asia/Seoul" },
                             startDate = if (hasStayPeriod) startDate.toString() else null,
                             endDate = if (hasStayPeriod) endDate.toString() else null,
-                            referenceLatitude = initial?.referenceLatitude,
-                            referenceLongitude = initial?.referenceLongitude,
+                            // 프리셋을 고르면 그 도시 중심 좌표를 기준점으로 함께 넣는다 —
+                            // 없으면 주변 탭이 "거리 계산 불가"로 남는다. 직접 입력한
+                            // 도시는 종전대로 좌표 없이 저장된다.
+                            referenceLatitude = pickedPreset?.latitude ?: initial?.referenceLatitude,
+                            referenceLongitude = pickedPreset?.longitude ?: initial?.referenceLongitude,
                             notes = initial?.notes,
                         ),
                     )

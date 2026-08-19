@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 data class SettingsUiState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val transportLeadMinutes: Int = 60,
+    val dailyBriefEnabled: Boolean = true,
 )
 
 /**
@@ -32,6 +33,7 @@ class SettingsViewModel @Inject constructor(
             SettingsUiState(
                 themeMode = prefs.themeMode,
                 transportLeadMinutes = prefs.transportLeadMinutes,
+                dailyBriefEnabled = prefs.dailyBriefEnabled,
             )
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
@@ -42,5 +44,9 @@ class SettingsViewModel @Inject constructor(
 
     fun setTransportLeadMinutes(minutes: Int) {
         viewModelScope.launch { appPreferences.setTransportLeadMinutes(minutes) }
+    }
+
+    fun setDailyBriefEnabled(enabled: Boolean) {
+        viewModelScope.launch { appPreferences.setDailyBriefEnabled(enabled) }
     }
 }

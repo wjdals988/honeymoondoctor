@@ -8,7 +8,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 
 /**
@@ -26,9 +29,22 @@ class ItineraryReminderSyncCoordinator @Inject constructor(
     fun start(scope: CoroutineScope) {
         observeCurrentTrip()
             .flatMapLatest { trip ->
-                if (trip == null) flowOf(emptyList()) else itineraryRepository.observeItinerary(trip.id)
+                if (trip == null) {
+                    flowOf(null to emptyList())
+                } else {
+                    itineraryRepository.observeItinerary(trip.id).map { items -> trip to items }
+                }
             }
-            .onEach { items -> scheduler.syncSchedule(items) }
+            .onEach { (trip, items) ->
+                scheduler.syncSchedule(items)
+                // 아침 요약은 여행 기간 안에서만 보내므로 여행 정보가 함께 필요하다.
+                scheduler.syncDailyBrief(
+                    items = items,
+                    tripStartDate = trip?.startDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
+                    tripEndDate = trip?.endDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
+                    zoneId = ZoneId.systemDefault(),
+                )
+            }
             .launchIn(scope)
     }
 }

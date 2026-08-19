@@ -115,7 +115,19 @@ fun ReservationListScreen(
 
             if (uiState.reservations.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    EmptyState(title = "표시할 예약이 없습니다.")
+                    // 검색·필터 때문에 0건인데 "예약이 없습니다"라고 하면, 추가해도 여전히
+                    // 안 보여서 고장난 것처럼 읽힌다(주변 탭은 이미 이렇게 구분하고 있다).
+                    if (uiState.totalCount == 0) {
+                        EmptyState(
+                            title = "아직 등록한 예약이 없습니다",
+                            description = "항공·숙소·티켓 예약을 넣어두면 예약번호까지 한 곳에서 찾을 수 있습니다.",
+                        )
+                    } else {
+                        EmptyState(
+                            title = "조건에 맞는 예약이 없습니다",
+                            description = "검색어나 상태 필터를 바꿔 보세요.",
+                        )
+                    }
                 }
             } else {
                 LazyColumn(

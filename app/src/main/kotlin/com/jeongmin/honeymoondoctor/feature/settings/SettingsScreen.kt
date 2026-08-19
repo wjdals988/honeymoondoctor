@@ -2,6 +2,7 @@ package com.jeongmin.honeymoondoctor.feature.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,11 +15,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -76,6 +79,26 @@ fun SettingsScreen(
                 )
                 Text(
                     text = "이 설정은 이 기기에만 적용됩니다. 함께 여행하는 사람의 화면은 바뀌지 않습니다.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            AppCard(modifier = Modifier.fillMaxWidth()) {
+                SectionHeader(title = "알림")
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                ) {
+                    Text("아침 하루 요약", modifier = Modifier.weight(1f))
+                    Switch(
+                        checked = uiState.dailyBriefEnabled,
+                        onCheckedChange = viewModel::setDailyBriefEnabled,
+                    )
+                }
+                Text(
+                    text = "여행 중 매일 오전 8시에 그날 일정을 한 번에 알려줍니다. 일정이 없는 날은 " +
+                        "보내지 않습니다. 일정 시작 24·3·1시간 전 알림과는 별개입니다.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

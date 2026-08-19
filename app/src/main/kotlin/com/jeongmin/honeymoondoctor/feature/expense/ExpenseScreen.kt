@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -279,9 +280,40 @@ private fun SummaryCard(uiState: ExpenseUiState, onOpenBudgets: () -> Unit) {
             }
         }
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        Row(modifier = Modifier.fillMaxWidth()) {
-            Text("공동지출 1/2 정산 예상", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-            Text(formatKrw(uiState.settlementPerPersonKrw), style = MaterialTheme.typography.bodySmall)
+        // "합계의 절반"이 아니라 실제로 주고받을 금액을 이름과 함께 보여준다 — 종전에는
+        // 결제자를 안 봐서 한 사람이 다 냈든 반씩 냈든 같은 숫자가 나왔다.
+        val settlement = uiState.settlement.settlement
+        if (settlement == null) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = if (uiState.settlement.settledTotalKrw > 0) "정산 완료 — 주고받을 금액 없음" else "정산할 공동지출 없음",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else {
+            val from = uiState.members.firstOrNull { it.uid == settlement.fromUid }?.displayName ?: "상대"
+            val to = uiState.members.firstOrNull { it.uid == settlement.toUid }?.displayName ?: "상대"
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "$from → $to 정산",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = formatKrw(settlement.amountKrw),
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                )
+            }
+        }
+        if (uiState.settlement.unattributedCount > 0) {
+            // 조용히 빼면 합이 안 맞는 이유를 알 수 없다.
+            Text(
+                text = "결제자를 안 고른 공동지출 ${uiState.settlement.unattributedCount}건은 정산에서 빠졌습니다.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
         }
         Row(modifier = Modifier.fillMaxWidth()) {
             Text(

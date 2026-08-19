@@ -15,6 +15,7 @@ import com.jeongmin.honeymoondoctor.domain.repository.ExpenseRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ReservationRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
 import com.jeongmin.honeymoondoctor.domain.usecase.ObserveCurrentTrip
+import com.jeongmin.honeymoondoctor.domain.usecase.SettlementCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -57,9 +58,9 @@ data class ExpenseUiState(
     /** 필터 적용된 합계(화면 목록 위 합계 표시용) */
     val filteredTotalKrw: Long = 0,
     val categoryTotals: List<CategoryTotal> = emptyList(),
-    /** 공동지출 합계와 1/2 정산 예상액(스펙 7-6) */
+    /** 공동지출 합계와 "누가 누구에게 얼마"(스펙 7-6) */
     val sharedTotalKrw: Long = 0,
-    val settlementPerPersonKrw: Long = 0,
+    val settlement: SettlementCalculator.SettlementResult = SettlementCalculator.SettlementResult(),
     /** 예약의 예상 비용 합계 — 실제 지출과 구분해 표시(스펙 7-6) */
     val reservationEstimateKrw: Long = 0,
     val actionError: String? = null,
@@ -120,7 +121,7 @@ class ExpenseViewModel @Inject constructor(
                             .map { (category, list) -> CategoryTotal(category, list.sumOf { it.amountKrw }) }
                             .sortedByDescending { it.totalKrw },
                         sharedTotalKrw = sharedTotal,
-                        settlementPerPersonKrw = sharedTotal / 2,
+                        settlement = SettlementCalculator.compute(expenses, members.map { it.uid }),
                         reservationEstimateKrw = reservations.sumOf { it.estimatedKrw ?: 0L },
                         actionError = error,
                     )

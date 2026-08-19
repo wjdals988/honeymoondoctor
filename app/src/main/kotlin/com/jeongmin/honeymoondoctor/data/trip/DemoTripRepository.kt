@@ -37,6 +37,7 @@ class DemoTripRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val seedAssetLoader: SeedAssetLoader,
     private val demoChecklistRepository: DemoChecklistRepository,
+    private val demoCityRepository: com.jeongmin.honeymoondoctor.data.city.DemoCityRepository,
 ) : com.jeongmin.honeymoondoctor.domain.repository.TripRepository {
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -90,6 +91,10 @@ class DemoTripRepository @Inject constructor(
         // 기본 준비물 체크리스트는 여행 최초 생성 시에만 삽입한다. 여행 생성이 유일한 진입점이므로
         // 재실행·동기화 시 재삽입되지 않는다. 도시·일정·예약·결정함은 사용자가 직접 채운다.
         demoChecklistRepository.seedForNewTrip(tripId, defaults.checklistItems.map { it.toDomainChecklistItem() })
+        // 첫 목적지도 함께 저장한다(체류 기간 = 여행 기간). 없으면 종전대로 도시 0개로 시작한다.
+        draft.firstCity?.let { city ->
+            demoCityRepository.create(tripId, city.copy(startDate = draft.startDate, endDate = draft.endDate))
+        }
         return state.toDomain()
     }
 

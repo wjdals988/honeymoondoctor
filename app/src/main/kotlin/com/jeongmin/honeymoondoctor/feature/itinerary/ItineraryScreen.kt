@@ -377,6 +377,46 @@ private fun ItineraryMapView(
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
+            // 지도만으로는 핀의 번호가 무슨 일정인지 알 수 없다. 아래에 순서대로 나열해
+            // "지도랑 이것만 보고 움직인다"가 실제로 되게 한다.
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 16.dp, end = 16.dp, top = 8.dp, bottom = FabSpacing.ContentBottomPadding,
+                ),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                items(stops.size, key = { i -> "stop-${stops[i].item.id}" }) { index ->
+                    val stop = stops[index]
+                    stop.straightLineFromPreviousMeters?.let { meters ->
+                        Text(
+                            text = "↓ 직선 ${formatDistance(meters)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 12.dp, top = 2.dp, bottom = 2.dp),
+                        )
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "${stop.sequenceNumber}",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.width(24.dp),
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(stop.item.title, style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                text = listOfNotNull(
+                                    timeLabel(stop.item).takeIf { it.isNotBlank() },
+                                    stop.place.name,
+                                ).joinToString(" · "),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -605,3 +645,7 @@ private fun timeLabel(item: ItineraryItem): String {
         "$startText – $endText"
     }
 }
+
+/** 직선 거리 표기. 1km 미만은 m, 그 이상은 소수 한 자리 km. */
+private fun formatDistance(meters: Double): String =
+    if (meters < 1000) "${meters.toInt()}m" else String.format(Locale.KOREA, "%.1fkm", meters / 1000)

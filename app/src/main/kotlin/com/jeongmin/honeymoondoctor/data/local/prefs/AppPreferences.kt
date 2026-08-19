@@ -54,6 +54,10 @@ data class AppPrefsSnapshot(
     val selectedTripId: String?,
     val lastSyncAtEpochMillis: Long?,
     val scheduledReminderKeys: Set<String>,
+    /** 아침 하루 요약 알림 사용 여부(기본 켜짐). */
+    val dailyBriefEnabled: Boolean,
+    /** 아침 요약으로 이미 예약해 둔 키 — 일정이 바뀌면 지난 예약을 취소해야 한다. */
+    val scheduledDailyBriefKeys: Set<String>,
     /**
      * 통화 코드 → 직전에 쓴 환율(1 외화 = ? KRW). 지출을 넣을 때마다 같은 값을 다시
      * 타이핑하지 않게 하려고 남긴다. 기내·로밍처럼 환율을 못 불러오는 상황이 실제로
@@ -87,6 +91,8 @@ class AppPreferences @Inject constructor(
         val SELECTED_TRIP_ID = stringPreferencesKey("selected_trip_id")
         val LAST_SYNC_AT = longPreferencesKey("last_sync_at_epoch_millis")
         val SCHEDULED_REMINDER_KEYS = stringSetPreferencesKey("scheduled_reminder_keys")
+        val DAILY_BRIEF_ENABLED = booleanPreferencesKey("daily_brief_enabled")
+        val SCHEDULED_DAILY_BRIEF_KEYS = stringSetPreferencesKey("scheduled_daily_brief_keys")
 
         /**
          * `"EUR=1629.64"` 형태의 문자열 집합. 통화별로 키를 따로 만들지 않는 이유:
@@ -119,6 +125,8 @@ class AppPreferences @Inject constructor(
             selectedTripId = prefs[Keys.SELECTED_TRIP_ID],
             lastSyncAtEpochMillis = prefs[Keys.LAST_SYNC_AT],
             scheduledReminderKeys = prefs[Keys.SCHEDULED_REMINDER_KEYS].orEmpty(),
+            dailyBriefEnabled = prefs[Keys.DAILY_BRIEF_ENABLED] ?: true,
+            scheduledDailyBriefKeys = prefs[Keys.SCHEDULED_DAILY_BRIEF_KEYS].orEmpty(),
             lastExchangeRates = decodeRates(prefs[Keys.LAST_EXCHANGE_RATES].orEmpty()),
             themeMode = prefs[Keys.THEME_MODE]
                 ?.let { raw -> ThemeMode.entries.firstOrNull { it.name == raw } }
@@ -164,6 +172,14 @@ class AppPreferences @Inject constructor(
     }
 
     /** 현재 예약돼 있는 일정 알림 키 집합. 다음 재계획 시 사라진 키를 취소하는 기준이 된다. */
+    suspend fun setDailyBriefEnabled(enabled: Boolean) {
+        dataStore.edit { it[Keys.DAILY_BRIEF_ENABLED] = enabled }
+    }
+
+    suspend fun setScheduledDailyBriefKeys(keys: Set<String>) {
+        dataStore.edit { it[Keys.SCHEDULED_DAILY_BRIEF_KEYS] = keys }
+    }
+
     suspend fun setScheduledReminderKeys(keys: Set<String>) {
         dataStore.edit { it[Keys.SCHEDULED_REMINDER_KEYS] = keys }
     }

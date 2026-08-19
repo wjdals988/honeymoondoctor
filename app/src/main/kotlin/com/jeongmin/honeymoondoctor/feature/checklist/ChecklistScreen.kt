@@ -159,19 +159,28 @@ fun ChecklistScreen(
 
             if (uiState.items.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    EmptyState(
-                        title = "표시할 준비물이 없습니다.",
-                        action = if (LocalTripReadOnly.current) {
-                            null
-                        } else {
-                            {
-                                FilledTonalButton(onClick = {
-                                    editorTarget = null
-                                    showEditor = true
-                                }) { Text("준비물 추가") }
-                            }
-                        },
-                    )
+                    // 검색·필터 결과가 0건인 경우까지 "추가" 버튼을 내밀면, 추가해도 필터에
+                    // 걸려 안 보이므로 고장난 것처럼 읽힌다. 진짜 0건일 때만 추가를 권한다.
+                    if (uiState.totalCount == 0) {
+                        EmptyState(
+                            title = "아직 등록한 준비물이 없습니다",
+                            action = if (LocalTripReadOnly.current) {
+                                null
+                            } else {
+                                {
+                                    FilledTonalButton(onClick = {
+                                        editorTarget = null
+                                        showEditor = true
+                                    }) { Text("준비물 추가") }
+                                }
+                            },
+                        )
+                    } else {
+                        EmptyState(
+                            title = "조건에 맞는 준비물이 없습니다",
+                            description = "검색어나 담당·필수 필터를 바꿔 보세요.",
+                        )
+                    }
                 }
             } else {
                 LazyColumn(

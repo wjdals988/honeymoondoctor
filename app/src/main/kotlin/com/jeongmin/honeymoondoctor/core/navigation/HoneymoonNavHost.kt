@@ -36,6 +36,7 @@ import com.jeongmin.honeymoondoctor.feature.settings.SettingsScreen
 import com.jeongmin.honeymoondoctor.feature.together.TogetherScreen
 import com.jeongmin.honeymoondoctor.feature.checklist.ChecklistScreen
 import com.jeongmin.honeymoondoctor.feature.decision.DecisionScreen
+import com.jeongmin.honeymoondoctor.feature.emergency.EmergencyScreen
 import com.jeongmin.honeymoondoctor.feature.expense.BudgetScreen
 import com.jeongmin.honeymoondoctor.feature.expense.ExpenseEditScreen
 import com.jeongmin.honeymoondoctor.feature.expense.ExpenseScreen
@@ -74,6 +75,7 @@ private const val ROUTE_PUBLIC_TRIP_DETAIL = "public_trip_detail"
 private const val ROUTE_ABOUT = "about"
 private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_TOGETHER = "together"
+private const val ROUTE_EMERGENCY = "emergency"
 
 private fun itineraryEditRoute(itemId: String?): String =
     if (itemId == null) ROUTE_ITINERARY_EDIT else "$ROUTE_ITINERARY_EDIT?itemId=$itemId"
@@ -258,6 +260,7 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                     onNavigateToAbout = { navController.navigate(ROUTE_ABOUT) },
                     onNavigateToSettings = { navController.navigate(ROUTE_SETTINGS) },
                     onNavigateToTogether = { navController.navigate(ROUTE_TOGETHER) },
+                    onNavigateToEmergency = { navController.navigate(ROUTE_EMERGENCY) },
                     onSwitchTrip = viewModel::backToTripList,
                     onExportBackup = moreViewModel::exportBackup,
                     backupMessage = backupMessage,
@@ -280,6 +283,9 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
             }
             composable(ROUTE_TOGETHER) {
                 TogetherScreen(onNavigateBack = { navController.popBackStack() })
+            }
+            composable(ROUTE_EMERGENCY) {
+                EmergencyScreen(onNavigateBack = { navController.popBackStack() })
             }
             composable(ROUTE_PUBLIC_TRIPS) {
                 PublicTripListScreen(
