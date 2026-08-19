@@ -130,6 +130,15 @@ object RepositoryModule {
 
     @Provides
     @Singleton
+    fun provideTripNoteRepository(
+        demoModeManager: DemoModeManager,
+        demo: Provider<com.jeongmin.honeymoondoctor.data.note.DemoTripNoteRepository>,
+        firebase: Provider<com.jeongmin.honeymoondoctor.data.note.FirebaseTripNoteRepository>,
+    ): com.jeongmin.honeymoondoctor.domain.repository.TripNoteRepository =
+        if (demoModeManager.isDemoMode) demo.get() else firebase.get()
+
+    @Provides
+    @Singleton
     fun providePlaceRepository(
         demoModeManager: DemoModeManager,
         demo: Provider<DemoPlaceRepository>,

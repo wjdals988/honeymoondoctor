@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.ConfirmationNumber
@@ -75,6 +76,7 @@ fun MoreScreen(
     onNavigateToAbout: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToTogether: () -> Unit,
+    onNavigateToNotes: () -> Unit,
     onNavigateToEmergency: () -> Unit,
     onSwitchTrip: () -> Unit,
     onExportBackup: (android.net.Uri) -> Unit,
@@ -87,6 +89,7 @@ fun MoreScreen(
     onDismissDeleteAccountError: () -> Unit,
     deleteAccountState: DeleteAccountUiState = DeleteAccountUiState.Idle,
     pendingJoinRequestCount: Int = 0,
+    unreadNoteCount: Int = 0,
     modifier: Modifier = Modifier,
 ) {
     var showLogoutConfirm by remember { mutableStateOf(false) }
@@ -108,6 +111,9 @@ fun MoreScreen(
         MoreMenu("여행 정보 및 구성원", "trip_info", MoreSection.TRIP, Icons.Filled.Group),
         MoreMenu("여행 둘러보기", "public_trips", MoreSection.TRIP, Icons.Filled.Public),
         MoreMenu("우리 위치", "together", MoreSection.TOGETHER, Icons.Filled.LocationOn),
+        // 데모 모드에도 보여준다 — 상대는 없지만 로컬로 동작해 기능을 미리 볼 수 있고,
+        // 빈 화면 안내가 "상대가 열 때 확인한다"는 동작 방식을 설명한다(데드엔드 아님).
+        MoreMenu("쪽지함", "notes", MoreSection.TOGETHER, Icons.AutoMirrored.Filled.Message),
         MoreMenu("예약함", "reservations", MoreSection.TOGETHER, Icons.Filled.ConfirmationNumber),
         MoreMenu("준비물", "checklist", MoreSection.TOGETHER, Icons.Filled.Checklist),
         MoreMenu("결정함", "decisions", MoreSection.TOGETHER, Icons.Filled.HowToVote),
@@ -151,6 +157,7 @@ fun MoreScreen(
                     "about" -> onNavigateToAbout
                     "settings" -> onNavigateToSettings
                     "emergency" -> onNavigateToEmergency
+                    "notes" -> onNavigateToNotes
                     "together" -> onNavigateToTogether
                     "switch_trip" -> onSwitchTrip
                     else -> null
@@ -166,10 +173,12 @@ fun MoreScreen(
                         onClick == null -> { { Text("추후 단계에서 제공") } }
                         else -> null
                     },
-                    trailingContent = if (menu.onClickKey == "trip_info" && pendingJoinRequestCount > 0) {
-                        { Text("대기 중인 참여 요청 ${pendingJoinRequestCount}건", color = MaterialTheme.colorScheme.error) }
-                    } else {
-                        null
+                    trailingContent = when {
+                        menu.onClickKey == "trip_info" && pendingJoinRequestCount > 0 ->
+                            { { Text("대기 중인 참여 요청 ${pendingJoinRequestCount}건", color = MaterialTheme.colorScheme.error) } }
+                        menu.onClickKey == "notes" && unreadNoteCount > 0 ->
+                            { { Text("읽지 않음 ${unreadNoteCount}건", color = MaterialTheme.colorScheme.error) } }
+                        else -> null
                     },
                     modifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier,
                 )

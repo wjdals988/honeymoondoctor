@@ -29,7 +29,7 @@ private const val MEMBERS = "members"
 private const val JOIN_REQUESTS = "joinRequests"
 private val OPERATIONAL_COLLECTIONS = listOf(
     "cities", "itinerary", "reservations", "checklistItems",
-    "expenses", "budgets", "places", "decisions",
+    "expenses", "budgets", "places", "decisions", "notes",
 )
 
 @Singleton

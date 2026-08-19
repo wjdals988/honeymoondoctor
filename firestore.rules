@@ -139,6 +139,27 @@ service cloud.firestore {
         ];
       }
 
+      // ── 쪽지 ──────────────────────────────────────────────────────
+      // "보내 두면 상대가 앱을 열 때 확인"하는 비동기 메모. 운영 데이터 블록에 넣지 않고
+      // 별도 규칙을 두는 이유: (1) 보낸 사람 위조 금지(senderUid == 본인), (2) 읽음
+      // 표시는 수신자만·readAt 필드만, (3) 삭제는 보낸 사람만 — 필드 단위 제약이 필요해서다.
+      match /notes/{noteId} {
+        allow read: if isTripMember(tripId);
+        allow create: if isTripMember(tripId) && isTripActive(tripId)
+          && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 500
+          && !('readAt' in request.resource.data);
+        // 읽음 표시. 완료된 여행에서도 허용한다 — 내용이 아니라 열람 메타데이터라서,
+        // 여행이 끝났다는 이유로 "읽지 않음 배지"가 영원히 남으면 안 된다.
+        allow update: if isTripMember(tripId)
+          && request.auth.uid != resource.data.senderUid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt']);
+        allow delete: if isTripMember(tripId) && isTripActive(tripId)
+          && request.auth.uid == resource.data.senderUid;
+      }
+
       // ── 위치 공유 ─────────────────────────────────────────────────
       // 문서 id = uid. 읽기는 구성원 전체, 쓰기·삭제는 자기 문서만 — 상대의 위치를
       // 위조하거나 지울 수 없다. 운영 데이터와 달리 완료된 여행에서도 삭제를 허용한다:

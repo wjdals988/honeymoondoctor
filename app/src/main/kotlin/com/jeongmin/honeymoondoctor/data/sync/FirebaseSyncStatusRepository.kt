@@ -22,7 +22,7 @@ private const val TRIPS = "trips"
 
 /** 대기 변경 수·마지막 동기화 시각을 계산하려고 열어보는 여행의 서브컬렉션들. */
 private val TRACKED_SUBCOLLECTIONS = listOf(
-    "cities", "itinerary", "reservations", "checklistItems", "expenses", "budgets", "places", "decisions",
+    "cities", "itinerary", "reservations", "checklistItems", "expenses", "budgets", "places", "decisions", "notes",
 )
 
 /** 하나의 쿼리/문서 스냅샷에서 뽑아낸 "동기화 상태 기여분". */

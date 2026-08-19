@@ -10,6 +10,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -19,6 +20,8 @@ class AppRootViewModel @Inject constructor(
     demoModeManager: DemoModeManager,
     observeCurrentTrip: ObserveCurrentTrip,
     private val appPreferences: AppPreferences,
+    tripNoteRepository: com.jeongmin.honeymoondoctor.domain.repository.TripNoteRepository,
+    authRepository: com.jeongmin.honeymoondoctor.domain.repository.AuthRepository,
 ) : ViewModel() {
     val isDemoMode: Boolean = demoModeManager.isDemoMode
 
@@ -31,6 +34,24 @@ class AppRootViewModel @Inject constructor(
      * 여행 목록으로 돌아간다. 선택을 비우면 AuthGate의 상태 흐름이 알아서 목록 화면으로
      * 되돌리므로, 여기서 화면 전환을 직접 하지 않는다(진입 순서를 한 곳에서만 관리).
      */
+    /** 상대가 보낸 읽지 않은 쪽지 수. 하단 "전체" 탭 아이콘의 배지로 보여준다. */
+    @kotlinx.coroutines.ExperimentalCoroutinesApi
+    val unreadNoteCount: StateFlow<Int> = observeCurrentTrip()
+        .flatMapLatest { trip ->
+            if (trip == null) {
+                kotlinx.coroutines.flow.flowOf(0)
+            } else {
+                kotlinx.coroutines.flow.combine(
+                    tripNoteRepository.observeNotes(trip.id),
+                    authRepository.currentUser,
+                ) { notes, user ->
+                    val myUid = user?.uid ?: return@combine 0
+                    notes.count { it.senderUid != myUid && it.readAt == null }
+                }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
     fun backToTripList() {
         viewModelScope.launch { appPreferences.setSelectedTripId(null) }
     }

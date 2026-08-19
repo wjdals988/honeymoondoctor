@@ -20,6 +20,17 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.7.3",
+            versionCode = 37,
+            date = "2026-08-19",
+            changes = listOf(
+                "쪽지함이 생겼습니다(전체 → 쪽지함). 보내 두면 상대가 앱을 열 때 확인하는 " +
+                    "방식입니다 — 상대 앱이 켜져 있으면 바로 알림이 가고, 꺼져 있으면 " +
+                    "하단 \"전체\" 탭의 배지로 읽지 않은 쪽지를 알려줍니다. 상대가 확인하면 " +
+                    "\"확인함\"으로 표시됩니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.7.2",
             versionCode = 36,
             date = "2026-08-19",

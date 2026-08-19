@@ -9,6 +9,7 @@ import com.jeongmin.honeymoondoctor.domain.repository.ExpenseRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ItineraryRepository
 import com.jeongmin.honeymoondoctor.domain.repository.PlaceRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ReservationRepository
+import com.jeongmin.honeymoondoctor.domain.repository.TripNoteRepository
 import java.time.Instant
 import javax.inject.Inject
 import kotlinx.coroutines.flow.first
@@ -35,6 +36,7 @@ class TripBackupBuilder @Inject constructor(
     private val budgetRepository: BudgetRepository,
     private val placeRepository: PlaceRepository,
     private val decisionRepository: DecisionRepository,
+    private val tripNoteRepository: TripNoteRepository,
 ) {
 
     suspend fun build(trip: Trip, appVersion: String): String {
@@ -192,6 +194,33 @@ class TripBackupBuilder @Inject constructor(
                 },
             ),
         )
+
+        root.put(
+
+            "notes",
+
+            JSONArray(
+
+                tripNoteRepository.observeNotes(trip.id).first().map { note ->
+
+                    JSONObject()
+
+                        .put("id", note.id)
+
+                        .put("senderUid", note.senderUid)
+
+                        .put("text", note.text)
+
+                        .put("createdAt", note.createdAt.toString())
+
+                        .putOpt("readAt", note.readAt?.toString())
+
+                },
+
+            ),
+
+        )
+
 
         return root.toString(2)
     }

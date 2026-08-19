@@ -7,6 +7,8 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -46,6 +48,7 @@ import com.jeongmin.honeymoondoctor.feature.itinerary.ItineraryScreen
 import com.jeongmin.honeymoondoctor.feature.more.MoreScreen
 import com.jeongmin.honeymoondoctor.feature.more.MoreViewModel
 import com.jeongmin.honeymoondoctor.feature.nearby.NearbyScreen
+import com.jeongmin.honeymoondoctor.feature.notes.NotesScreen
 import com.jeongmin.honeymoondoctor.feature.nearby.PlaceAddScreen
 import com.jeongmin.honeymoondoctor.feature.nearby.PlaceEditScreen
 import com.jeongmin.honeymoondoctor.feature.nearby.PlaceImportScreen
@@ -76,6 +79,7 @@ private const val ROUTE_ABOUT = "about"
 private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_TOGETHER = "together"
 private const val ROUTE_EMERGENCY = "emergency"
+private const val ROUTE_NOTES = "notes"
 
 private fun itineraryEditRoute(itemId: String?): String =
     if (itemId == null) ROUTE_ITINERARY_EDIT else "$ROUTE_ITINERARY_EDIT?itemId=$itemId"
@@ -97,7 +101,7 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
 
     CompositionLocalProvider(LocalTripReadOnly provides isReadOnly) {
     Scaffold(
-        bottomBar = { HoneymoonBottomBar(navController) },
+        bottomBar = { HoneymoonBottomBar(navController, unreadNoteCount = viewModel.unreadNoteCount.collectAsState().value) },
     ) { innerPadding ->
         // 읽기전용 띠는 NavHost 밖에 한 번만 두어 5개 탭과 모든 하위 화면에 함께 적용한다
         // (화면마다 넣으면 20곳을 손대야 하고 새 화면에서 빠뜨리기 쉽다).
@@ -247,6 +251,7 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
             composable(BottomTab.MORE.route) {
                 val moreViewModel: MoreViewModel = hiltViewModel()
                 val pendingJoinRequestCount by moreViewModel.pendingJoinRequestCount.collectAsState()
+                val unreadNoteCount by moreViewModel.unreadNoteCount.collectAsState()
                 val deleteAccountState by moreViewModel.deleteAccountState.collectAsState()
                 val backupMessage by moreViewModel.backupMessage.collectAsState()
                 MoreScreen(
@@ -262,6 +267,7 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                     onNavigateToSettings = { navController.navigate(ROUTE_SETTINGS) },
                     onNavigateToTogether = { navController.navigate(ROUTE_TOGETHER) },
                     onNavigateToEmergency = { navController.navigate(ROUTE_EMERGENCY) },
+                    onNavigateToNotes = { navController.navigate(ROUTE_NOTES) },
                     onSwitchTrip = viewModel::backToTripList,
                     onExportBackup = moreViewModel::exportBackup,
                     backupMessage = backupMessage,
@@ -273,6 +279,7 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                     onDismissDeleteAccountError = moreViewModel::dismissDeleteAccountError,
                     deleteAccountState = deleteAccountState,
                     pendingJoinRequestCount = pendingJoinRequestCount,
+                    unreadNoteCount = unreadNoteCount,
                 )
             }
             composable(ROUTE_TRIP_INFO) { TripInfoScreen() }
@@ -287,6 +294,9 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
             }
             composable(ROUTE_EMERGENCY) {
                 EmergencyScreen(onNavigateBack = { navController.popBackStack() })
+            }
+            composable(ROUTE_NOTES) {
+                NotesScreen(onNavigateBack = { navController.popBackStack() })
             }
             composable(ROUTE_PUBLIC_TRIPS) {
                 PublicTripListScreen(
@@ -355,7 +365,7 @@ private fun androidx.navigation.NavHostController.navigateToTab(tab: BottomTab) 
 }
 
 @Composable
-private fun HoneymoonBottomBar(navController: androidx.navigation.NavHostController) {
+private fun HoneymoonBottomBar(navController: androidx.navigation.NavHostController, unreadNoteCount: Int = 0) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
 
@@ -364,7 +374,17 @@ private fun HoneymoonBottomBar(navController: androidx.navigation.NavHostControl
             NavigationBarItem(
                 selected = currentRoute == tab.route,
                 onClick = { navController.navigateToTab(tab) },
-                icon = { Icon(imageVector = tab.icon, contentDescription = stringResource(id = tab.labelRes)) },
+                icon = {
+                    // 읽지 않은 쪽지는 "전체" 탭 안(쪽지함)에 있어, 탭 아이콘에 점 배지로
+                    // 존재만 알린다 — 홈에 카드를 더 얹지 않는다(홈은 이미 카드 5~6개).
+                    if (tab == BottomTab.MORE && unreadNoteCount > 0) {
+                        BadgedBox(badge = { Badge { Text("$unreadNoteCount") } }) {
+                            Icon(imageVector = tab.icon, contentDescription = stringResource(id = tab.labelRes))
+                        }
+                    } else {
+                        Icon(imageVector = tab.icon, contentDescription = stringResource(id = tab.labelRes))
+                    }
+                },
                 label = { Text(text = stringResource(id = tab.labelRes)) },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,

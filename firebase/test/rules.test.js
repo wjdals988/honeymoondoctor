@@ -479,3 +479,96 @@ test("위치 공유: 완료된 여행에서도 자기 위치는 지울 수 있�
   // 삭제는 된다
   await assertSucceeds(deleteDoc(doc(partnerDb, "trips", TRIP_ID, "memberLocations", PARTNER_UID)));
 });
+
+// ── 쪽지 규칙 ─────────────────────────────────────────────────────────
+
+test("쪽지: 구성원은 자기 uid로 보낼 수 있다", async () => {
+  const db = testEnv.authenticatedContext(OWNER_UID).firestore();
+  await assertSucceeds(
+    setDoc(doc(db, "trips", TRIP_ID, "notes", "note-1"), {
+      senderUid: OWNER_UID,
+      text: "3시에 호텔 로비에서 만나",
+      createdAt: new Date(),
+    }),
+  );
+});
+
+test("쪽지: 보낸 사람을 위조할 수 없다", async () => {
+  const db = testEnv.authenticatedContext(OWNER_UID).firestore();
+  await assertFails(
+    setDoc(doc(db, "trips", TRIP_ID, "notes", "note-forged"), {
+      senderUid: PARTNER_UID,
+      text: "위조",
+      createdAt: new Date(),
+    }),
+  );
+});
+
+test("쪽지: 구성원이 아니면 보낼 수 없다", async () => {
+  const db = testEnv.authenticatedContext(OUTSIDER_UID).firestore();
+  await assertFails(
+    setDoc(doc(db, "trips", TRIP_ID, "notes", "note-outsider"), {
+      senderUid: OUTSIDER_UID,
+      text: "외부인",
+      createdAt: new Date(),
+    }),
+  );
+});
+
+test("쪽지: 빈 내용이나 500자 초과는 거부한다", async () => {
+  const db = testEnv.authenticatedContext(OWNER_UID).firestore();
+  await assertFails(
+    setDoc(doc(db, "trips", TRIP_ID, "notes", "note-empty"), {
+      senderUid: OWNER_UID,
+      text: "",
+      createdAt: new Date(),
+    }),
+  );
+  await assertFails(
+    setDoc(doc(db, "trips", TRIP_ID, "notes", "note-long"), {
+      senderUid: OWNER_UID,
+      text: "가".repeat(501),
+      createdAt: new Date(),
+    }),
+  );
+});
+
+test("쪽지: 수신자만 읽음 표시를 할 수 있고, readAt 외 필드는 못 바꾼다", async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "trips", TRIP_ID, "notes", "note-read"), {
+      senderUid: OWNER_UID,
+      text: "읽음 테스트",
+      createdAt: new Date(),
+    });
+  });
+  const partner = testEnv.authenticatedContext(PARTNER_UID).firestore();
+  await assertSucceeds(
+    updateDoc(doc(partner, "trips", TRIP_ID, "notes", "note-read"), { readAt: new Date() }),
+  );
+  // 보낸 사람 본인은 읽음 표시를 못 한다(스스로 "확인함"을 만들 수 없다).
+  const owner = testEnv.authenticatedContext(OWNER_UID).firestore();
+  await assertFails(
+    updateDoc(doc(owner, "trips", TRIP_ID, "notes", "note-read"), { readAt: new Date() }),
+  );
+  // 수신자라도 본문은 못 바꾼다.
+  await assertFails(
+    updateDoc(doc(partner, "trips", TRIP_ID, "notes", "note-read"), {
+      readAt: new Date(),
+      text: "변조",
+    }),
+  );
+});
+
+test("쪽지: 보낸 사람만 삭제할 수 있다", async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "trips", TRIP_ID, "notes", "note-del"), {
+      senderUid: OWNER_UID,
+      text: "삭제 테스트",
+      createdAt: new Date(),
+    });
+  });
+  const partner = testEnv.authenticatedContext(PARTNER_UID).firestore();
+  await assertFails(deleteDoc(doc(partner, "trips", TRIP_ID, "notes", "note-del")));
+  const owner = testEnv.authenticatedContext(OWNER_UID).firestore();
+  await assertSucceeds(deleteDoc(doc(owner, "trips", TRIP_ID, "notes", "note-del")));
+});
