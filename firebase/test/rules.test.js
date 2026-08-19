@@ -572,3 +572,8 @@ test("쪽지: 보낸 사람만 삭제할 수 있다", async () => {
   const owner = testEnv.authenticatedContext(OWNER_UID).firestore();
   await assertSucceeds(deleteDoc(doc(owner, "trips", TRIP_ID, "notes", "note-del")));
 });
+
+test("쪽지: 구성원은 컬렉션을 list 쿼리로 열 수 있다(SyncStatusRepository·NotesViewModel과 동일한 접근)", async () => {
+  const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
+  await assertSucceeds(getDocs(collection(db, "trips", TRIP_ID, "notes")));
+});
