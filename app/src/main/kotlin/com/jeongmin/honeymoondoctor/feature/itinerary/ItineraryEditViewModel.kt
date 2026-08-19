@@ -4,18 +4,24 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jeongmin.honeymoondoctor.core.error.toUserMessage
+import com.jeongmin.honeymoondoctor.core.location.LocationProvider
+import com.jeongmin.honeymoondoctor.data.maps.MapsLinkResolver
+import com.jeongmin.honeymoondoctor.data.maps.MapsShortLink
 import com.jeongmin.honeymoondoctor.core.time.LocalTimes
 import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryItem
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryStatus
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryType
 import com.jeongmin.honeymoondoctor.domain.model.Place
+import com.jeongmin.honeymoondoctor.domain.model.PlaceCategory
 import com.jeongmin.honeymoondoctor.domain.model.TripMember
 import com.jeongmin.honeymoondoctor.domain.repository.AuthRepository
 import com.jeongmin.honeymoondoctor.domain.repository.CityRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ItineraryRepository
 import com.jeongmin.honeymoondoctor.domain.repository.PlaceRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
+import com.jeongmin.honeymoondoctor.domain.usecase.Coordinates
+import com.jeongmin.honeymoondoctor.domain.usecase.MapsUrlCoordinates
 import com.jeongmin.honeymoondoctor.domain.usecase.ObserveCurrentTrip
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
@@ -59,6 +65,25 @@ data class ItineraryEditForm(
     val reservationId: String? = null,
 )
 
+/**
+ * 일정 편집에서 곧바로 만드는 새 장소. 종전에는 주변 탭으로 나갔다 와야 했고, 그러면
+ * 작성 중인 일정 폼이 사라졌다. 좌표 채우는 두 수단(현재 위치·구글 지도 링크)은
+ * 장소 화면과 같은 것을 쓴다.
+ */
+data class NewPlaceForm(
+    val name: String = "",
+    val category: PlaceCategory = PlaceCategory.ETC,
+    val latitudeText: String = "",
+    val longitudeText: String = "",
+    val mapsUrl: String = "",
+    val resolvingLink: Boolean = false,
+    val error: String? = null,
+) {
+    val hasCoordinates: Boolean
+        get() = latitudeText.toDoubleOrNull() != null && longitudeText.toDoubleOrNull() != null
+    val canSave: Boolean get() = name.isNotBlank() && !resolvingLink
+}
+
 data class ItineraryEditUiState(
     val loading: Boolean = true,
     val tripId: String? = null,
@@ -78,7 +103,124 @@ class ItineraryEditViewModel @Inject constructor(
     private val cityRepository: CityRepository,
     private val itineraryRepository: ItineraryRepository,
     private val placeRepository: PlaceRepository,
+    private val locationProvider: LocationProvider,
+    private val mapsLinkResolver: MapsLinkResolver,
 ) : ViewModel() {
+
+    /** null이면 "새 장소 만들기" 대화상자가 닫힌 상태다. */
+    private val _newPlaceForm = MutableStateFlow<NewPlaceForm?>(null)
+    val newPlaceForm: StateFlow<NewPlaceForm?> = _newPlaceForm
+
+    fun openNewPlaceForm() {
+        // 일정 이름을 이미 적었으면 장소명 기본값으로 쓴다("센소지" 일정 → "센소지" 장소).
+        _newPlaceForm.value = NewPlaceForm(name = _form.value?.title?.trim().orEmpty())
+    }
+
+    fun dismissNewPlaceForm() {
+        _newPlaceForm.value = null
+    }
+
+    fun updateNewPlaceForm(transform: (NewPlaceForm) -> NewPlaceForm) {
+        _newPlaceForm.value = _newPlaceForm.value?.let(transform)?.copy(error = null)
+    }
+
+    /** 지금 있는 곳의 좌표를 채운다(장소 화면과 같은 동작). */
+    fun fillNewPlaceWithCurrentLocation() {
+        viewModelScope.launch {
+            if (!locationProvider.hasLocationPermission()) {
+                _newPlaceForm.value = _newPlaceForm.value?.copy(
+                    error = "위치 권한이 없습니다. 주변 탭에서 권한을 허용한 뒤 다시 시도해 주세요.",
+                )
+                return@launch
+            }
+            val location = runCatching { locationProvider.refreshCurrentLocation() }.getOrNull()
+            _newPlaceForm.value = if (location == null) {
+                _newPlaceForm.value?.copy(error = "현재 위치를 가져오지 못했습니다. 실외에서 잠시 뒤 다시 시도해 주세요.")
+            } else {
+                _newPlaceForm.value?.copy(
+                    latitudeText = location.latitude.toString(),
+                    longitudeText = location.longitude.toString(),
+                    error = null,
+                )
+            }
+        }
+    }
+
+    /** 구글 지도 링크(또는 좌표 문자열)에서 좌표를 뽑아 채운다(장소 화면과 같은 동작). */
+    fun fillNewPlaceFromMapsUrl() {
+        val current = _newPlaceForm.value ?: return
+        val url = current.mapsUrl.trim()
+        if (url.isBlank()) return
+
+        MapsUrlCoordinates.parse(url)?.let { applyNewPlaceCoordinates(it) ; return }
+        if (!MapsShortLink.isShortLink(url)) {
+            _newPlaceForm.value = current.copy(
+                error = "링크에서 좌표를 찾지 못했습니다. 구글 지도에서 \"공유 → 링크 복사\"한 주소를 넣어 주세요.",
+            )
+            return
+        }
+        _newPlaceForm.value = current.copy(resolvingLink = true, error = null)
+        viewModelScope.launch {
+            mapsLinkResolver.resolve(url)
+                .onSuccess { expanded ->
+                    val coordinates = MapsUrlCoordinates.parse(expanded)
+                    if (coordinates == null) {
+                        _newPlaceForm.value = _newPlaceForm.value?.copy(
+                            resolvingLink = false,
+                            error = "링크를 펼쳤지만 좌표가 없었습니다.",
+                        )
+                    } else {
+                        applyNewPlaceCoordinates(coordinates)
+                    }
+                }
+                .onFailure {
+                    _newPlaceForm.value = _newPlaceForm.value?.copy(
+                        resolvingLink = false,
+                        error = it.toUserMessage("링크를 펼치지 못했습니다. 연결을 확인해 주세요."),
+                    )
+                }
+        }
+    }
+
+    private fun applyNewPlaceCoordinates(coordinates: Coordinates) {
+        _newPlaceForm.value = _newPlaceForm.value?.copy(
+            latitudeText = coordinates.latitude.toString(),
+            longitudeText = coordinates.longitude.toString(),
+            resolvingLink = false,
+            error = null,
+        )
+    }
+
+    /**
+     * 새 장소를 저장하고 곧바로 이 일정에 연결한다. 좌표가 없어도 저장은 되지만 지도에는
+     * 안 뜨므로, 화면에서 그 점을 미리 알려 준다.
+     */
+    fun createAndLinkPlace() {
+        val newPlace = _newPlaceForm.value ?: return
+        val tripId = uiState.value.tripId ?: return
+        if (!newPlace.canSave) return
+        val place = Place(
+            id = "place-${UUID.randomUUID()}",
+            name = newPlace.name.trim(),
+            cityId = _form.value?.cityId,
+            category = newPlace.category,
+            latitude = newPlace.latitudeText.toDoubleOrNull(),
+            longitude = newPlace.longitudeText.toDoubleOrNull(),
+            mapsUrl = newPlace.mapsUrl.trim().ifEmpty { null },
+        )
+        viewModelScope.launch {
+            runCatching { placeRepository.create(tripId, place) }
+                .onSuccess {
+                    updateForm { it.copy(placeId = place.id) }
+                    _newPlaceForm.value = null
+                }
+                .onFailure {
+                    _newPlaceForm.value = _newPlaceForm.value?.copy(
+                        error = it.toUserMessage("장소를 저장하지 못했습니다. 완료된 여행은 수정할 수 없습니다."),
+                    )
+                }
+        }
+    }
 
     private val editingItemId: String? = savedStateHandle["itemId"]
 

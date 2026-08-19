@@ -20,6 +20,16 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.7.2",
+            versionCode = 36,
+            date = "2026-08-19",
+            changes = listOf(
+                "일정 편집에서 장소를 바로 만들 수 있습니다. 종전에는 주변 탭으로 나갔다 " +
+                    "와야 했고 그러면 작성 중인 일정이 사라졌습니다. 만들면 그 일정에 " +
+                    "자동으로 연결되고, 좌표는 \"현재 위치\"나 구글 지도 링크로 채웁니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.7.1",
             versionCode = 35,
             date = "2026-08-19",

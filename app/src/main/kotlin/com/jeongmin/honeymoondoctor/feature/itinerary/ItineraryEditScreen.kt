@@ -13,6 +13,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,6 +46,7 @@ import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.core.ui.TimeField
 import com.jeongmin.honeymoondoctor.core.ui.confirm
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryTitleSuggestions
+import com.jeongmin.honeymoondoctor.domain.model.PlaceCategory
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryType
 import java.time.LocalTime
 
@@ -56,6 +58,18 @@ fun ItineraryEditScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val form by viewModel.form.collectAsState()
+    val newPlaceForm by viewModel.newPlaceForm.collectAsState()
+
+    newPlaceForm?.let { newPlace ->
+        NewPlaceDialog(
+            form = newPlace,
+            onUpdate = viewModel::updateNewPlaceForm,
+            onUseCurrentLocation = viewModel::fillNewPlaceWithCurrentLocation,
+            onFillFromLink = viewModel::fillNewPlaceFromMapsUrl,
+            onConfirm = viewModel::createAndLinkPlace,
+            onDismiss = viewModel::dismissNewPlaceForm,
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -253,8 +267,7 @@ fun ItineraryEditScreen(
                         style = MaterialTheme.typography.labelLarge,
                     )
                     Text(
-                        text = "주변 탭에서 장소를 저장하면(좌표는 \"현재 위치\" 버튼이나 구글 지도 " +
-                            "링크로 채울 수 있습니다) 여기서 골라 일정을 지도에 표시할 수 있습니다.",
+                        text = "여기서 바로 만들면 이 일정에 연결되고, 지도 보기에 핀으로 표시됩니다.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -281,6 +294,8 @@ fun ItineraryEditScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                // 주변 탭으로 나갔다 오면 작성 중인 일정 폼이 사라진다. 여기서 만들 수 있게 한다.
+                TextButton(onClick = viewModel::openNewPlaceForm) { Text("+ 새 장소 만들기") }
 
                 OutlinedTextField(
                     value = currentForm.location,
@@ -332,4 +347,73 @@ fun ItineraryEditScreen(
             ) { Text(if (currentForm.itemId == null) "일정 추가" else "변경 사항 저장") }
         }
     }
+}
+
+/**
+ * 일정 편집에서 장소를 바로 만드는 대화상자. 좌표는 손으로 넣을 값이 아니라서 "현재 위치"
+ * 와 "구글 지도 링크"로만 채우게 하고(장소 화면과 같은 두 수단), 좌표 없이 저장하는 것도
+ * 막지 않되 지도에 안 뜬다는 점을 미리 알려 준다.
+ */
+@Composable
+private fun NewPlaceDialog(
+    form: NewPlaceForm,
+    onUpdate: ((NewPlaceForm) -> NewPlaceForm) -> Unit,
+    onUseCurrentLocation: () -> Unit,
+    onFillFromLink: () -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("새 장소 만들기") },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                OutlinedTextField(
+                    value = form.name,
+                    onValueChange = { value -> onUpdate { it.copy(name = value) } },
+                    label = { Text("장소명 *") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                ChipSelector(
+                    label = "종류",
+                    options = PlaceCategory.entries,
+                    selected = form.category,
+                    optionLabel = { it.display },
+                    onSelect = { category -> onUpdate { it.copy(category = category) } },
+                )
+                Text(
+                    text = if (form.hasCoordinates) {
+                        "좌표 ${form.latitudeText}, ${form.longitudeText} — 지도에 표시됩니다."
+                    } else {
+                        "좌표를 채우면 지도 보기에 핀으로 표시됩니다. 없어도 저장은 됩니다."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                TextButton(onClick = onUseCurrentLocation) { Text("현재 위치로 좌표 채우기") }
+                OutlinedTextField(
+                    value = form.mapsUrl,
+                    onValueChange = { value -> onUpdate { it.copy(mapsUrl = value) } },
+                    label = { Text("구글 지도 링크") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                TextButton(
+                    onClick = onFillFromLink,
+                    enabled = form.mapsUrl.isNotBlank() && !form.resolvingLink,
+                ) { Text(if (form.resolvingLink) "링크 펼치는 중…" else "링크에서 좌표 채우기") }
+                form.error?.let { error ->
+                    Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm, enabled = form.canSave) { Text("만들고 연결") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } },
+    )
 }
