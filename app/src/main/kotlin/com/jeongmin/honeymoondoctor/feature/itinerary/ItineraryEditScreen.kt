@@ -35,7 +35,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.jeongmin.honeymoondoctor.core.time.koreanZoneLabel
+import com.jeongmin.honeymoondoctor.core.time.timeZoneChoices
+import com.jeongmin.honeymoondoctor.core.time.zoneOptionLabel
 import com.jeongmin.honeymoondoctor.core.ui.CityPickerField
 import com.jeongmin.honeymoondoctor.core.ui.CollapsibleSection
 import com.jeongmin.honeymoondoctor.core.ui.DateField
@@ -46,9 +47,6 @@ import com.jeongmin.honeymoondoctor.core.ui.confirm
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryTitleSuggestions
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryType
 import java.time.LocalTime
-
-/** 이번 여행에서 고를 수 있는 시간대 후보. 도시를 고르면 자동으로 바뀌고, 직접 바꿀 수도 있다. */
-private val timeZoneOptions = listOf("Asia/Seoul", "Europe/Prague", "Europe/Madrid")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -215,19 +213,19 @@ fun ItineraryEditScreen(
 
             DropdownSelector(
                 label = "시간대",
-                selectedLabel = "${koreanZoneLabel(currentForm.timeZone)} (${currentForm.timeZone})",
-                options = (timeZoneOptions + currentForm.timeZone).distinct(),
-                optionLabel = { "${koreanZoneLabel(it)} ($it)" },
+                selectedLabel = zoneOptionLabel(currentForm.timeZone),
+                options = timeZoneChoices(uiState.cities.map { it.timeZoneId }, currentForm.timeZone),
+                optionLabel = { zoneOptionLabel(it) },
                 onSelect = { zone -> viewModel.updateForm { it.copy(timeZone = zone) } },
             )
 
             if (!currentForm.allDay && currentForm.hasEnd) {
                 DropdownSelector(
                     label = "도착(종료) 시간대 — 비행처럼 시간대가 바뀔 때만",
-                    selectedLabel = currentForm.endTimeZone
-                        ?.let { "${koreanZoneLabel(it)} ($it)" } ?: "출발과 동일",
-                    options = listOf<String?>(null) + (timeZoneOptions + (currentForm.endTimeZone ?: "")).filter { it.isNotEmpty() }.distinct(),
-                    optionLabel = { it?.let { z -> "${koreanZoneLabel(z)} ($z)" } ?: "출발과 동일" },
+                    selectedLabel = currentForm.endTimeZone?.let(::zoneOptionLabel) ?: "출발과 동일",
+                    options = listOf<String?>(null) +
+                        timeZoneChoices(uiState.cities.map { it.timeZoneId }, currentForm.endTimeZone),
+                    optionLabel = { it?.let(::zoneOptionLabel) ?: "출발과 동일" },
                     onSelect = { zone -> viewModel.updateForm { it.copy(endTimeZone = zone) } },
                 )
             }
@@ -243,16 +241,46 @@ fun ItineraryEditScreen(
                     currentForm.estimatedKrwText.isNotBlank() ||
                     currentForm.notes.isNotBlank(),
             ) {
-                // 주변 탭에 이미 좌표를 가진 장소가 있으면 연결해 백로그(일정 지도 보기)에서
-                // 지도에 핀을 찍을 수 있게 한다. 아래 장소명·주소는 자유 텍스트라 계속 별도로 둔다.
-                DropdownSelector(
-                    label = "저장된 장소에서 선택",
-                    selectedLabel = uiState.places.firstOrNull { it.id == currentForm.placeId }?.name
-                        ?: "연결 안 함",
-                    options = listOf(null) + uiState.places,
-                    optionLabel = { it?.name ?: "연결 안 함" },
-                    onSelect = { place -> viewModel.updateForm { it.copy(placeId = place?.id) } },
-                )
+                // 주변 탭에 이미 좌표를 가진 장소가 있으면 연결해 지도 보기에서 핀을 찍는다.
+                // 아래 장소명·주소는 자유 텍스트라 계속 별도로 둔다.
+                //
+                // 저장된 장소가 하나도 없으면 드롭다운에 "연결 안 함" 한 줄만 남아, 왜 비어
+                // 있는지도 어디서 만드는지도 알 수 없는 막힌 길이 된다(v0.7.0까지의 문제).
+                // 그럴 때는 드롭다운 대신 안내를 보여준다.
+                if (uiState.places.isEmpty()) {
+                    Text(
+                        text = "저장된 장소가 없습니다",
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                    Text(
+                        text = "주변 탭에서 장소를 저장하면(좌표는 \"현재 위치\" 버튼이나 구글 지도 " +
+                            "링크로 채울 수 있습니다) 여기서 골라 일정을 지도에 표시할 수 있습니다.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    DropdownSelector(
+                        label = "저장된 장소에서 선택",
+                        selectedLabel = uiState.places.firstOrNull { it.id == currentForm.placeId }?.name
+                            ?: "연결 안 함",
+                        options = listOf(null) + uiState.places,
+                        optionLabel = { it?.name ?: "연결 안 함" },
+                        onSelect = { place -> viewModel.updateForm { it.copy(placeId = place?.id) } },
+                    )
+                    val linkedPlace = uiState.places.firstOrNull { it.id == currentForm.placeId }
+                    Text(
+                        text = when {
+                            linkedPlace == null -> "장소를 연결하면 일정 탭의 지도 보기에 핀으로 표시됩니다."
+                            linkedPlace.hasCoordinates -> "지도 보기에 핀으로 표시됩니다."
+                            // 좌표 없는 장소를 연결하면 지도에 안 뜨는데, 이유를 알려주지
+                            // 않으면 "연결했는데 왜 안 보이지"가 된다.
+                            else -> "이 장소에는 좌표가 없어 지도에는 표시되지 않습니다 — " +
+                                "주변 탭에서 좌표를 채워 주세요."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
 
                 OutlinedTextField(
                     value = currentForm.location,

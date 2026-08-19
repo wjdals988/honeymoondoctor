@@ -55,6 +55,8 @@ data class HomeUiState(
     val currentCity: City? = null,
     /** 체류 기간이 오늘을 포함하는 도시 수. 2 이상이면 어느 도시를 기준으로 삼았는지 알려준다. */
     val overlappingCityCount: Int = 0,
+    /** 이 여행에 등록된 도시 수. 완료 후 요약에 쓴다. */
+    val cityCount: Int = 0,
     /** 홈 표시 기준 시간대(현재 도시 → 다음 일정 → 한국 순으로 결정) */
     val displayZoneId: String = "Asia/Seoul",
     val now: Instant = Instant.EPOCH,
@@ -205,6 +207,7 @@ class HomeViewModel @Inject constructor(
             isDuringTrip = isDuringTrip,
             currentCity = currentCity,
             overlappingCityCount = citySelection.overlappingCount,
+            cityCount = cities.size,
             displayZoneId = displayZoneId,
             now = now,
             next = snapshot,

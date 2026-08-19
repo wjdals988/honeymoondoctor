@@ -144,6 +144,7 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                     onOpenReservations = { navController.navigate(ROUTE_RESERVATIONS) },
                     onOpenChecklist = { navController.navigate(ROUTE_CHECKLIST) },
                     onOpenSyncStatus = { navController.navigate(ROUTE_SYNC_STATUS) },
+                    onOpenTripInfo = { navController.navigate(ROUTE_TRIP_INFO) },
                 )
             }
             composable(

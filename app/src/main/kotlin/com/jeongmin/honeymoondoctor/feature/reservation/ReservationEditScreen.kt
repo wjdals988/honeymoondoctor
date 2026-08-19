@@ -33,7 +33,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.jeongmin.honeymoondoctor.core.time.koreanZoneLabel
+import com.jeongmin.honeymoondoctor.core.time.timeZoneChoices
+import com.jeongmin.honeymoondoctor.core.time.zoneOptionLabel
 import com.jeongmin.honeymoondoctor.core.ui.CollapsibleSection
 import com.jeongmin.honeymoondoctor.core.ui.DateField
 import com.jeongmin.honeymoondoctor.core.ui.ChipSelector
@@ -42,8 +43,6 @@ import com.jeongmin.honeymoondoctor.core.ui.TimeField
 import com.jeongmin.honeymoondoctor.core.ui.confirm
 import com.jeongmin.honeymoondoctor.domain.model.ReservationStatus
 import com.jeongmin.honeymoondoctor.domain.model.ReservationType
-
-private val timeZoneOptions = listOf("Asia/Seoul", "Europe/Prague", "Europe/Madrid")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -186,18 +185,19 @@ fun ReservationEditScreen(
                 }
                 DropdownSelector(
                     label = "시간대",
-                    selectedLabel = "${koreanZoneLabel(currentForm.timeZone)} (${currentForm.timeZone})",
-                    options = (timeZoneOptions + currentForm.timeZone).distinct(),
-                    optionLabel = { "${koreanZoneLabel(it)} ($it)" },
+                    selectedLabel = zoneOptionLabel(currentForm.timeZone),
+                    options = timeZoneChoices(uiState.cityZoneIds, currentForm.timeZone),
+                    optionLabel = { zoneOptionLabel(it) },
                     onSelect = { zone -> viewModel.updateForm { it.copy(timeZone = zone) } },
                 )
                 if (!currentForm.allDay) {
                     DropdownSelector(
                         label = "도착(종료) 시간대 — 비행처럼 시간대가 바뀔 때만",
                         selectedLabel = currentForm.endTimeZone
-                            ?.let { "${koreanZoneLabel(it)} ($it)" } ?: "출발과 동일",
-                        options = listOf<String?>(null) + timeZoneOptions,
-                        optionLabel = { it?.let { z -> "${koreanZoneLabel(z)} ($z)" } ?: "출발과 동일" },
+                            ?.let(::zoneOptionLabel) ?: "출발과 동일",
+                        options = listOf<String?>(null) +
+                            timeZoneChoices(uiState.cityZoneIds, currentForm.endTimeZone),
+                        optionLabel = { it?.let(::zoneOptionLabel) ?: "출발과 동일" },
                         onSelect = { zone -> viewModel.updateForm { it.copy(endTimeZone = zone) } },
                     )
                 }

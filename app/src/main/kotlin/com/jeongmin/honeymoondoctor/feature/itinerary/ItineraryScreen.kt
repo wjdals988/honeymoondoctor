@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
@@ -186,6 +188,7 @@ fun ItineraryScreen(
                         places = uiState.places,
                         selectedDate = selectedMapDate ?: uiState.days.firstOrNull()?.date,
                         onSelectDay = { selectedMapDate = it },
+                        onOpenEditor = onOpenEditor,
                     )
                     return@Column
                 }
@@ -340,6 +343,7 @@ private fun ItineraryMapView(
     places: List<Place>,
     selectedDate: LocalDate?,
     onSelectDay: (LocalDate) -> Unit,
+    onOpenEditor: (itemId: String?) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         DayChipRow(
@@ -351,8 +355,9 @@ private fun ItineraryMapView(
         val stops = day?.let { ItineraryDayStops.resolve(it.allDayItems, it.timedItems, places) }.orEmpty()
         if (day == null || stops.isEmpty()) {
             EmptyState(
-                title = "이 날에는 좌표가 연결된 일정이 없습니다",
-                description = "일정 편집에서 \"저장된 장소에서 선택\"으로 주변 탭의 장소를 연결해 보세요.",
+                title = "이 날에는 지도에 표시할 일정이 없습니다",
+                description = "주변 탭에서 장소를 저장한 뒤, 일정 편집의 \"저장된 장소에서 선택\"으로 " +
+                    "연결하면 여기에 순서대로 핀이 찍힙니다.",
                 modifier = Modifier.padding(16.dp),
             )
         } else {
@@ -368,15 +373,7 @@ private fun ItineraryMapView(
                 modifier = Modifier.padding(16.dp),
                 mapHeight = 360.dp,
             )
-            val unlinkedCount = day.allDayItems.size + day.timedItems.size - stops.size
-            if (unlinkedCount > 0) {
-                Text(
-                    text = "위치 미확인 ${unlinkedCount}건 — 장소가 연결되지 않은 일정입니다.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-            }
+
             // 지도만으로는 핀의 번호가 무슨 일정인지 알 수 없다. 아래에 순서대로 나열해
             // "지도랑 이것만 보고 움직인다"가 실제로 되게 한다.
             LazyColumn(
@@ -386,6 +383,11 @@ private fun ItineraryMapView(
                 ),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
+                // 지도에 못 찍힌 일정은 숫자로만 알려주면(종전 "위치 미확인 3건") 어떤
+                // 일정인지 알 수 없고 고치러 갈 방법도 없었다. 목록으로 펼치고 탭하면
+                // 바로 그 일정 편집으로 보낸다.
+                val linkedIds = stops.map { it.item.id }.toSet()
+                val unlinked = (day.allDayItems + day.timedItems).filterNot { it.id in linkedIds }
                 items(stops.size, key = { i -> "stop-${stops[i].item.id}" }) { index ->
                     val stop = stops[index]
                     stop.straightLineFromPreviousMeters?.let { meters ->
@@ -412,6 +414,40 @@ private fun ItineraryMapView(
                                 ).joinToString(" · "),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+                if (unlinked.isNotEmpty()) {
+                    item(key = "unlinked-header") {
+                        Text(
+                            text = "지도에 없는 일정 ${unlinked.size}건",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
+                        )
+                    }
+                    items(unlinked.size, key = { i -> "unlinked-${unlinked[i].id}" }) { index ->
+                        val item = unlinked[index]
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onOpenEditor(item.id) }
+                                .padding(vertical = 6.dp),
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(item.title, style = MaterialTheme.typography.bodyLarge)
+                                Text(
+                                    text = "장소 연결 안 됨 — 눌러서 연결",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }

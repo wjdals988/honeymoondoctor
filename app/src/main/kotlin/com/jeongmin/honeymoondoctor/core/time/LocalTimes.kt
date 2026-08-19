@@ -1,5 +1,7 @@
 package com.jeongmin.honeymoondoctor.core.time
 
+import com.jeongmin.honeymoondoctor.domain.model.CityPresets
+
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -52,9 +54,36 @@ object LocalTimes {
 }
 
 /** 이번 여행에서 실제로 쓰는 시간대의 짧은 한국어 라벨. 그 외 시간대는 IANA ID를 그대로 보여준다. */
-fun koreanZoneLabel(zoneId: String): String = when (zoneId) {
-    "Asia/Seoul" -> "한국"
-    "Europe/Prague" -> "프라하"
-    "Europe/Madrid" -> "스페인"
-    else -> zoneId
+/**
+ * IANA 시간대 id를 사람이 읽는 이름으로. 목록은 [CityPresets]에서 파생한다 —
+ * 종전에는 서울·프라하·마드리드 3개만 손으로 매핑해 뒀는데(리브랜딩 전 신혼여행 목적지),
+ * 목적지가 63개로 늘어난 뒤에는 나머지 60개가 화면에 `Asia/Tokyo` 같은 원시 id로
+ * 노출됐다. 프리셋에서 파생하면 도시를 추가할 때 매핑을 따로 손댈 필요가 없다.
+ */
+fun koreanZoneLabel(zoneId: String): String = zoneNameByZoneId[zoneId] ?: zoneId
+
+private val zoneNameByZoneId: Map<String, String> by lazy {
+    CityPresets.all
+        .groupBy { it.timeZoneId }
+        // 한 시간대에 여러 나라가 걸리면(예: 같은 UTC 오프셋) 나라명을 모아 보여준다.
+        .mapValues { (_, presets) -> presets.map { it.countryName }.distinct().joinToString("·") }
+}
+
+/**
+ * 시간대 선택 후보. 종전에는 화면마다 `listOf("Asia/Seoul", "Europe/Prague", "Europe/Madrid")`
+ * 를 하드코딩해, 도쿄 여행인데 드롭다운에 Asia/Tokyo가 없어 **고를 수 없는** 상태였다
+ * (리브랜딩 전 목적지가 그대로 남아 있던 것).
+ *
+ * 이제 이 여행의 도시들이 쓰는 시간대를 후보로 쓰고, 출발지인 한국을 항상 포함한다
+ * ([current]는 이미 선택된 값 — 목록에 없어도 사라지지 않게 함께 넣는다).
+ */
+fun timeZoneChoices(cityZoneIds: List<String>, current: String? = null): List<String> =
+    (listOf("Asia/Seoul") + cityZoneIds + listOfNotNull(current))
+        .filter { it.isNotBlank() }
+        .distinct()
+
+/** 드롭다운 한 줄 표기. 한국어 이름이 없으면 원시 id를 두 번 적지 않는다. */
+fun zoneOptionLabel(zoneId: String): String {
+    val name = koreanZoneLabel(zoneId)
+    return if (name == zoneId) zoneId else "$name ($zoneId)"
 }

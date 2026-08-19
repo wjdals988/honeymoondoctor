@@ -58,6 +58,8 @@ data class ReservationEditUiState(
     val tripId: String? = null,
     val itinerary: List<ItineraryItem> = emptyList(),
     val members: List<TripMember> = emptyList(),
+    /** 시간대 선택 후보를 이 여행의 도시에서 뽑기 위해 필요하다. */
+    val cityZoneIds: List<String> = emptyList(),
     val validationError: String? = null,
 )
 
@@ -69,6 +71,7 @@ class ReservationEditViewModel @Inject constructor(
     tripRepository: TripRepository,
     private val itineraryRepository: ItineraryRepository,
     private val reservationRepository: ReservationRepository,
+    cityRepository: com.jeongmin.honeymoondoctor.domain.repository.CityRepository,
 ) : ViewModel() {
 
     private val editingId: String? = savedStateHandle["reservationId"]
@@ -87,13 +90,15 @@ class ReservationEditViewModel @Inject constructor(
                 combine(
                     itineraryRepository.observeItinerary(trip.id),
                     tripRepository.observeMembers(trip.id),
+                    cityRepository.observeCities(trip.id),
                     validationError,
-                ) { itinerary, members, error ->
+                ) { itinerary, members, cities, error ->
                     ReservationEditUiState(
                         loading = false,
                         tripId = trip.id,
                         itinerary = itinerary,
                         members = members,
+                        cityZoneIds = cities.map { it.timeZoneId },
                         validationError = error,
                     )
                 }

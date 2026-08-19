@@ -57,6 +57,8 @@ import com.jeongmin.honeymoondoctor.domain.model.isReadOnly
 import com.jeongmin.honeymoondoctor.domain.usecase.NextItineraryUrgency
 import com.jeongmin.honeymoondoctor.domain.usecase.TripDaySummary
 import java.time.Duration
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 
 @Composable
 fun HomeScreen(
@@ -70,6 +72,7 @@ fun HomeScreen(
     onOpenReservations: () -> Unit,
     onOpenChecklist: () -> Unit,
     onOpenSyncStatus: () -> Unit,
+    onOpenTripInfo: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -122,7 +125,10 @@ fun HomeScreen(
                 }
             } else if (isCompleted) {
                 // 완료 후에는 기록 열람이 목적이다. "다음 일정"은 없는 개념이라 숨기고
-                // 전체 일정을 맨 위로 올린다.
+                // 전체 일정을 맨 위로 올린다. 그 앞에 이 여행이 어땠는지 숫자로 한 번
+                // 요약한다 — 종전에는 완료 후에도 일정 목록만 있어 "다녀왔다"는 감각이
+                // 전혀 없었고, 공개하기 기능으로 가는 길도 메뉴 깊숙이 묻혀 있었다.
+                TripRecapCard(uiState = uiState, onOpenTripInfo = onOpenTripInfo)
                 TripOverviewSection(
                     uiState = uiState,
                     onOpenItineraryTab = onOpenItineraryTab,
@@ -497,6 +503,59 @@ private fun TodayTimelineSection(uiState: HomeUiState) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+            }
+        }
+    }
+}
+
+/**
+ * 완료된 여행 요약. 이미 홈이 구독 중인 데이터(일정·도시·지출)만 쓴다 — 방문 장소 수도
+ * 넣고 싶었지만 그러려면 홈이 장소 컬렉션까지 구독해야 하고, 홈은 이미 8개를 실시간
+ * 구독해 Firestore 읽기 비용이 백로그(2-6)의 관심사라 넣지 않았다.
+ */
+@Composable
+private fun TripRecapCard(uiState: HomeUiState, onOpenTripInfo: () -> Unit) {
+    val trip = uiState.trip ?: return
+    val dayCount = remember(trip.startDate, trip.endDate) {
+        val start = runCatching { LocalDate.parse(trip.startDate) }.getOrNull()
+        val end = runCatching { LocalDate.parse(trip.endDate) }.getOrNull()
+        if (start != null && end != null && !end.isBefore(start)) {
+            ChronoUnit.DAYS.between(start, end).toInt() + 1
+        } else {
+            null
+        }
+    }
+    val itineraryCount = uiState.tripDays.sumOf { it.itemCount }
+
+    AppCard(tone = CardTone.Highlight, modifier = Modifier.fillMaxWidth()) {
+        Text("다녀온 여행", style = MaterialTheme.typography.titleSmall)
+        Text(
+            text = listOfNotNull(
+                dayCount?.let { "${it}일" },
+                uiState.cityCount.takeIf { it > 0 }?.let { "도시 ${it}곳" },
+                itineraryCount.takeIf { it > 0 }?.let { "일정 ${it}건" },
+            ).joinToString(" · ").ifEmpty { "기록된 내용이 없습니다" },
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+        if (uiState.totalSpentKrw > 0) {
+            Text(
+                text = "총 지출 ${formatWon(uiState.totalSpentKrw)}",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+        // 공개는 완료된 여행에서만 되는 기능인데 여행 정보 화면 깊숙이 있어 발견되기
+        // 어려웠다. 완료 직후가 공개를 생각하는 유일한 시점이라 여기서 안내한다.
+        if (trip.isPublic) {
+            Text(
+                text = "다른 커플에게 공개 중입니다.",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        } else {
+            TextButton(onClick = onOpenTripInfo, modifier = Modifier.padding(top = 4.dp)) {
+                Text("다른 커플에게 공개하기")
             }
         }
     }
