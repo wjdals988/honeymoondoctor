@@ -13,6 +13,7 @@ import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.Place
 import com.jeongmin.honeymoondoctor.domain.model.PlaceCategory
 import com.jeongmin.honeymoondoctor.domain.repository.CityRepository
+import com.jeongmin.honeymoondoctor.domain.repository.ItineraryRepository
 import com.jeongmin.honeymoondoctor.domain.repository.PlaceRepository
 import com.jeongmin.honeymoondoctor.domain.usecase.Haversine
 import com.jeongmin.honeymoondoctor.domain.usecase.ObserveCurrentTrip
@@ -28,6 +29,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
@@ -86,6 +88,7 @@ class NearbyViewModel @Inject constructor(
     cityRepository: CityRepository,
     private val appPreferences: AppPreferences,
     private val locationProvider: LocationProvider,
+    private val itineraryRepository: ItineraryRepository,
 ) : ViewModel() {
 
     private val categoryFilter = MutableStateFlow<PlaceCategory?>(null)
@@ -186,10 +189,23 @@ class NearbyViewModel @Inject constructor(
         }
     }
 
+    /** 삭제 확인 다이얼로그에 보여줄, 이 장소를 연결한 일정 수(스펙 4장: 연쇄 삭제 금지). */
+    suspend fun countItineraryReferences(tripId: String, placeId: String): Int =
+        runCatching { itineraryRepository.observeItinerary(tripId).first().count { it.placeId == placeId } }
+            .getOrDefault(0)
+
+    /**
+     * 장소 삭제. 이 장소를 가리키던 일정의 placeId는 연쇄 삭제하지 않고 참조만 해제한다
+     * (스펙 4장, [com.jeongmin.honeymoondoctor.feature.itinerary.ItineraryViewModel.delete]와
+     * 같은 패턴 — 예약의 linkedItineraryId를 해제하는 방향과 대칭).
+     */
     fun delete(place: Place) {
         val tripId = uiState.value.tripId ?: return
         viewModelScope.launch {
             val deleted = actionError.runReporting("장소를 삭제하지 못했습니다. 완료된 여행은 수정할 수 없습니다.") {
+                itineraryRepository.observeItinerary(tripId).first()
+                    .filter { it.placeId == place.id }
+                    .forEach { itineraryRepository.update(tripId, it.copy(placeId = null)) }
                 placeRepository.delete(tripId, place.id)
             }
             if (deleted) undoDelete.offer(place, "장소를 삭제했습니다.")

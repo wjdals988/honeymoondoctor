@@ -9,10 +9,12 @@ import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryItem
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryStatus
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryType
+import com.jeongmin.honeymoondoctor.domain.model.Place
 import com.jeongmin.honeymoondoctor.domain.model.TripMember
 import com.jeongmin.honeymoondoctor.domain.repository.AuthRepository
 import com.jeongmin.honeymoondoctor.domain.repository.CityRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ItineraryRepository
+import com.jeongmin.honeymoondoctor.domain.repository.PlaceRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
 import com.jeongmin.honeymoondoctor.domain.usecase.ObserveCurrentTrip
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -48,6 +50,7 @@ data class ItineraryEditForm(
     val endTimeZone: String? = null, // null = 시작과 동일
     val location: String = "",
     val address: String = "",
+    val placeId: String? = null,
     val notes: String = "",
     val assigneeUid: String? = null,
     val estimatedKrwText: String = "",
@@ -61,6 +64,7 @@ data class ItineraryEditUiState(
     val tripId: String? = null,
     val cities: List<City> = emptyList(),
     val members: List<TripMember> = emptyList(),
+    val places: List<Place> = emptyList(),
     val validationError: String? = null,
 )
 
@@ -73,6 +77,7 @@ class ItineraryEditViewModel @Inject constructor(
     tripRepository: TripRepository,
     private val cityRepository: CityRepository,
     private val itineraryRepository: ItineraryRepository,
+    private val placeRepository: PlaceRepository,
 ) : ViewModel() {
 
     private val editingItemId: String? = savedStateHandle["itemId"]
@@ -92,13 +97,15 @@ class ItineraryEditViewModel @Inject constructor(
                 combine(
                     cityRepository.observeCities(trip.id),
                     tripRepository.observeMembers(trip.id),
+                    placeRepository.observePlaces(trip.id),
                     validationError,
-                ) { cities, members, error ->
+                ) { cities, members, places, error ->
                     ItineraryEditUiState(
                         loading = false,
                         tripId = trip.id,
                         cities = cities,
                         members = members,
+                        places = places,
                         validationError = error,
                     )
                 }
@@ -166,6 +173,7 @@ class ItineraryEditViewModel @Inject constructor(
             endTimeZone = item.endTimeZone,
             location = item.location.orEmpty(),
             address = item.address.orEmpty(),
+            placeId = item.placeId,
             notes = item.notes.orEmpty(),
             assigneeUid = item.assigneeUid,
             estimatedKrwText = item.estimatedKrw?.toString().orEmpty(),
@@ -242,6 +250,7 @@ class ItineraryEditViewModel @Inject constructor(
             cityId = form.cityId,
             location = form.location.trim().ifEmpty { null },
             address = form.address.trim().ifEmpty { null },
+            placeId = form.placeId,
             status = form.status,
             assigneeUid = form.assigneeUid,
             reservationId = form.reservationId,

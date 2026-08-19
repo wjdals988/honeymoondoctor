@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import org.osmdroid.config.Configuration
@@ -46,6 +47,8 @@ data class MapPin(
     val label: String,
     val emoji: String? = null,
     val pinColor: androidx.compose.ui.graphics.Color? = null,
+    /** 일정 지도 보기(백로그)의 방문 순서 배지. [pinColor]/[emoji]보다 우선한다. */
+    val sequenceNumber: Int? = null,
 )
 
 /**
@@ -56,6 +59,9 @@ val MyLocationPinColor = androidx.compose.ui.graphics.Color(0xFF1E88E5)
 
 /** 상대(파트너) 위치 색. "우리 위치" 화면에서만 쓰인다. */
 val PartnerLocationPinColor = androidx.compose.ui.graphics.Color(0xFFE53935)
+
+/** 일정 지도 보기의 방문 순번 핀 색. 사람 위치 핀(파랑/빨강)과 겹치지 않는 색으로 고른다. */
+val ItinerarySequencePinColor = androidx.compose.ui.graphics.Color(0xFF43A047)
 
 /**
  * 앱 공용 미니맵(오픈스트리트맵/osmdroid — 키·결제 계정 불필요, "월 0원" 유지).
@@ -73,13 +79,15 @@ fun OsmMiniMap(
     pins: List<MapPin>,
     modifier: Modifier = Modifier,
     initialZoom: Double = 17.0,
+    /** 일정 지도 보기처럼 지도가 화면의 메인일 때는 220dp보다 키워서 넘긴다. */
+    mapHeight: Dp = 220.dp,
 ) {
     if (pins.isEmpty()) return
     val shape = MaterialTheme.shapes.medium
     AndroidView(
         modifier = modifier
             .fillMaxWidth()
-            .height(220.dp)
+            .height(mapHeight)
             .clip(shape),
         factory = { context ->
             configureOsmdroid(context)
@@ -104,6 +112,11 @@ fun OsmMiniMap(
                         position = GeoPoint(pin.latitude, pin.longitude)
                         title = pin.label
                         when {
+                            pin.sequenceNumber != null -> {
+                                // 물방울 핀 + 숫자 배지. 사람 핀과 같은 이유로 ANCHOR_BOTTOM.
+                                icon = sequenceBadgeDrawable(map.context, pin.sequenceNumber)
+                                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                            }
                             pin.pinColor != null -> {
                                 // 물방울 핀이라 뾰족한 끝이 좌표를 가리킨다 — 이모지와
                                 // 달리 ANCHOR_BOTTOM.
@@ -207,6 +220,55 @@ private fun personPinDrawable(
         val baseline = headCenterY - (textPaint.descent() + textPaint.ascent()) / 2f
         canvas.drawText(initial.uppercase(), cx, baseline, textPaint)
     }
+    return BitmapDrawable(context.resources, bitmap)
+}
+
+/**
+ * 방문 순번용 물방울 핀. [personPinDrawable]과 같은 모양이되, 안에 문자 1개가 아니라
+ * 두 자리까지 갈 수 있는 순번 숫자를 그린다(글자 하나만 받는 [Char] 대신 [Int]를 받아
+ * 별도 함수로 분리했다). 두 자리 이상은 폭이 좁아 글자 크기를 살짝 줄인다.
+ */
+private fun sequenceBadgeDrawable(context: Context, number: Int): BitmapDrawable {
+    val density = context.resources.displayMetrics.density
+    val widthPx = (34 * density)
+    val heightPx = (44 * density)
+    val bitmap = Bitmap.createBitmap(widthPx.toInt(), heightPx.toInt(), Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val cx = widthPx / 2f
+    val strokeWidth = 1.5f * density
+    val headRadius = widthPx / 2f - strokeWidth
+    val headCenterY = headRadius + strokeWidth
+
+    val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = ItinerarySequencePinColor.toArgb()
+        style = Paint.Style.FILL
+    }
+    val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.WHITE
+        style = Paint.Style.STROKE
+        this.strokeWidth = strokeWidth
+    }
+    val path = Path().apply {
+        addCircle(cx, headCenterY, headRadius, Path.Direction.CW)
+        val tailHalfWidth = headRadius * 0.5f
+        val tailStartY = headCenterY + headRadius * 0.8f
+        moveTo(cx - tailHalfWidth, tailStartY)
+        lineTo(cx, heightPx - strokeWidth)
+        lineTo(cx + tailHalfWidth, tailStartY)
+        close()
+    }
+    canvas.drawPath(path, fillPaint)
+    canvas.drawCircle(cx, headCenterY, headRadius, strokePaint)
+
+    val text = number.toString()
+    val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.WHITE
+        textSize = if (text.length > 1) headRadius * 0.85f else headRadius * 1.1f
+        textAlign = Paint.Align.CENTER
+        isFakeBoldText = true
+    }
+    val baseline = headCenterY - (textPaint.descent() + textPaint.ascent()) / 2f
+    canvas.drawText(text, cx, baseline, textPaint)
     return BitmapDrawable(context.resources, bitmap)
 }
 

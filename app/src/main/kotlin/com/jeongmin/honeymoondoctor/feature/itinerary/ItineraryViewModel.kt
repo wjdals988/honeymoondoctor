@@ -8,9 +8,11 @@ import com.jeongmin.honeymoondoctor.core.error.runReporting
 import com.jeongmin.honeymoondoctor.core.time.LocalTimes
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryItem
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryStatus
+import com.jeongmin.honeymoondoctor.domain.model.Place
 import com.jeongmin.honeymoondoctor.domain.model.Trip
 import com.jeongmin.honeymoondoctor.domain.repository.AuthRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ItineraryRepository
+import com.jeongmin.honeymoondoctor.domain.repository.PlaceRepository
 import com.jeongmin.honeymoondoctor.domain.repository.ReservationRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
 import com.jeongmin.honeymoondoctor.domain.usecase.ItineraryConflictDetector
@@ -46,6 +48,7 @@ data class ItineraryUiState(
     val trip: Trip? = null,
     val days: List<ItineraryDay> = emptyList(),
     val conflictIds: Set<String> = emptySet(),
+    val places: List<Place> = emptyList(),
     val actionError: String? = null,
 )
 
@@ -59,6 +62,7 @@ class ItineraryViewModel @Inject constructor(
     tripRepository: TripRepository,
     private val itineraryRepository: ItineraryRepository,
     private val reservationRepository: ReservationRepository,
+    private val placeRepository: PlaceRepository,
 ) : ViewModel() {
 
     private val actionError = ActionErrorState()
@@ -77,13 +81,15 @@ class ItineraryViewModel @Inject constructor(
                     } else {
                         combine(
                             itineraryRepository.observeItinerary(trip.id),
+                            placeRepository.observePlaces(trip.id),
                             actionError.message,
-                        ) { items, error ->
+                        ) { items, places, error ->
                             ItineraryUiState(
                                 loading = false,
                                 trip = trip,
                                 days = buildDays(trip, items),
                                 conflictIds = ItineraryConflictDetector.findConflictingIds(items),
+                                places = places,
                                 actionError = error,
                             )
                         }

@@ -238,10 +238,22 @@ fun ItineraryEditScreen(
                 title = "장소·담당·경비 입력",
                 initiallyExpanded = currentForm.location.isNotBlank() ||
                     currentForm.address.isNotBlank() ||
+                    currentForm.placeId != null ||
                     currentForm.assigneeUid != null ||
                     currentForm.estimatedKrwText.isNotBlank() ||
                     currentForm.notes.isNotBlank(),
             ) {
+                // 주변 탭에 이미 좌표를 가진 장소가 있으면 연결해 백로그(일정 지도 보기)에서
+                // 지도에 핀을 찍을 수 있게 한다. 아래 장소명·주소는 자유 텍스트라 계속 별도로 둔다.
+                DropdownSelector(
+                    label = "저장된 장소에서 선택",
+                    selectedLabel = uiState.places.firstOrNull { it.id == currentForm.placeId }?.name
+                        ?: "연결 안 함",
+                    options = listOf(null) + uiState.places,
+                    optionLabel = { it?.name ?: "연결 안 함" },
+                    onSelect = { place -> viewModel.updateForm { it.copy(placeId = place?.id) } },
+                )
+
                 OutlinedTextField(
                     value = currentForm.location,
                     onValueChange = { value -> viewModel.updateForm { it.copy(location = value) } },

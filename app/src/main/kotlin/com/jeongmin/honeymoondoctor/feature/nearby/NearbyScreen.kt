@@ -82,6 +82,18 @@ fun NearbyScreen(
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
     var deleteTarget by remember { mutableStateOf<Place?>(null) }
+    var deletePlaceReferenceCount by remember { mutableStateOf(0) }
+    // 삭제 확인을 띄우기 전에 이 장소를 연결한 일정 수를 세어 경고 문구에 넣는다
+    // (TripInfoScreen의 도시 삭제 참조 카운트와 같은 패턴).
+    LaunchedEffect(deleteTarget) {
+        val target = deleteTarget
+        val tripId = uiState.tripId
+        deletePlaceReferenceCount = if (target != null && tripId != null) {
+            viewModel.countItineraryReferences(tripId, target.id)
+        } else {
+            0
+        }
+    }
     val snackbarHostState = rememberActionErrorSnackbar(uiState.actionError, viewModel::clearActionError)
     val pendingUndo by viewModel.undoDelete.pending.collectAsState()
     UndoDeleteSnackbarEffect(
@@ -262,7 +274,17 @@ fun NearbyScreen(
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
             title = { Text("장소 삭제") },
-            text = { Text("\"${target.name}\" 장소를 삭제할까요?") },
+            text = {
+                Text(
+                    buildString {
+                        append("\"${target.name}\" 장소를 삭제할까요?")
+                        if (deletePlaceReferenceCount > 0) {
+                            append("\n\n이 장소를 연결한 일정 ${deletePlaceReferenceCount}건은 ")
+                            append("삭제되지 않고 \"연결 안 함\"으로 남습니다.")
+                        }
+                    },
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
                     haptic.confirm()

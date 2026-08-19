@@ -31,6 +31,7 @@ data class DemoItineraryItemDto(
     val reservationId: String? = null,
     val estimatedKrw: Long? = null,
     val notes: String? = null,
+    val placeId: String? = null,
 )
 
 fun ItineraryItem.toDemoDto() = DemoItineraryItemDto(
@@ -50,6 +51,7 @@ fun ItineraryItem.toDemoDto() = DemoItineraryItemDto(
     reservationId = reservationId,
     estimatedKrw = estimatedKrw,
     notes = notes,
+    placeId = placeId,
 )
 
 fun DemoItineraryItemDto.toDomain() = ItineraryItem(
@@ -69,4 +71,5 @@ fun DemoItineraryItemDto.toDomain() = ItineraryItem(
     reservationId = reservationId,
     estimatedKrw = estimatedKrw,
     notes = notes,
+    placeId = placeId,
 )

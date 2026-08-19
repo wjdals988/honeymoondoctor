@@ -62,6 +62,8 @@ import com.jeongmin.honeymoondoctor.core.ui.CardTone
 import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
+import com.jeongmin.honeymoondoctor.core.ui.MapPin
+import com.jeongmin.honeymoondoctor.core.ui.OsmMiniMap
 import com.jeongmin.honeymoondoctor.core.ui.SkeletonBar
 import com.jeongmin.honeymoondoctor.core.ui.SkeletonBlock
 import com.jeongmin.honeymoondoctor.core.ui.TabHeader
@@ -72,11 +74,16 @@ import com.jeongmin.honeymoondoctor.core.ui.UndoDeleteSnackbarEffect
 import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryItem
 import com.jeongmin.honeymoondoctor.domain.model.ItineraryStatus
+import com.jeongmin.honeymoondoctor.domain.model.Place
+import com.jeongmin.honeymoondoctor.domain.usecase.ItineraryDayStops
 import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.coroutines.launch
+
+/** 목록/지도 두 가지로 볼 수 있다(백로그: 일정 지도 보기 — 급할 때 지도만 보고 움직이기). */
+private enum class ItineraryViewMode { LIST, MAP }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -92,6 +99,15 @@ fun ItineraryScreen(
     var deleteTarget by remember { mutableStateOf<ItineraryItem?>(null) }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    var viewMode by remember { mutableStateOf(ItineraryViewMode.LIST) }
+    // 지도 모드에서 보고 있는 날짜. 목록 모드의 스크롤 위치와는 별개로 관리한다.
+    var selectedMapDate by remember { mutableStateOf<LocalDate?>(null) }
+    LaunchedEffect(uiState.days) {
+        if (selectedMapDate == null && uiState.days.isNotEmpty()) {
+            val today = LocalDate.now()
+            selectedMapDate = uiState.days.firstOrNull { it.date == today }?.date ?: uiState.days.first().date
+        }
+    }
 
     // 날짜별 헤더가 목록 몇 번째인지 세어 그 위치로 보낸다(날짜 칩을 눌렀을 때도 같은
     // 계산을 쓴다 — indexOfDay). 구조를 바꾸면 그 계산도 같이 바뀐다.
@@ -146,11 +162,33 @@ fun ItineraryScreen(
             ) { Text("여행 정보를 불러올 수 없습니다.") }
 
             else -> Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-                TabHeader(
-                    Icons.AutoMirrored.Filled.List,
-                    "일정",
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
-                )
+                ) {
+                    TabHeader(Icons.AutoMirrored.Filled.List, "일정", modifier = Modifier.weight(1f))
+                    // 백로그: 일정 지도 보기 — 급할 때는 지도랑 일정만 보고 움직일 수 있게.
+                    FilterChip(
+                        selected = viewMode == ItineraryViewMode.LIST,
+                        onClick = { viewMode = ItineraryViewMode.LIST },
+                        label = { Text("목록") },
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    FilterChip(
+                        selected = viewMode == ItineraryViewMode.MAP,
+                        onClick = { viewMode = ItineraryViewMode.MAP },
+                        label = { Text("지도") },
+                    )
+                }
+                if (viewMode == ItineraryViewMode.MAP) {
+                    ItineraryMapView(
+                        days = uiState.days,
+                        places = uiState.places,
+                        selectedDate = selectedMapDate ?: uiState.days.firstOrNull()?.date,
+                        onSelectDay = { selectedMapDate = it },
+                    )
+                    return@Column
+                }
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
@@ -166,7 +204,7 @@ fun ItineraryScreen(
                     stickyHeader {
                         DayChipRow(
                             days = uiState.days,
-                            today = LocalDate.now(),
+                            selectedDate = LocalDate.now(),
                             onSelectDay = { date ->
                                 indexOfDay(uiState.days, date)?.let { index ->
                                     coroutineScope.launch { listState.animateScrollToItem(index) }
@@ -263,7 +301,7 @@ private val dayChipDateFormatter = DateTimeFormatter.ofPattern("M/d")
 @Composable
 private fun DayChipRow(
     days: List<ItineraryDay>,
-    today: LocalDate,
+    selectedDate: LocalDate,
     onSelectDay: (LocalDate) -> Unit,
 ) {
     Row(
@@ -275,9 +313,8 @@ private fun DayChipRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         days.forEach { day ->
-            val isToday = day.date == today
             FilterChip(
-                selected = isToday,
+                selected = day.date == selectedDate,
                 onClick = { onSelectDay(day.date) },
                 label = {
                     Text(
@@ -288,6 +325,58 @@ private fun DayChipRow(
                     )
                 },
             )
+        }
+    }
+}
+
+/**
+ * 일정 지도 보기(백로그) — 급할 때는 지도랑 일정만 보고 움직일 수 있게, 선택한 하루의
+ * 일정 중 저장된 장소(Place)가 연결된 것만 방문 순서 번호 핀으로 찍는다. 220dp 미니맵이
+ * 아니라 [OsmMiniMap]의 `mapHeight`를 키워 지도를 화면의 메인으로 둔다.
+ */
+@Composable
+private fun ItineraryMapView(
+    days: List<ItineraryDay>,
+    places: List<Place>,
+    selectedDate: LocalDate?,
+    onSelectDay: (LocalDate) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        DayChipRow(
+            days = days,
+            selectedDate = selectedDate ?: LocalDate.now(),
+            onSelectDay = onSelectDay,
+        )
+        val day = days.firstOrNull { it.date == selectedDate }
+        val stops = day?.let { ItineraryDayStops.resolve(it.allDayItems, it.timedItems, places) }.orEmpty()
+        if (day == null || stops.isEmpty()) {
+            EmptyState(
+                title = "이 날에는 좌표가 연결된 일정이 없습니다",
+                description = "일정 편집에서 \"저장된 장소에서 선택\"으로 주변 탭의 장소를 연결해 보세요.",
+                modifier = Modifier.padding(16.dp),
+            )
+        } else {
+            OsmMiniMap(
+                pins = stops.map { stop ->
+                    MapPin(
+                        latitude = stop.place.latitude!!,
+                        longitude = stop.place.longitude!!,
+                        label = "${stop.sequenceNumber}. ${stop.item.title}",
+                        sequenceNumber = stop.sequenceNumber,
+                    )
+                },
+                modifier = Modifier.padding(16.dp),
+                mapHeight = 360.dp,
+            )
+            val unlinkedCount = day.allDayItems.size + day.timedItems.size - stops.size
+            if (unlinkedCount > 0) {
+                Text(
+                    text = "위치 미확인 ${unlinkedCount}건 — 장소가 연결되지 않은 일정입니다.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
         }
     }
 }

@@ -33,6 +33,7 @@ internal fun ItineraryItem.toFirestoreMap(): Map<String, Any?> = mapOf(
     "reservationId" to reservationId,
     "estimatedKrw" to estimatedKrw,
     "notes" to notes,
+    "placeId" to placeId,
 )
 
 internal fun DocumentSnapshot.toItineraryItem(): ItineraryItem? {
@@ -57,5 +58,6 @@ internal fun DocumentSnapshot.toItineraryItem(): ItineraryItem? {
         reservationId = getString("reservationId"),
         estimatedKrw = getLong("estimatedKrw"),
         notes = getString("notes"),
+        placeId = getString("placeId"),
     )
 }

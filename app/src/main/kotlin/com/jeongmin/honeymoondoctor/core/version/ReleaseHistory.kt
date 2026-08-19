@@ -20,6 +20,16 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.6.9",
+            versionCode = 33,
+            date = "2026-08-19",
+            changes = listOf(
+                "일정 탭에 목록/지도 보기를 추가했습니다. 주변 탭의 저장된 장소를 일정에 " +
+                    "연결하면, 그날 방문할 순서대로 번호가 매겨진 핀이 지도에 표시됩니다. " +
+                    "급할 때 지도만 보고 움직일 수 있습니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.6.8",
             versionCode = 32,
             date = "2026-08-13",

@@ -41,6 +41,8 @@ data class ItineraryItem(
     val reservationId: String? = null,
     val estimatedKrw: Long? = null,
     val notes: String? = null,
+    /** 주변 탭에 저장된 [Place]와의 연결(백로그: 일정 지도 보기). 좌표가 있어야 지도에 찍힌다. */
+    val placeId: String? = null,
 ) {
     val effectiveEndTimeZone: String get() = endTimeZone ?: timeZone
 }
