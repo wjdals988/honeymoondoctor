@@ -311,6 +311,12 @@ class FirebaseTripRepository @Inject constructor(
             .await()
     }
 
+    override suspend fun updateMyMemberDisplayName(tripId: String, uid: String, name: String) {
+        firestore.collection(TRIPS).document(tripId).collection(MEMBERS).document(uid)
+            .update("displayName", name)
+            .await()
+    }
+
     private fun DocumentSnapshot.toTrip(): Trip? {
         val ownerId = getString("ownerId") ?: return null
         @Suppress("UNCHECKED_CAST")

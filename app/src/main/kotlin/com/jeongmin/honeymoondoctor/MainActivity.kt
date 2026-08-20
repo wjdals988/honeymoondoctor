@@ -38,12 +38,19 @@ class MainActivity : ComponentActivity() {
      * 값을 지울 필요는 없다 — 참여 버튼을 누르지 않는 한 그냥 입력창에 남아있을 뿐이다. */
     private var pendingInviteCodeFromLink by mutableStateOf<String?>(null)
 
+    /** 쪽지 알림을 탭해서 열렸다는 신호(honeymoondoctor://notes). 로그인 후 5탭 화면이
+     * 뜨는 즉시 쪽지함으로 이동하고 나면 [HoneymoonDoctorAppRoot]가 false로 되돌린다. */
+    private var pendingOpenNotes by mutableStateOf(false)
+
     private fun extractInviteCodeFrom(intent: Intent?): String? =
         intent?.data?.let(InviteCode::extractFromLink)
+
+    private fun isOpenNotesIntent(intent: Intent?): Boolean = intent?.data?.host == "notes"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         pendingInviteCodeFromLink = extractInviteCodeFrom(intent)
+        pendingOpenNotes = isOpenNotesIntent(intent)
         enableEdgeToEdge()
         // "우리 위치" 자동 공유. RESUMED 동안만 돌고 백그라운드 전환 시 코루틴이 취소된다 —
         // 어떤 모드든 앱을 보고 있는 동안만 전송된다는 보장이 이 한 줄의 위치에서 나온다.
@@ -67,7 +74,11 @@ class MainActivity : ComponentActivity() {
             }
             HoneymoonDoctorTheme(darkTheme = darkTheme) {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    AuthGate(prefillInviteCode = pendingInviteCodeFromLink)
+                    AuthGate(
+                        prefillInviteCode = pendingInviteCodeFromLink,
+                        openNotesRequest = pendingOpenNotes,
+                        onOpenNotesConsumed = { pendingOpenNotes = false },
+                    )
                 }
             }
         }
@@ -78,5 +89,6 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         extractInviteCodeFrom(intent)?.let { pendingInviteCodeFromLink = it }
+        if (isOpenNotesIntent(intent)) pendingOpenNotes = true
     }
 }

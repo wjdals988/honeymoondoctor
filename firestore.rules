@@ -94,10 +94,15 @@ service cloud.firestore {
       allow delete: if isTripOwner(tripId) && resource.data.get('isPublic', false) == false;
 
       // ── trips/{tripId}/members/{uid} ────────────────────────────
-      // 구성원 문서는 승인 트랜잭션의 일부로 소유자만 생성·수정한다.
+      // 구성원 문서는 승인 트랜잭션의 일부로 소유자가 생성한다.
       match /members/{memberUid} {
         allow read: if isTripMember(tripId);
-        allow create, update: if isTripOwner(tripId);
+        allow create: if isTripOwner(tripId);
+        // 수정: 소유자는 무엇이든(역할 변경 등), 본인은 자기 displayName(닉네임)만 —
+        // 상대의 표시 이름을 위조하거나 role을 스스로 바꾸지 못하게 필드 단위로 제한한다.
+        allow update: if isTripOwner(tripId) ||
+          (isTripMember(tripId) && request.auth.uid == memberUid &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName']));
         // 본인 탈퇴 시 자기 구성원 문서는 스스로 지울 수 있다(소유자는 여전히 아무 구성원이나 지울 수 있음).
         allow delete: if isTripOwner(tripId) || (isSignedIn() && request.auth.uid == memberUid);
       }

@@ -3,8 +3,11 @@ package com.jeongmin.honeymoondoctor.core.notification
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -41,12 +44,24 @@ object NoteNotifier {
             return
         }
         ensureChannel(context)
+        val openNotesIntent = Intent(Intent.ACTION_VIEW, Uri.parse("honeymoondoctor://notes")).apply {
+            setPackage(context.packageName)
+        }
+        val contentIntent = PendingIntent.getActivity(
+            context,
+            notificationId,
+            openNotesIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
         val notification = NotificationCompat.Builder(context, NOTE_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("$senderName 님의 쪽지")
+            // "OO 님의 쪽지"(명사형)보다 이모지 하나로 말 건네는 느낌을 준다 — 이 앱의
+            // 다른 곳(온보딩 🧳💕)과 같은 톤.
+            .setContentTitle("💌 $senderName")
             .setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
+            .setContentIntent(contentIntent)
             .build()
         NotificationManagerCompat.from(context).notify(notificationId, notification)
     }

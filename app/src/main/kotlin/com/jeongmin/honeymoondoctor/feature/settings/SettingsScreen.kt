@@ -14,13 +14,19 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -28,6 +34,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.ui.AppCard
 import com.jeongmin.honeymoondoctor.core.ui.ChipSelector
 import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
+import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.data.local.prefs.ThemeMode
 
 /** 출발 여유 선택지. 공항 3시간 전 도착 같은 큰 여유까지 흔한 범위만 늘어놓는다. */
@@ -47,8 +54,11 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = rememberActionErrorSnackbar(uiState.actionError, viewModel::clearActionError)
+    var nickname by remember(uiState.displayName) { mutableStateOf(uiState.displayName) }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("설정") },
@@ -68,6 +78,27 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            AppCard(modifier = Modifier.fillMaxWidth()) {
+                SectionHeader(title = "계정")
+                OutlinedTextField(
+                    value = nickname,
+                    onValueChange = { nickname = it },
+                    label = { Text("닉네임") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+                Text(
+                    text = "상대에게 보이는 이름입니다. 지금 보고 있는 여행에도 함께 반영됩니다 — " +
+                        "예전에 다녀온 여행의 기록은 그때 이름으로 그대로 남습니다.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                TextButton(
+                    onClick = { viewModel.updateDisplayName(nickname) },
+                    enabled = nickname.isNotBlank() && nickname != uiState.displayName,
+                ) { Text("저장") }
+            }
+
             AppCard(modifier = Modifier.fillMaxWidth()) {
                 SectionHeader(title = "화면")
                 ChipSelector(

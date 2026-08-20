@@ -34,4 +34,9 @@ class DemoAuthRepository @Inject constructor() : AuthRepository {
 
     override suspend fun reauthenticate(idToken: String): Result<Unit> =
         Result.failure(UnsupportedOperationException("데모 모드에서는 재인증이 필요하지 않습니다."))
+
+    override suspend fun updateDisplayName(name: String): Result<Unit> = runCatching {
+        _currentUser.value = _currentUser.value?.copy(displayName = name)
+            ?: throw IllegalStateException("로그인된 사용자가 없습니다.")
+    }
 }

@@ -63,4 +63,12 @@ interface TripRepository {
 
     /** 여행 이름·기간·기본 통화를 수정한다. 소유자만 호출 가능(규칙에서 강제), 완료된 여행은 UI에서 막는다. */
     suspend fun updateTripInfo(tripId: String, name: String, startDate: String, endDate: String, defaultCurrency: String)
+
+    /**
+     * 닉네임을 바꿀 때 지금 보고 있는 여행의 내 구성원 표시 이름만 함께 갱신한다(계정
+     * 자체의 닉네임은 [AuthRepository.updateDisplayName]이 관리). 본인 문서만 고칠 수
+     * 있다(규칙에서 강제) — 과거 참여했던 다른 여행의 기록은 그 시점 이름으로 그대로
+     * 남는다, 완료된 여행 기록을 뒤늦게 바꾸지 않는다는 기존 원칙과 같다.
+     */
+    suspend fun updateMyMemberDisplayName(tripId: String, uid: String, name: String)
 }

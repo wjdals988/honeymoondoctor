@@ -5,6 +5,7 @@ import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.UserProfileChangeRequest
 import com.jeongmin.honeymoondoctor.domain.model.AuthUser
 import com.jeongmin.honeymoondoctor.domain.repository.AuthRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -58,6 +59,14 @@ class FirebaseAuthRepository @Inject constructor(
     override suspend fun reauthenticate(idToken: String): Result<Unit> = runCatching {
         val user = firebaseAuth.currentUser ?: throw IllegalStateException("로그인된 사용자가 없습니다.")
         user.reauthenticate(GoogleAuthProvider.getCredential(idToken, null)).await()
+    }
+
+    override suspend fun updateDisplayName(name: String): Result<Unit> = runCatching {
+        val user = firebaseAuth.currentUser ?: throw IllegalStateException("로그인된 사용자가 없습니다.")
+        user.updateProfile(UserProfileChangeRequest.Builder().setDisplayName(name).build()).await()
+        // updateProfile은 AuthStateListener를 트리거하지 않는다(ID 토큰이 안 바뀌므로) —
+        // 여기서 직접 갱신해야 화면이 새 닉네임을 바로 반영한다.
+        _currentUser.value = firebaseAuth.currentUser?.toAuthUser()
     }
 
     private fun com.google.firebase.auth.FirebaseUser.toAuthUser() = AuthUser(

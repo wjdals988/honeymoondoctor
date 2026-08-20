@@ -19,4 +19,11 @@ interface AuthRepository {
 
     /** 최근 로그인 요구 오류(회원 탈퇴 등 민감한 작업 전)를 해소하기 위한 재인증. */
     suspend fun reauthenticate(idToken: String): Result<Unit>
+
+    /**
+     * 닉네임(표시 이름)을 계정 전역으로 바꾼다. Google 계정 자체의 프로필은 건드리지
+     * 않는다 — Firebase Auth가 로그인 시 복사해 둔 로컬 레코드만 덮어쓴다.
+     * 현재 참여 중인 여행의 구성원 표시 이름에 반영하는 것은 호출자(설정 화면)의 몫이다.
+     */
+    suspend fun updateDisplayName(name: String): Result<Unit>
 }

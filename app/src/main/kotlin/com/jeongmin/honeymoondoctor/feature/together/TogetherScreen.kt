@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -29,6 +30,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -199,6 +201,18 @@ fun TogetherScreen(
                     Icon(Icons.Filled.Place, contentDescription = null)
                     Spacer(Modifier.width(6.dp))
                     Text(if (uiState.sharing) "위치 확인 중…" else "지금 내 위치 공유하기")
+                }
+                // 위 "공유하기"는 이 화면의 실시간 핀을 갱신한다 — 상대가 지금 이 화면을
+                // 보고 있어야 바로 안다. "역까지 데리러 와줘"처럼 그 순간 한 번 전달하면
+                // 되는 말은, 상대가 나중에 열어도 남는 쪽지 쪽이 더 맞는 채널이라 분리한다.
+                OutlinedButton(
+                    onClick = viewModel::sendMyLocationAsNote,
+                    enabled = !uiState.sharing,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.Message, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("내 위치를 쪽지로 보내기")
                 }
             }
         }

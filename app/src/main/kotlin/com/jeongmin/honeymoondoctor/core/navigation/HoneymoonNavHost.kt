@@ -18,6 +18,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -94,10 +95,23 @@ private fun placeEditRoute(placeId: String): String = "$ROUTE_PLACE_EDIT?placeId
 
 /** 데모 모드 배너는 AuthGate가 로그인/여행설정 화면을 포함해 항상 최상단에 그린다. */
 @Composable
-fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
+fun HoneymoonDoctorAppRoot(
+    // 쪽지 알림을 탭해서 열렸을 때 쪽지함으로 바로 이동한다(MainActivity의 딥링크 처리).
+    // 로그인 전이었다면 로그인 후 이 5탭 화면이 처음 그려지는 시점에 소비된다.
+    openNotesRequest: Boolean = false,
+    onOpenNotesConsumed: () -> Unit = {},
+    viewModel: AppRootViewModel = hiltViewModel(),
+) {
     val isDemoMode = viewModel.isDemoMode
     val navController = rememberNavController()
     val isReadOnly by viewModel.isTripReadOnly.collectAsState()
+
+    LaunchedEffect(openNotesRequest) {
+        if (openNotesRequest) {
+            navController.navigate(ROUTE_NOTES)
+            onOpenNotesConsumed()
+        }
+    }
 
     CompositionLocalProvider(LocalTripReadOnly provides isReadOnly) {
     Scaffold(

@@ -40,6 +40,13 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="honeymoondoctor" android:host="join" />
             </intent-filter>
+            <!-- 쪽지 알림을 탭했을 때 쪽지함으로 바로 이동하기 위한 내부용 딥링크(앱의
+                 PendingIntent만 사용, 외부 링크로는 안 노출되므로 BROWSABLE 불필요). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="honeymoondoctor" android:host="notes" />
+            </intent-filter>
         </activity>
 
         <!-- 바우처 파일을 기기 내부 저장소에서 FileProvider로만 연다. 외부 앱과 파일 시스템 경로를 직접 공유하지 않는다. -->

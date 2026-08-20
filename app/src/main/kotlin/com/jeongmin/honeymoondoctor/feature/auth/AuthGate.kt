@@ -31,7 +31,12 @@ import com.jeongmin.honeymoondoctor.feature.triplist.TripListScreen
  * [safeDrawingInsets]를 적용한다 — 전체에 걸면 Scaffold와 이중으로 적용된다.
  */
 @Composable
-fun AuthGate(prefillInviteCode: String? = null, viewModel: AuthGateViewModel = hiltViewModel()) {
+fun AuthGate(
+    prefillInviteCode: String? = null,
+    openNotesRequest: Boolean = false,
+    onOpenNotesConsumed: () -> Unit = {},
+    viewModel: AuthGateViewModel = hiltViewModel(),
+) {
     Column {
         if (viewModel.demoModeManager.isDemoMode) {
             DemoModeBanner()
@@ -39,13 +44,18 @@ fun AuthGate(prefillInviteCode: String? = null, viewModel: AuthGateViewModel = h
         when (viewModel.hasSeenOnboarding.collectAsState().value) {
             null -> LoadingIndicator()
             false -> OnboardingScreen(onDone = viewModel::markOnboardingSeen, modifier = safeDrawingInsets())
-            true -> AuthGateContent(viewModel, prefillInviteCode)
+            true -> AuthGateContent(viewModel, prefillInviteCode, openNotesRequest, onOpenNotesConsumed)
         }
     }
 }
 
 @Composable
-private fun AuthGateContent(viewModel: AuthGateViewModel, prefillInviteCode: String?) {
+private fun AuthGateContent(
+    viewModel: AuthGateViewModel,
+    prefillInviteCode: String?,
+    openNotesRequest: Boolean,
+    onOpenNotesConsumed: () -> Unit,
+) {
     when (val state = viewModel.state.collectAsState().value) {
         is AuthGateState.Loading -> LoadingIndicator()
         is AuthGateState.NeedsLogin -> {
@@ -117,7 +127,10 @@ private fun AuthGateContent(viewModel: AuthGateViewModel, prefillInviteCode: Str
                     modifier = safeDrawingInsets(),
                 )
             }
-        is AuthGateState.Ready -> HoneymoonDoctorAppRoot()
+        is AuthGateState.Ready -> HoneymoonDoctorAppRoot(
+            openNotesRequest = openNotesRequest,
+            onOpenNotesConsumed = onOpenNotesConsumed,
+        )
     }
 }
 

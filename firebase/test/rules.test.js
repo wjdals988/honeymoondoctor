@@ -577,3 +577,39 @@ test("쪽지: 구성원은 컬렉션을 list 쿼리로 열 수 있다(SyncStatus
   const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
   await assertSucceeds(getDocs(collection(db, "trips", TRIP_ID, "notes")));
 });
+
+// ── 닉네임(구성원 표시 이름 자기 수정) ──────────────────────────────
+
+test("닉네임: 구성원은 자기 displayName만 스스로 바꿀 수 있다", async () => {
+  const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
+  await assertSucceeds(
+    updateDoc(doc(db, "trips", TRIP_ID, "members", PARTNER_UID), { displayName: "새 닉네임" }),
+  );
+});
+
+test("닉네임: 다른 사람의 displayName은 바꿀 수 없다", async () => {
+  const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
+  await assertFails(
+    updateDoc(doc(db, "trips", TRIP_ID, "members", OWNER_UID), { displayName: "가로채기" }),
+  );
+});
+
+test("닉네임: displayName과 함께 role 등 다른 필드는 스스로 못 바꾼다", async () => {
+  const db = testEnv.authenticatedContext(PARTNER_UID).firestore();
+  await assertFails(
+    updateDoc(doc(db, "trips", TRIP_ID, "members", PARTNER_UID), {
+      displayName: "새 닉네임",
+      role: "OWNER",
+    }),
+  );
+});
+
+test("닉네임: 소유자는 구성원의 displayName·role을 모두 바꿀 수 있다", async () => {
+  const db = testEnv.authenticatedContext(OWNER_UID).firestore();
+  await assertSucceeds(
+    updateDoc(doc(db, "trips", TRIP_ID, "members", PARTNER_UID), {
+      displayName: "소유자가 정정",
+      role: "MEMBER",
+    }),
+  );
+});

@@ -9,13 +9,16 @@ import com.jeongmin.honeymoondoctor.data.local.prefs.AppPreferences
 import com.jeongmin.honeymoondoctor.data.local.prefs.LocationShareMode
 import com.jeongmin.honeymoondoctor.domain.model.MemberLocation
 import com.jeongmin.honeymoondoctor.domain.model.TripMember
+import com.jeongmin.honeymoondoctor.domain.model.TripNote
 import com.jeongmin.honeymoondoctor.domain.repository.AuthRepository
 import com.jeongmin.honeymoondoctor.domain.repository.MemberLocationRepository
+import com.jeongmin.honeymoondoctor.domain.repository.TripNoteRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
 import com.jeongmin.honeymoondoctor.domain.usecase.Haversine
 import com.jeongmin.honeymoondoctor.domain.usecase.ObserveCurrentTrip
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
+import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,6 +62,7 @@ class TogetherViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val locationProvider: LocationProvider,
     private val appPreferences: AppPreferences,
+    private val tripNoteRepository: TripNoteRepository,
 ) : ViewModel() {
 
     private val actionError = ActionErrorState()
@@ -141,6 +145,35 @@ class TogetherViewModel @Inject constructor(
                         latitude = current.latitude,
                         longitude = current.longitude,
                         sharedAt = Instant.now(),
+                    ),
+                )
+            }
+            sharing.value = false
+        }
+    }
+
+    /**
+     * 지금 위치를 구글 지도 링크로 만들어 쪽지로 보낸다. "우리 위치"의 실시간 공유(핀)와
+     * 달리 쪽지는 상대가 앱을 안 보고 있어도 "다음에 열 때" 남는다 — "역까지 데리러 와줘"
+     * 처럼 그 순간 한 번 전달하면 되는 말에 더 맞는 채널이라 별도 버튼으로 둔다.
+     */
+    fun sendMyLocationAsNote() {
+        val tripId = uiState.value.tripId ?: return
+        val uid = uiState.value.myUid ?: return
+        if (sharing.value) return
+        sharing.value = true
+        viewModelScope.launch {
+            actionError.runReporting("위치를 가져오지 못했습니다. 위치 권한과 GPS를 확인해 주세요.") {
+                val current = locationProvider.refreshCurrentLocation()
+                    ?: error("위치를 가져오지 못했습니다. 위치 권한과 GPS를 확인해 주세요.")
+                val mapsLink = "https://maps.google.com/?q=${current.latitude},${current.longitude}"
+                tripNoteRepository.send(
+                    tripId,
+                    TripNote(
+                        id = "note-${UUID.randomUUID()}",
+                        senderUid = uid,
+                        text = "지금 내 위치: $mapsLink",
+                        createdAt = Instant.now(),
                     ),
                 )
             }

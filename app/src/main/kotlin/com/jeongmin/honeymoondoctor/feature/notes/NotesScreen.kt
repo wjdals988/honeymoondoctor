@@ -7,16 +7,21 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -37,7 +42,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withLink
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.jeongmin.honeymoondoctor.core.ui.EmptyState
@@ -51,6 +64,27 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private val noteTimeFormatter = DateTimeFormatter.ofPattern("M/d HH:mm", Locale.KOREAN)
+private val urlPattern = Regex("https?://\\S+")
+
+/** 쪽지 텍스트 중 URL 구간에만 탭-오픈 링크를 건다. 나머지는 평범한 텍스트로 남아 길게 눌러 삭제하는 제스처를 그대로 받는다. */
+private fun linkify(text: String, linkColor: Color): AnnotatedString = buildAnnotatedString {
+    var lastIndex = 0
+    for (match in urlPattern.findAll(text)) {
+        append(text.substring(lastIndex, match.range.first))
+        withLink(
+            LinkAnnotation.Url(
+                url = match.value,
+                styles = TextLinkStyles(
+                    style = SpanStyle(color = linkColor, textDecoration = TextDecoration.Underline),
+                ),
+            ),
+        ) {
+            append(match.value)
+        }
+        lastIndex = match.range.last + 1
+    }
+    append(text.substring(lastIndex))
+}
 
 /**
  * 쪽지함(삐삐 모델). 2인 대화라 받은함/보낸함으로 나누지 않고 시간순 한 흐름으로 보여준다.
@@ -207,25 +241,42 @@ private fun NoteBubble(
                 .combinedClickable(onClick = {}, onLongClick = onLongPress)
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         ) {
+            val bubbleContentColor = if (isMine) {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
             Text(
-                text = note.text,
+                // 위치 공유("우리 위치" → 쪽지로 보내기)가 지도 링크를 텍스트로 보내는데,
+                // 링크가 그냥 문자열이면 탭도 복사도 안 된다 — URL 구간에 LinkAnnotation을
+                // 달아 탭하면 브라우저/지도 앱이 바로 열리게 한다.
+                text = linkify(note.text, linkColor = MaterialTheme.colorScheme.primary),
                 style = MaterialTheme.typography.bodyLarge,
-                color = if (isMine) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
+                color = bubbleContentColor,
             )
         }
-        Text(
-            // 읽은 "시각"은 일부러 보여주지 않는다 — 확인 여부만.
-            text = buildString {
-                append(noteTimeFormatter.format(note.createdAt.atZone(ZoneId.systemDefault())))
-                if (isMine) append(if (note.readAt != null) " · 확인함" else " · 아직 안 봄")
-            },
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 2.dp),
-        )
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+            Text(
+                text = noteTimeFormatter.format(note.createdAt.atZone(ZoneId.systemDefault())),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            // 읽은 "시각"은 일부러 보여주지 않는다 — 확인 여부만, 문구 대신 카카오톡·
+            // 왓츠앱에 익숙한 체크마크로: 발송(회색 체크 1개) → 확인(강조색 체크 2개).
+            // "아직 안 봄"이라는 문구보다 아이콘 쪽이 재촉하는 느낌이 덜하다.
+            if (isMine) {
+                Spacer(Modifier.width(4.dp))
+                Icon(
+                    imageVector = if (note.readAt != null) Icons.Filled.DoneAll else Icons.Filled.Done,
+                    contentDescription = if (note.readAt != null) "확인함" else "아직 안 봄",
+                    modifier = Modifier.size(13.dp),
+                    tint = if (note.readAt != null) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+            }
+        }
     }
 }
