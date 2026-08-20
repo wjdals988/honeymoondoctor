@@ -20,6 +20,15 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.7.9",
+            versionCode = 43,
+            date = "2026-08-20",
+            changes = listOf(
+                "예약함에서 시작·종료가 여러 날에 걸친 예약(왕복 항공권 등)의 종료 시각에 " +
+                    "날짜가 빠져 시작일 당일에 끝나는 것처럼 보이던 표시 오류를 고쳤습니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.7.8",
             versionCode = 42,
             date = "2026-08-20",

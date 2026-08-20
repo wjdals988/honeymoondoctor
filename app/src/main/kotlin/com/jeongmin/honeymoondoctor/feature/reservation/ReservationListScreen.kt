@@ -222,10 +222,19 @@ internal fun reservationScheduleLabel(reservation: Reservation): String? {
             "${start.monthValue}/${start.dayOfMonth} 종일"
         }
     }
+    val startDate = LocalTimes.toLocalDate(startAt, reservation.timeZone)
     val startText = "${LocalTimes.formatDate(startAt, reservation.timeZone)} " +
         LocalTimes.formatTime(startAt, reservation.timeZone)
     val end = reservation.endAt ?: return "$startText (${koreanZoneLabel(reservation.timeZone)})"
-    val endText = LocalTimes.formatTime(end, reservation.effectiveEndTimeZone)
+    val endDate = LocalTimes.toLocalDate(end, reservation.effectiveEndTimeZone)
+    val endTimeText = LocalTimes.formatTime(end, reservation.effectiveEndTimeZone)
+    // 왕복 항공권처럼 시작·종료가 다른 날짜에 걸친 예약은 종료 시각에 날짜도 함께 적는다 —
+    // 시간만 보이면(예: "16:00") 시작일 당일에 끝나는 것처럼 보인다.
+    val endText = if (endDate != startDate) {
+        "${LocalTimes.formatDate(end, reservation.effectiveEndTimeZone)} $endTimeText"
+    } else {
+        endTimeText
+    }
     return if (reservation.effectiveEndTimeZone != reservation.timeZone) {
         "$startText(${koreanZoneLabel(reservation.timeZone)}) → $endText(${koreanZoneLabel(reservation.effectiveEndTimeZone)})"
     } else {
