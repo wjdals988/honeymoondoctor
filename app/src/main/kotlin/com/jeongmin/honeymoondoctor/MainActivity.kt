@@ -1,5 +1,6 @@
 package com.jeongmin.honeymoondoctor
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,10 +11,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.jeongmin.honeymoondoctor.core.location.LocationShareCoordinator
+import com.jeongmin.honeymoondoctor.core.security.InviteCode
 import com.jeongmin.honeymoondoctor.core.theme.HoneymoonDoctorTheme
 import com.jeongmin.honeymoondoctor.data.local.prefs.AppPreferences
 import com.jeongmin.honeymoondoctor.data.local.prefs.ThemeMode
@@ -29,8 +33,17 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var appPreferences: AppPreferences
     @Inject lateinit var locationShareCoordinator: LocationShareCoordinator
 
+    /** 초대 딥링크(honeymoondoctor://join?code=...)의 code 파라미터. Compose가 읽는 State라
+     * onNewIntent에서 갱신하면 recompose로 반영된다. 한 번 소비되면(TripSetupScreen 진입)
+     * 값을 지울 필요는 없다 — 참여 버튼을 누르지 않는 한 그냥 입력창에 남아있을 뿐이다. */
+    private var pendingInviteCodeFromLink by mutableStateOf<String?>(null)
+
+    private fun extractInviteCodeFrom(intent: Intent?): String? =
+        intent?.data?.let(InviteCode::extractFromLink)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pendingInviteCodeFromLink = extractInviteCodeFrom(intent)
         enableEdgeToEdge()
         // "우리 위치" 자동 공유. RESUMED 동안만 돌고 백그라운드 전환 시 코루틴이 취소된다 —
         // 어떤 모드든 앱을 보고 있는 동안만 전송된다는 보장이 이 한 줄의 위치에서 나온다.
@@ -54,9 +67,16 @@ class MainActivity : ComponentActivity() {
             }
             HoneymoonDoctorTheme(darkTheme = darkTheme) {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    AuthGate()
+                    AuthGate(prefillInviteCode = pendingInviteCodeFromLink)
                 }
             }
         }
+    }
+
+    /** 앱이 이미 떠 있는 상태에서 딥링크로 다시 열릴 때(launchMode 기본값=standard가 아니면
+     * onCreate가 재호출되지 않는 경우도 있어 별도로 처리). */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        extractInviteCodeFrom(intent)?.let { pendingInviteCodeFromLink = it }
     }
 }

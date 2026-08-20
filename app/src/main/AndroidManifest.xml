@@ -31,6 +31,15 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- 초대코드 딥링크. 커스텀 스킴이라 도메인 소유 확인(App Links)이 필요 없어
+                 서버 호스팅 없이도 바로 동작한다 — 카카오톡 등으로 링크를 보내면 탭 한 번으로
+                 참여 화면에 코드가 채워진다(초대코드를 손으로 옮겨 적어야 했던 문제 해결). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="honeymoondoctor" android:host="join" />
+            </intent-filter>
         </activity>
 
         <!-- 바우처 파일을 기기 내부 저장소에서 FileProvider로만 연다. 외부 앱과 파일 시스템 경로를 직접 공유하지 않는다. -->

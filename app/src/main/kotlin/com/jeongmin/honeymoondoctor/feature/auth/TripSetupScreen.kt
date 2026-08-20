@@ -39,6 +39,10 @@ fun TripSetupScreen(
     pendingJoinTripId: String?,
     joinRequestStatus: JoinRequestStatus?,
     createError: String?,
+    /** 초대 딥링크로 들어왔을 때 초대코드 입력창을 미리 채운다. 사용자는 여전히 "참여 요청
+     * 보내기"를 직접 눌러야 한다 — 링크만으로 자동 참여시키면 잘못 탭한 링크로도 요청이
+     * 나가버릴 수 있다. */
+    prefillInviteCode: String? = null,
     onCreateTrip: (NewTripDraft) -> Unit,
     onRequestToJoin: (String, (Result<Unit>) -> Unit) -> Unit,
     onCancelPendingJoin: () -> Unit,
@@ -185,7 +189,7 @@ fun TripSetupScreen(
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
 
-        var inviteCode by remember { mutableStateOf("") }
+        var inviteCode by remember { mutableStateOf(prefillInviteCode.orEmpty()) }
         var joinError by remember { mutableStateOf<String?>(null) }
         SectionHeader(title = "초대코드로 참여하기")
         OutlinedTextField(

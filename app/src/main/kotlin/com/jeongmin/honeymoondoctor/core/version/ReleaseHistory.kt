@@ -20,6 +20,15 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.7.7",
+            versionCode = 41,
+            date = "2026-08-20",
+            changes = listOf(
+                "초대코드를 손으로 옮겨 적을 필요가 없어졌습니다. \"공유\" 버튼이 링크를 " +
+                    "함께 보내고, 그 링크를 누르면 참여 화면에 코드가 자동으로 채워집니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.7.6",
             versionCode = 40,
             date = "2026-08-20",

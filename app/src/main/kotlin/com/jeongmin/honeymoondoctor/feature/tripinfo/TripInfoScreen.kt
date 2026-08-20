@@ -36,6 +36,7 @@ import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
 import com.jeongmin.honeymoondoctor.core.ui.confirm
 import com.jeongmin.honeymoondoctor.core.ui.copyToClipboard
+import com.jeongmin.honeymoondoctor.core.security.InviteCode
 import com.jeongmin.honeymoondoctor.core.ui.shareText
 import com.jeongmin.honeymoondoctor.domain.model.City
 import com.jeongmin.honeymoondoctor.domain.model.TravelCurrency
@@ -241,7 +242,20 @@ fun TripInfoScreen(modifier: Modifier = Modifier, viewModel: TripInfoViewModel =
                             TextButton(onClick = { copyToClipboard(context, "초대코드", code) }) {
                                 Text("복사")
                             }
-                            TextButton(onClick = { shareText(context, code) }) {
+                            TextButton(
+                                onClick = {
+                                    // 코드를 그대로 보내면 상대가 손으로 옮겨 적어야 한다 —
+                                    // 딥링크를 같이 보내 탭 한 번으로 참여 화면에 코드가
+                                    // 채워지게 한다(코드 자체도 남겨 링크를 못 여는 경우를 대비).
+                                    shareText(
+                                        context,
+                                        "동행일기에 초대합니다 — 아래 링크를 눌러 참여하세요.\n" +
+                                            InviteCode.buildJoinLink(code) +
+                                            "\n\n링크가 안 열리면 앱의 \"초대코드로 참여하기\"에 " +
+                                            "이 코드를 직접 입력하세요: $code",
+                                    )
+                                },
+                            ) {
                                 Text("공유")
                             }
                         }

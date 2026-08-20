@@ -31,7 +31,7 @@ import com.jeongmin.honeymoondoctor.feature.triplist.TripListScreen
  * [safeDrawingInsets]를 적용한다 — 전체에 걸면 Scaffold와 이중으로 적용된다.
  */
 @Composable
-fun AuthGate(viewModel: AuthGateViewModel = hiltViewModel()) {
+fun AuthGate(prefillInviteCode: String? = null, viewModel: AuthGateViewModel = hiltViewModel()) {
     Column {
         if (viewModel.demoModeManager.isDemoMode) {
             DemoModeBanner()
@@ -39,13 +39,13 @@ fun AuthGate(viewModel: AuthGateViewModel = hiltViewModel()) {
         when (viewModel.hasSeenOnboarding.collectAsState().value) {
             null -> LoadingIndicator()
             false -> OnboardingScreen(onDone = viewModel::markOnboardingSeen, modifier = safeDrawingInsets())
-            true -> AuthGateContent(viewModel)
+            true -> AuthGateContent(viewModel, prefillInviteCode)
         }
     }
 }
 
 @Composable
-private fun AuthGateContent(viewModel: AuthGateViewModel) {
+private fun AuthGateContent(viewModel: AuthGateViewModel, prefillInviteCode: String?) {
     when (val state = viewModel.state.collectAsState().value) {
         is AuthGateState.Loading -> LoadingIndicator()
         is AuthGateState.NeedsLogin -> {
@@ -78,6 +78,7 @@ private fun AuthGateContent(viewModel: AuthGateViewModel) {
                         pendingJoinTripId = null,
                         joinRequestStatus = null,
                         createError = createError,
+                        prefillInviteCode = prefillInviteCode,
                         onCreateTrip = { draft ->
                             createError = null
                             viewModel.createTrip(state.user, draft) {
@@ -106,6 +107,7 @@ private fun AuthGateContent(viewModel: AuthGateViewModel) {
                     pendingJoinTripId = state.pendingJoinTripId,
                     joinRequestStatus = state.joinRequestStatus,
                     createError = createError,
+                    prefillInviteCode = prefillInviteCode,
                     onCreateTrip = { draft ->
                         createError = null
                         viewModel.createTrip(state.user, draft) { createError = it.message ?: "여행 생성에 실패했습니다." }
