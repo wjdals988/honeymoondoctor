@@ -20,6 +20,16 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.7.6",
+            versionCode = 40,
+            date = "2026-08-20",
+            changes = listOf(
+                "홈 진입 무한 로딩의 진짜 원인을 고쳤습니다. 네트워크가 잠깐 끊겼다가 " +
+                    "여러 항목이 동시에 다시 연결되는 순간, 화면이 계속 스스로를 다시 " +
+                    "불러오는 상태에 갇힐 수 있었습니다(v0.7.4는 증상만 줄인 것이었습니다).",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.7.5",
             versionCode = 39,
             date = "2026-08-20",

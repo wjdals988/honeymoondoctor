@@ -8,6 +8,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -34,10 +35,17 @@ class ObserveCurrentTrip @Inject constructor(
         } else {
             combine(
                 tripRepository.observeMyTrips(user.uid),
-                appPreferences.snapshot.map { it.selectedTripId },
+                // selectedTripId 말고 다른 설정(예: lastSyncAt, transportLeadMinutes)만 바뀌어도
+                // DataStore 전체 snapshot이 새로 emit된다 — distinctUntilChanged 없으면 이 usecase를
+                // 구독하는 모든 화면(홈 등)이 실제로는 안 바뀐 여행을 놓고도 매번 재구독을 반복한다.
+                appPreferences.snapshot.map { it.selectedTripId }.distinctUntilChanged(),
             ) { trips, selectedId ->
                 trips.firstOrNull { it.id == selectedId }
             }
         }
     }
+        // Trip은 data class라 내용이 같으면 동일하게 취급된다. 위 selectedTripId 가드로도 못 막는
+        // 경우(예: tripRepository.observeMyTrips가 메타데이터만 바뀐 스냅샷을 내보낼 때)를 대비한
+        // 마지막 안전장치 — 실제로 여행 내용이 바뀌지 않으면 이 usecase는 재emit하지 않는다.
+        .distinctUntilChanged()
 }

@@ -87,6 +87,23 @@
 
 ## 4. 아직 검증하지 못한 것 (리스크)
 
+> **2026-08-20 실기기 검증 — 홈 무한 로딩 근본 원인 발견·수정 (v0.7.6).**
+> v0.7.3에서 사용자가 보고한 "홈 진입 시 무한 로딩(재시작해도 매번 재현)"의 진짜 원인을
+> 실기기 logcat 실측으로 찾았다. v0.7.4에서 고쳤다고 판단한 "쪽지 리스너 중복"은
+> 부수적 완화였을 뿐, 진짜 원인은 `ObserveCurrentTrip`이 `AppPreferences.snapshot`
+> 전체를 구독하면서 `selectedTripId`가 아닌 다른 설정(`lastSyncAt` 등)만 바뀌어도
+> 재emit했다는 것 — `FirebaseSyncStatusRepository`가 "서버 확인됨" 이벤트마다
+> `setLastSyncAt()`으로 그 설정을 쓰기 때문에, 홈 화면의 최상위 `flatMapLatest`가
+> Firestore 리스너 10개 전체를 재구독 → 재구독된 리스너가 다시 "서버 확인됨"을
+> 만들어 `setLastSyncAt()`을 또 호출 → 무한 자기강화 루프였다. 평소엔 안 걸리지만,
+> **DNS가 잠깐 끊겼다가 여러 리스너가 동시에 재연결되는 순간** 트리거되기 쉽다 —
+> 실기기에서 `firestore.googleapis.com` DNS 조회가 일시적으로 실패한 시점부터
+> `ConnectivityManager` 콜백이 초당 300회 이상 등록/해제되는 것을 logcat으로 직접
+> 확인했다. `ObserveCurrentTrip`에 `distinctUntilChanged()` 2곳을 추가해 고쳤고,
+> 회귀 테스트(`ObserveCurrentTripTest`)로 고정했다 — 수정 전 코드로는 실제로 테스트가
+> 실패하는 것까지 확인. 이 usecase는 홈뿐 아니라 일정 알림 동기화·쪽지 배지 등
+> 17곳이 함께 바라보는 지점이라, 파급력이 큰 수정이었다.
+
 > **2026-08-12 검증 라운드 결과** (에뮬레이터 데모 모드 + 실기기):
 >
 > - ~~4-3 알림 실발사~~ **검증 완료 + 버그 발견·수정.** 이동 일정을 만들자
