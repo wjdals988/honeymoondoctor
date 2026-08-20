@@ -26,7 +26,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -51,9 +50,8 @@ import com.jeongmin.honeymoondoctor.core.ui.DropdownSelector
 import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
-import com.jeongmin.honeymoondoctor.core.ui.containerColor
-import com.jeongmin.honeymoondoctor.core.ui.contentColor
 import com.jeongmin.honeymoondoctor.core.ui.SkeletonBlock
+import com.jeongmin.honeymoondoctor.core.ui.StatusChip
 import com.jeongmin.honeymoondoctor.core.ui.rememberActionErrorSnackbar
 import com.jeongmin.honeymoondoctor.domain.model.Decision
 import com.jeongmin.honeymoondoctor.domain.model.DecisionCategory
@@ -315,17 +313,7 @@ private fun DecisionCard(
             // 벤치마킹: "결정 필요"와 "결정됨"이 같은 회색 칩이라 구분이 안 됐다. 아직 결정
             // 안 된 상태는 눈에 띄게, 결정된 상태는 톤을 낮춰 "끝났다"는 인상을 준다.
             val statusTone = if (decision.status == DecisionStatus.DECIDED) CardTone.Done else CardTone.Warn
-            Surface(
-                shape = MaterialTheme.shapes.small,
-                color = statusTone.containerColor(),
-                contentColor = statusTone.contentColor(),
-            ) {
-                Text(
-                    text = decision.status.labelKo,
-                    style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                )
-            }
+            StatusChip(decision.status.labelKo, statusTone)
         }
         decision.options.forEach { option ->
             val isSelected = decision.selectedOptionId == option.id

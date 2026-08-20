@@ -23,6 +23,8 @@ import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -162,22 +164,28 @@ fun MoreScreen(
                     "switch_trip" -> onSwitchTrip
                     else -> null
                 }
+                // "확인이 필요한 게 있다"는 문장 대신 하단 "전체" 탭과 같은 점 배지로 통일한다
+                // — 정확한 건수보다 "가서 봐야 한다"는 신호 자체가 중요한 항목들이라, 아이콘
+                // 위 점 하나로 충분하다(오늘의 목표: 문장을 줄이고 시각 신호로 대체).
+                val needsAttention = (menu.onClickKey == "trip_info" && pendingJoinRequestCount > 0) ||
+                    (menu.onClickKey == "notes" && unreadNoteCount > 0)
                 ListItem(
                     headlineContent = { Text(menu.label) },
-                    leadingContent = { Icon(menu.icon, contentDescription = null) },
+                    leadingContent = {
+                        if (needsAttention) {
+                            BadgedBox(badge = { Badge() }) {
+                                Icon(menu.icon, contentDescription = null)
+                            }
+                        } else {
+                            Icon(menu.icon, contentDescription = null)
+                        }
+                    },
                     supportingContent = when {
                         menu.onClickKey == "switch_trip" -> { { Text("다른 여행을 보거나 새로 만듭니다") } }
                         // 목록에서 바로 버전을 읽을 수 있게 한다(들어가지 않아도 확인 가능).
                         menu.onClickKey == "about" ->
                             { { Text("v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})") } }
                         onClick == null -> { { Text("추후 단계에서 제공") } }
-                        else -> null
-                    },
-                    trailingContent = when {
-                        menu.onClickKey == "trip_info" && pendingJoinRequestCount > 0 ->
-                            { { Text("대기 중인 참여 요청 ${pendingJoinRequestCount}건", color = MaterialTheme.colorScheme.error) } }
-                        menu.onClickKey == "notes" && unreadNoteCount > 0 ->
-                            { { Text("읽지 않음 ${unreadNoteCount}건", color = MaterialTheme.colorScheme.error) } }
                         else -> null
                     },
                     modifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier,

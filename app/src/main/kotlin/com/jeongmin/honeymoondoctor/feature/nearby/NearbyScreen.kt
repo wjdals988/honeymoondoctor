@@ -499,7 +499,9 @@ private fun PlaceRow(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = place.name,
+                    // 카테고리 이모지를 지도 핀과 같은 자리(이름 맨 앞)에 노출한다 — 지도와
+                    // 목록이 같은 언어로 말하게 한다(벤치마킹: 트리플의 순번 배지·지도 대응).
+                    text = "${place.category.emoji} ${place.name}",
                     style = MaterialTheme.typography.titleSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -507,7 +509,7 @@ private fun PlaceRow(
                 Text(
                     text = listOfNotNull(
                         scored.distanceMeters?.let { formatDistance(it) },
-                        place.category.display,
+                        place.category.labelKo,
                         place.priority.labelKo,
                         if (place.visited) "방문함" else "미방문",
                     ).joinToString(" · "),

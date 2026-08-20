@@ -530,8 +530,11 @@ private fun ItineraryCard(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.padding(top = 4.dp),
         ) {
-            AssistChip(onClick = {}, label = { Text(item.type.labelKo) })
+            AssistChip(onClick = {}, label = { Text(item.type.display) })
             if (item.status != ItineraryStatus.PLANNED) {
+                // 카드 전체가 이미 완료/건너뜀 시 CardTone.Done으로 어두워진다(dimmed) —
+                // 칩까지 같은 색을 쓰면 배경에 녹아 안 보인다(에뮬레이터로 실측해 발견).
+                // 그래서 여기만 기존 AssistChip(테두리로 항상 구분됨)을 그대로 둔다.
                 AssistChip(onClick = {}, label = { Text(item.status.labelKo) })
             }
             if (isConflicting) {

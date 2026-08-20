@@ -43,6 +43,7 @@ import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.SearchField
 import com.jeongmin.honeymoondoctor.core.ui.SkeletonBlock
+import com.jeongmin.honeymoondoctor.core.ui.StatusChip
 import com.jeongmin.honeymoondoctor.domain.model.Reservation
 import com.jeongmin.honeymoondoctor.domain.model.ReservationStatus
 import com.jeongmin.honeymoondoctor.domain.model.maskSecret
@@ -188,7 +189,8 @@ private fun ReservationCard(reservation: Reservation, onClick: () -> Unit, modif
             modifier = Modifier.padding(top = 6.dp),
         ) {
             AssistChip(onClick = {}, label = { Text(reservation.type.display) })
-            AssistChip(onClick = {}, label = { Text(reservation.status.labelKo) })
+            // 결정함과 같은 색상 언어: "아직 안 됨"은 눈에 띄게, "끝났다"는 톤을 낮춘다.
+            StatusChip(reservation.status.labelKo, reservationStatusTone(reservation.status))
         }
         // 목록에서는 예약번호·PIN을 항상 마스킹한다(스펙 7-4). 원문은 상세 화면에서만.
         maskSecret(reservation.confirmationCode)?.let { masked ->
@@ -200,6 +202,12 @@ private fun ReservationCard(reservation: Reservation, onClick: () -> Unit, modif
             )
         }
     }
+}
+
+private fun reservationStatusTone(status: ReservationStatus): CardTone = when (status) {
+    ReservationStatus.CONFIRMED, ReservationStatus.USED -> CardTone.Done
+    ReservationStatus.NEEDS_CHECK, ReservationStatus.NEEDS_BOOKING, ReservationStatus.NEEDS_PAYMENT -> CardTone.Warn
+    ReservationStatus.CANCELED -> CardTone.Neutral
 }
 
 /** 예약의 일시 요약: 종일이면 날짜 범위, 시간이 있으면 시간대 라벨과 함께. */

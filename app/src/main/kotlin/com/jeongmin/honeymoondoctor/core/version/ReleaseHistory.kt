@@ -20,6 +20,19 @@ object ReleaseHistory {
 
     val entries: List<ReleaseEntry> = listOf(
         ReleaseEntry(
+            versionName = "0.7.5",
+            versionCode = 39,
+            date = "2026-08-20",
+            changes = listOf(
+                "준비물·경비·예약함·일정·주변 목록에 카테고리 이모지와 상태 색상을 더해, " +
+                    "글자만 이어붙인 한 줄 대신 한눈에 훑어볼 수 있게 했습니다.",
+                "경비 정산에 이니셜 배지와 화살표를 더해 \"누가 누구에게\"가 바로 보입니다.",
+                "완료한 준비물은 더 옅게 표시됩니다.",
+                "읽지 않은 쪽지·대기 중인 참여 요청 안내를 문장 대신 점(dot) 배지로 " +
+                    "통일했습니다 — 전체 탭과 해당 메뉴 둘 다 같은 표시를 씁니다.",
+            ),
+        ),
+        ReleaseEntry(
             versionName = "0.7.4",
             versionCode = 38,
             date = "2026-08-20",

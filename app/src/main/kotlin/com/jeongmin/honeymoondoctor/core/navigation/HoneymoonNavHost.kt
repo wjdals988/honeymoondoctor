@@ -379,8 +379,10 @@ private fun HoneymoonBottomBar(navController: androidx.navigation.NavHostControl
                 icon = {
                     // 읽지 않은 쪽지는 "전체" 탭 안(쪽지함)에 있어, 탭 아이콘에 점 배지로
                     // 존재만 알린다 — 홈에 카드를 더 얹지 않는다(홈은 이미 카드 5~6개).
+                    // 건수는 일부러 안 담는다 — 쪽지함 메뉴 행의 점 배지와 같은 신호(숫자 없이
+                    // "가서 볼 것이 있다"만)로 통일해, 화면 전체의 배지 언어를 하나로 맞춘다.
                     if (tab == BottomTab.MORE && unreadNoteCount > 0) {
-                        BadgedBox(badge = { Badge { Text("$unreadNoteCount") } }) {
+                        BadgedBox(badge = { Badge() }) {
                             Icon(imageVector = tab.icon, contentDescription = stringResource(id = tab.labelRes))
                         }
                     } else {

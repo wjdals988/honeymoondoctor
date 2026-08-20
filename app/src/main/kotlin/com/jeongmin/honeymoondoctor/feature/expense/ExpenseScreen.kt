@@ -1,19 +1,24 @@
 package com.jeongmin.honeymoondoctor.feature.expense
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Delete
@@ -47,6 +52,7 @@ import com.jeongmin.honeymoondoctor.core.ui.AppCard
 import com.jeongmin.honeymoondoctor.core.ui.CardTone
 import com.jeongmin.honeymoondoctor.core.ui.EmptyState
 import com.jeongmin.honeymoondoctor.core.ui.FabSpacing
+import com.jeongmin.honeymoondoctor.core.ui.InitialBadge
 import com.jeongmin.honeymoondoctor.core.ui.LocalTripReadOnly
 import com.jeongmin.honeymoondoctor.core.ui.SectionHeader
 import com.jeongmin.honeymoondoctor.core.ui.SkeletonBar
@@ -295,12 +301,21 @@ private fun SummaryCard(uiState: ExpenseUiState, onOpenBudgets: () -> Unit) {
         } else {
             val from = uiState.members.firstOrNull { it.uid == settlement.fromUid }?.displayName ?: "상대"
             val to = uiState.members.firstOrNull { it.uid == settlement.toUid }?.displayName ?: "상대"
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "$from → $to 정산",
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                // 이니셜 배지 + 화살표로 "누가 누구에게"를 텍스트보다 먼저 눈에 들어오게
+                // 한다(벤치마킹: Splitwise — 2인 구조라 다자 관계 계산 없이 그대로 적용).
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    InitialBadge(from)
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        modifier = Modifier.padding(horizontal = 6.dp).size(16.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                    InitialBadge(to)
+                    Spacer(Modifier.width(8.dp))
+                    Text(text = "정산", style = MaterialTheme.typography.bodyMedium)
+                }
                 Text(
                     text = formatKrw(settlement.amountKrw),
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
@@ -344,6 +359,17 @@ private fun ExpenseRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(),
         ) {
+            // 카테고리 이모지를 부제 텍스트에서 빼내 별도 배지로 승격 — 한 줄 텍스트에
+            // 묻혀 있으면 스캔이 안 된다(벤치마킹: 트리플·Google지도의 아이콘 우선 인지).
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(text = expense.category.emoji, style = MaterialTheme.typography.titleMedium)
+            }
+            Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = buildString {
@@ -362,7 +388,7 @@ private fun ExpenseRow(
                 val city = uiState.cities.firstOrNull { it.id == expense.cityId }?.displayName
                 Text(
                     text = listOfNotNull(
-                        expense.category.display,
+                        expense.category.labelKo,
                         if (expense.shared) "공동" else "개인",
                         payer?.let { "결제 $it" },
                         city,

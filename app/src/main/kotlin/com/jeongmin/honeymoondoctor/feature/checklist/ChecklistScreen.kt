@@ -42,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -278,7 +279,9 @@ private fun ChecklistRow(
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(vertical = 8.dp),
+                .padding(vertical = 8.dp)
+                // 완료된 항목은 통째로 옅게 — 취소선만으로는 스캔할 때 여전히 눈에 걸린다.
+                .alpha(if (item.completed) 0.55f else 1f),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -289,7 +292,7 @@ private fun ChecklistRow(
                 if (item.required) {
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = "필수",
+                        text = "❗ 필수",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error,
                     )
@@ -305,7 +308,7 @@ private fun ChecklistRow(
             val overdue = dueDate != null && !item.completed && dueDate.isBefore(LocalDate.now())
             Text(
                 text = buildString {
-                    append("${item.category.labelKo} · $ownerLabel")
+                    append("${item.category.display} · $ownerLabel")
                     if (dueDate != null) {
                         append(" · 기한 ${dueDate.monthValue}/${dueDate.dayOfMonth}")
                         if (overdue) append(" (지남)")

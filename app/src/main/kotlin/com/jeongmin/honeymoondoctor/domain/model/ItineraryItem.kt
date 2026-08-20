@@ -3,13 +3,17 @@ package com.jeongmin.honeymoondoctor.domain.model
 import java.time.Instant
 
 /** 스펙 7-3의 일정 유형: 이동, 관광, 식사, 휴양, 쇼핑, 기타 */
-enum class ItineraryType(val labelKo: String) {
-    TRANSPORT("이동"),
-    SIGHTSEEING("관광"),
-    MEAL("식사"),
-    REST("휴양"),
-    SHOPPING("쇼핑"),
-    ETC("기타"),
+enum class ItineraryType(val labelKo: String, val emoji: String) {
+    TRANSPORT("이동", "🚌"),
+    SIGHTSEEING("관광", "🗺️"),
+    MEAL("식사", "🍽️"),
+    REST("휴양", "🌴"),
+    SHOPPING("쇼핑", "🛍️"),
+    ETC("기타", "📌"),
+    ;
+
+    /** ExpenseCategory·ReservationType과 같은 이유(스캔 보조). 칩·목록에서 이 형태로 쓴다. */
+    val display: String get() = "$emoji $labelKo"
 }
 
 /** 상태: 예정, 완료, 건너뜀. DONE/SKIPPED는 홈의 "다음 일정" 후보에서 제외된다. */
