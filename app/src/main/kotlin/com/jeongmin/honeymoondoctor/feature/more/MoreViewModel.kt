@@ -45,7 +45,6 @@ class MoreViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     observeCurrentTrip: ObserveCurrentTrip,
     tripRepository: TripRepository,
-    private val tripNoteRepository: com.jeongmin.honeymoondoctor.domain.repository.TripNoteRepository,
 ) : ViewModel() {
 
     private val currentTrip: StateFlow<Trip?> =
@@ -57,23 +56,6 @@ class MoreViewModel @Inject constructor(
             if (trip == null) flowOf(emptyList()) else tripRepository.observePendingJoinRequests(trip.id)
         }
         .map { it.size }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
-
-    /** 상대가 보낸 읽지 않은 쪽지 수 — 쪽지함 메뉴 옆 배지. */
-    val unreadNoteCount: StateFlow<Int> = currentTrip
-        .flatMapLatest { trip ->
-            if (trip == null) {
-                flowOf(0)
-            } else {
-                kotlinx.coroutines.flow.combine(
-                    tripNoteRepository.observeNotes(trip.id),
-                    authRepository.currentUser,
-                ) { notes, user ->
-                    val myUid = user?.uid ?: return@combine 0
-                    notes.count { it.senderUid != myUid && it.readAt == null }
-                }
-            }
-        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     private val _deleteAccountState = MutableStateFlow<DeleteAccountUiState>(DeleteAccountUiState.Idle)

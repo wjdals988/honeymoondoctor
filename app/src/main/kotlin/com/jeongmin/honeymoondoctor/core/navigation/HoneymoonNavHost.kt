@@ -251,7 +251,9 @@ fun HoneymoonDoctorAppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
             composable(BottomTab.MORE.route) {
                 val moreViewModel: MoreViewModel = hiltViewModel()
                 val pendingJoinRequestCount by moreViewModel.pendingJoinRequestCount.collectAsState()
-                val unreadNoteCount by moreViewModel.unreadNoteCount.collectAsState()
+                // AppRootViewModel(하단 탭 배지)이 이미 구독 중인 것을 그대로 쓴다 — 화면마다
+                // 새로 구독하면 "쪽지" 컬렉션 리스너가 중복으로 여러 개 열린다.
+                val unreadNoteCount by viewModel.unreadNoteCount.collectAsState()
                 val deleteAccountState by moreViewModel.deleteAccountState.collectAsState()
                 val backupMessage by moreViewModel.backupMessage.collectAsState()
                 MoreScreen(

@@ -1,6 +1,8 @@
 package com.jeongmin.honeymoondoctor.core.notification
 
 import android.content.Context
+import com.jeongmin.honeymoondoctor.domain.model.AuthUser
+import com.jeongmin.honeymoondoctor.domain.model.TripNote
 import com.jeongmin.honeymoondoctor.domain.repository.AuthRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripNoteRepository
 import com.jeongmin.honeymoondoctor.domain.repository.TripRepository
@@ -12,6 +14,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
@@ -38,30 +41,36 @@ class NoteAlertCoordinator @Inject constructor(
     private val startedAt: Instant = Instant.now()
     private val notifiedNoteIds = mutableSetOf<String>()
 
+    private data class Snapshot(val tripId: String, val notes: List<TripNote>, val user: AuthUser?)
+
     fun start(scope: CoroutineScope) {
         observeCurrentTrip()
             .flatMapLatest { trip ->
                 if (trip == null) {
-                    flowOf(null)
+                    flowOf<Snapshot?>(null)
                 } else {
+                    // 구성원 목록은 여기서 상시 구독하지 않는다 — 발신자 이름은 알림을 실제로
+                    // 띄우는 드문 순간에만 필요해서, 아래 onEach에서 그때그때 1회성으로 읽는다
+                    // (그 편이 "쪽지" 리스너를 앱 시작마다 하나 더 얹지 않는다).
                     combine(
                         tripNoteRepository.observeNotes(trip.id),
-                        tripRepository.observeMembers(trip.id),
                         authRepository.currentUser,
-                    ) { notes, members, user -> Triple(notes, members, user) }
+                    ) { notes, user -> Snapshot(trip.id, notes, user) }
                 }
             }
-            .onEach { data ->
-                val (notes, members, user) = data ?: return@onEach
+            .onEach { snapshot ->
+                val (tripId, notes, user) = snapshot ?: return@onEach
                 val myUid = user?.uid ?: return@onEach
-                notes
+                val toNotify = notes
                     .filter { it.senderUid != myUid && it.readAt == null }
                     .filter { it.createdAt.isAfter(startedAt) }
                     .filter { notifiedNoteIds.add(it.id) } // 같은 쪽지에 중복 알림 방지
-                    .forEach { note ->
-                        val senderName = members.firstOrNull { it.uid == note.senderUid }?.displayName ?: "상대"
-                        NoteNotifier.show(context, note.id.hashCode(), senderName, note.text)
-                    }
+                if (toNotify.isEmpty()) return@onEach
+                val members = tripRepository.observeMembers(tripId).first()
+                toNotify.forEach { note ->
+                    val senderName = members.firstOrNull { it.uid == note.senderUid }?.displayName ?: "상대"
+                    NoteNotifier.show(context, note.id.hashCode(), senderName, note.text)
+                }
             }
             .launchIn(scope)
     }
